@@ -7,6 +7,8 @@ Editor local para a Elisa revisar uma primeira montagem, ajustar cenas e acresce
 - Importação de vídeos e áudios, com miniaturas e prévias compatíveis com o navegador.
 - Roteiro dividido em blocos e etiquetas por arquivo.
 - Sequência editável: trocar tomada, ajustar entrada e saída, reordenar, editar título e controlar volume.
+- Linha do tempo com régua, cursor, zoom, miniaturas proporcionais, divisão no cursor e aparo por arrasto.
+- Faixa de narração com forma de onda obtida do áudio.
 - Proteção de cenas e desfazer, com salvamento no computador.
 - Narração adicionada depois da montagem, com volume e posição inicial.
 - Exportação real em MP4/H.264, em 1080 × 1920 ou prévia leve em 540 × 960.
@@ -56,12 +58,15 @@ Foram analisados dois vídeos finalizados da Elisa e recebidos os nove arquivos 
 - [Análise inicial do estilo](outputs/analise-referencias-elisa.md).
 - [Direção de produto](outputs/direcao-produto.md).
 - [Estado e verificação da versão 0.1](outputs/versao-0.1.md).
+- [Linha do tempo, PWA e acesso remoto](outputs/linha-do-tempo-e-celular.md).
 
 ## Dados locais
 
-Os projetos, mídias importadas, prévias, exportações e históricos ficam em `work/lili-data/`, fora do versionamento. Os arquivos recebidos não são enviados a serviços externos. O servidor escuta apenas em `127.0.0.1` e esta versão não oferece acesso direto pelo iPhone.
+Os projetos, mídias importadas, prévias, exportações e históricos ficam em `work/lili-data/`, fora do versionamento. O editor escuta apenas em `127.0.0.1`. O processamento não envia arquivos a serviços de IA.
 
-A interface tem layout responsivo e cuidados de toque, mas ainda precisa de teste em iPhone real e de uma conexão autenticada ao computador. O CapCut continua como alternativa de finalização; a transferência de timeline editável entre os programas não foi implementada.
+O acesso pelo iPhone foi preparado como PWA, com um gateway de login separado. Executar `acesso-remoto.ps1 -Modo Preparar` e criar o login no notebook em `http://127.0.0.1:8767/auth/setup`. Depois, `acesso-remoto.ps1 -Modo Ativar` abre um endereço HTTPS temporário da Cloudflare para o gateway autenticado. Essa ativação dá acesso pela internet aos usuários que tiverem a senha; vídeos e comandos transitam pelo túnel até o celular. Ainda falta testar a ativação externa e o uso em iPhone real. `-Modo Desativar` encerra o acesso externo. O túnel nunca deve apontar diretamente para a porta 8765 do editor.
+
+A interface tem layout responsivo e cuidados de toque. O notebook deve permanecer ligado e conectado. O CapCut continua como alternativa de finalização; a transferência de timeline editável entre os programas não foi implementada.
 
 ## Motor de processamento
 
@@ -72,6 +77,8 @@ Esta versão usa FFmpeg local. O [Concat](https://github.com/jub0t/Concat) conti
 ```powershell
 python -m unittest discover -s tests -v
 node --check web/app.js
+node --check web/timeline.js
+node --check web/sw.js
 ```
 
-Os testes cobrem persistência, revisões concorrentes, cenas protegidas, desfazer, importação, montagem de vídeo sem áudio, narração adicional, títulos, orientação por metadados, exportação, leitura parcial de mídia e protocolo MCP. O Node é necessário apenas para a verificação de sintaxe do JavaScript, não para executar o editor.
+Os testes cobrem persistência, revisões concorrentes, cenas protegidas, divisão de clipes, desfazer, importação, envio em blocos, montagem de vídeo sem áudio, narração adicional, forma de onda, títulos, orientação por metadados, exportação, leitura parcial de mídia, protocolo MCP e autenticação do gateway remoto. O Node é necessário apenas para a verificação de sintaxe do JavaScript, não para executar o editor.

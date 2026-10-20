@@ -68,6 +68,14 @@ class IntegrationTests(unittest.TestCase):
 
         edit("timeline_replace", {"clips": [{"media_id": asset["id"], "start": .1, "end": 1.2, "volume": 0, "title": "Cora: um dia\nd'água %"}, {"media_id": asset["id"], "start": .3, "end": 1.4, "volume": .3}]})
         edit("narration_set", {"media_id": voice["media_id"], "volume": .5, "offset": .1})
+        wave = self.client.call("GET", f"/api/projects/{p['id']}/media/{voice['media_id']}/waveform.json")
+        self.assertAlmostEqual(wave["duration"], 2.5, delta=.05)
+        self.assertGreater(len(wave["peaks"]), 100)
+        self.assertGreater(max(wave["peaks"]), .05)
+        self.assertLessEqual(max(wave["peaks"]), 1)
+        edit("clip_split", {"clip_id": p["timeline"][0]["id"], "at": .6})
+        self.assertEqual(len(p["timeline"]), 3)
+        edit("undo", {})
         job = self.client.call("POST", f"/api/projects/{p['id']}/exports", {"expected_revision": p["revision"], "quality": "preview"})
         revision = p["revision"]
         edit("clip_update", {"clip_id": p["timeline"][0]["id"], "title": "Mudança posterior"})
@@ -105,6 +113,21 @@ class IntegrationTests(unittest.TestCase):
         run(["-display_rotation", "90", "-i", self.source, "-c", "copy", rotated])
         details = probe(rotated)
         self.assertEqual((details["width"], details["height"]), (90, 160))
+
+    def test_chunk_upload_retry_imports_identical_video(self):
+        p = self.client.call("POST", "/api/projects", {"name": "Envio em blocos"})
+        raw = self.source.read_bytes()
+        upload = self.client.call("POST", f"/api/projects/{p['id']}/uploads", {"name": "original.mp4", "size": len(raw)})
+        split = len(raw)//2
+        for offset, data in ((0, raw[:split]), (0, raw[:split]), (split, raw[split:])):
+            req = Request(self.base+f"/api/projects/{p['id']}/uploads/{upload['upload_id']}?offset={offset}", data=data, method="PUT")
+            with urlopen(req) as response:
+                self.assertEqual(json.loads(response.read())["received"], offset+len(data))
+        job = self.client.call("POST", f"/api/projects/{p['id']}/uploads/{upload['upload_id']}/complete", {})
+        self.wait_job(job["job"]["id"])
+        asset = self.store.media(p['id'], job['media_id'])
+        self.assertEqual(self.server.media.source(p['id'], asset).read_bytes(), raw)
+        self.assertEqual(asset['status'], 'ready')
 
     def test_external_origin_and_host_are_rejected(self):
         for headers in ({"Origin": "https://external.example"}, {"Host": "external.example"}):

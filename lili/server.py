@@ -12,6 +12,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 
 from .core import EditorError, Store, text, uid
 from .media import ALLOWED, MediaService
+from .uploads import Uploads
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 
@@ -23,6 +24,7 @@ class EditorServer(ThreadingHTTPServer):
         super().__init__(address, Handler)
         self.store = store
         self.media = MediaService(store)
+        self.uploads = Uploads(store, self.media)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -104,6 +106,8 @@ class Handler(BaseHTTPRequestHandler):
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
                 return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg"})
+            if path == "/auth/status":
+                return self.json({"authenticated": False})
             if path == "/api/projects":
                 return self.json(store.list())
             if len(parts) == 3 and parts[:2] == ["api", "jobs"]:
@@ -126,6 +130,8 @@ class Handler(BaseHTTPRequestHandler):
                 if len(parts) == 6 and parts[3] == "media":
                     asset = store.find(project["media"], parts[4], "Arquivo")
                     kind = parts[5]
+                    if kind == "waveform.json":
+                        return self.json(media.waveform(project_id, asset["id"]))
                     if kind == "sheet.jpg":
                         return self.file(media.sheet(project_id, asset["id"]))
                     if kind == "frame.jpg":
@@ -142,7 +148,7 @@ class Handler(BaseHTTPRequestHandler):
                     if job["project_id"] != project_id or job["status"] != "done":
                         raise EditorError("Esta exportação não está disponível.", 404)
                     return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True)
-            if path in ("/", "/app.js", "/styles.css", "/favicon.svg"):
+            if path in ("/", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
                 return self.file(WEB / ("index.html" if path == "/" else path[1:]))
             raise EditorError("Página não encontrada.", 404)
         if path == "/api/projects" and self.command == "POST":
@@ -151,6 +157,16 @@ class Handler(BaseHTTPRequestHandler):
         if len(parts) >= 4 and parts[:2] == ["api", "projects"]:
             project_id, operation = parts[2], parts[3]
             store.get(project_id)
+            if operation == "uploads":
+                if len(parts) == 4 and self.command == "POST":
+                    return self.json(self.server.uploads.start(project_id, self.read_json()), 201)
+                if len(parts) == 5 and self.command == "PUT":
+                    length = int(self.headers.get("Content-Length", "0"))
+                    offset = parse_qs(url.query).get("offset", ["0"])[0]
+                    return self.json(self.server.uploads.append(project_id, parts[4], offset, length, self.rfile))
+                if len(parts) == 6 and parts[5] == "complete" and self.command == "POST":
+                    self.read_json()
+                    return self.json(self.server.uploads.complete(project_id, parts[4]), 202)
             if operation == "upload" and self.command == "PUT" and len(parts) == 4:
                 name = text(parse_qs(url.query).get("name", ["arquivo"])[0], 240)
                 suffix = Path(name).suffix.lower()

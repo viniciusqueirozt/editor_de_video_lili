@@ -7,11 +7,18 @@
   <meta name="description" content="Seu olhar, com mais tempo para criar. Estúdio local de edição assistida da Lili.">
   <title>Lili — seu estúdio de vídeo</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/timeline.css">
   <script src="/app.js" defer></script>
+  <script src="/timeline.js" defer></script>
 </head>
 <body>
   <svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="m8 8 12 12M8 16 20 4M14 12h.01"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7z"/></symbol>
     <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
@@ -37,6 +44,8 @@
     <div class="header-spacer"></div>
     <span class="save-status" id="save-status"><i></i> Salvo neste computador</span>
     <button class="button quiet" id="context-button">Contexto para o Codex</button>
+    <button class="icon-button" id="phone-help" aria-label="Usar no iPhone" title="Usar no iPhone"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M10 18h4"/></svg></button>
+    <form method="post" action="/auth/logout" id="logout-form" hidden><button class="button quiet" type="submit">Sair</button></form>
     <button class="button primary" id="export-button"><svg><use href="#i-down"/></svg><span>Exportar</span></button>
   </header>
   <main class="workspace">
@@ -58,14 +67,42 @@
       <div id="project-note" class="project-note" hidden></div>
       <div class="preview-stage" id="preview-stage"><span class="stage-label">PRÉVIA DA MONTAGEM</span><div class="video-frame" id="video-frame"><video id="player" playsinline preload="metadata"></video><div class="preview-title" id="preview-title"></div><div class="preview-empty" id="preview-empty"><svg><use href="#i-film"/></svg><h3>Sua história começa aqui.</h3><p>Adicione uma cena ou monte um<br>rascunho a partir do roteiro.</p></div></div><span class="stage-note" id="stage-note">Seu olhar em cada escolha.</span></div>
       <div class="playback"><div class="playback-buttons"><button class="icon-button" id="previous-clip" aria-label="Cena anterior"><svg><use href="#i-left"/></svg></button><button class="play-button" id="play-button" aria-label="Reproduzir montagem"><svg><use href="#i-play"/></svg></button><button class="icon-button" id="next-clip" aria-label="Próxima cena"><svg><use href="#i-right"/></svg></button></div><span class="timecode" id="timecode">00:00 <span>/ 00:00</span></span><input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Posição na montagem"><span class="scene-position" id="scene-position">Nenhuma cena</span></div>
-      <section class="timeline-panel"><div class="timeline-heading"><div><h2>A sua sequência <span id="clip-count">0 cenas</span></h2><p id="timeline-subtitle">Escolha os momentos. Encontre o ritmo.</p></div><div class="timeline-actions"><button class="icon-button" id="undo-button" aria-label="Desfazer última alteração" title="Desfazer"><svg><use href="#i-back"/></svg></button><button class="button secondary" id="draft-button"><svg><use href="#i-spark"/></svg>Montar rascunho</button></div></div><div id="timeline" class="timeline"><div class="timeline-empty"><span>01</span><p>Os momentos que você escolher aparecem aqui.</p></div></div><div class="timeline-footer"><span><i class="status-dot"></i> Alterações salvas no projeto</span><span id="total-duration">Duração total —</span></div></section>
+
     </section>
     <aside class="inspector panel"><div class="panel-heading"><div><span class="eyebrow">DO SEU JEITO</span><h2>Ajustes finos</h2></div><svg class="heading-icon"><use href="#i-spark"/></svg></div><nav class="tabs" aria-label="Tipo de ajuste"><button class="tab active" data-inspector="scene">Cena</button><button class="tab" data-inspector="voice">Narração</button></nav><div id="scene-inspector" class="inspector-content"></div><div id="voice-inspector" class="inspector-content" hidden></div><div class="inspector-bottom"><span class="tiny-brand">lili.</span><p>Mais tempo para criar.<br>Seu olhar continua aqui.</p></div></aside>
+
+    <section class="timeline-panel" aria-label="Linha do tempo">
+      <div class="timeline-heading">
+        <div class="timeline-heading-title"><h2>Linha do tempo <span id="clip-count">0 cenas</span></h2><p id="timeline-subtitle">Selecione um clipe para editar.</p></div>
+        <div class="timeline-actions">
+          <button class="icon-button" id="undo-button" aria-label="Desfazer última alteração" title="Desfazer · Ctrl+Z"><svg><use href="#i-back"/></svg></button>
+          <span class="tool-divider"></span>
+          <button class="button timeline-tool" id="split-button" title="Dividir no cursor · S"><svg><use href="#i-scissors"/></svg>Dividir</button>
+          <button class="icon-button" id="delete-button" aria-label="Remover cena selecionada" title="Remover cena"><svg><use href="#i-trash"/></svg></button>
+          <span class="tool-divider"></span>
+          <div class="timeline-zoom"><button class="icon-button" id="zoom-out" aria-label="Diminuir zoom">−</button><label class="sr-only" for="timeline-zoom">Zoom da linha do tempo</label><input id="timeline-zoom" type="range" min="0.5" max="8" step="0.25" value="1"><button class="icon-button" id="zoom-in" aria-label="Aumentar zoom">+</button><button class="button timeline-tool" id="fit-timeline">Ajustar</button></div>
+          <button class="button timeline-tool draft-tool" id="draft-button"><svg><use href="#i-spark"/></svg>Rascunho</button>
+        </div>
+      </div>
+      <div class="timeline-body">
+        <div class="track-labels" aria-hidden="true"><span class="ruler-label">TEMPO</span><span class="video-label"><svg><use href="#i-film"/></svg>Vídeo</span><span class="audio-label"><svg><use href="#i-mic"/></svg>Áudio</span></div>
+        <div id="timeline-scroll" class="timeline-scroll" tabindex="0" aria-label="Trilhas de vídeo e áudio; use as setas para mover o cursor">
+          <div id="timeline" class="timeline">
+            <div id="time-ruler" class="time-ruler" aria-label="Régua de tempo"></div>
+            <div id="video-track" class="video-track" aria-label="Clipes de vídeo"></div>
+            <div id="audio-track" class="audio-track" aria-label="Faixa de narração"></div>
+            <div id="timeline-playhead" class="timeline-playhead" role="slider" tabindex="0" aria-label="Cursor da linha do tempo" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><span></span></div>
+          </div>
+        </div>
+      </div>
+      <div class="timeline-footer"><span id="timeline-hint">Clique na régua para posicionar o cursor. Arraste as bordas do clipe para aparar.</span><span id="total-duration">Duração total —</span></div>
+    </section>
   </main>
   <input type="file" id="file-input" multiple accept="video/*,audio/*,.mov,.mkv,.m4a" hidden>
   <audio id="voice-player" preload="metadata"></audio>
   <dialog id="new-dialog"><form id="new-form"><div class="dialog-header"><h2>Uma nova história</h2><button type="button" class="icon-button close-dialog" aria-label="Fechar"><svg><use href="#i-close"/></svg></button></div><label class="field-label" for="new-name">Nome do projeto</label><input id="new-name" required maxlength="120" placeholder="Ex.: Um passeio da Cora"><label class="field-label" for="new-script">Roteiro <span class="muted">· opcional</span></label><textarea id="new-script" rows="6" maxlength="20000" placeholder="Pode trazer seu roteiro depois."></textarea><button class="button primary full">Criar projeto</button></form></dialog>
   <dialog id="export-dialog"><div class="dialog-header"><div><span class="eyebrow">PRONTO PARA SAIR DO ESTÚDIO</span><h2>Leve sua história.</h2></div><button class="icon-button close-dialog" aria-label="Fechar"><svg><use href="#i-close"/></svg></button></div><p class="help">A exportação usa os arquivos originais e preserva o projeto para novos ajustes.</p><label class="field-label" for="export-quality">Qualidade</label><select id="export-quality"><option value="full">Entrega final · 1080 × 1920</option><option value="preview">Prévia leve · 540 × 960</option></select><p id="export-summary" class="export-summary"></p><button class="button primary full" id="start-export"><svg><use href="#i-down"/></svg>Gerar vídeo</button><div id="export-jobs"></div></dialog>
   <div id="toast" role="status" aria-live="polite" hidden></div>
+  <dialog id="phone-dialog"><div class="dialog-header"><h2>Seu estúdio no iPhone</h2><button type="button" class="icon-button close-dialog" aria-label="Fechar instruções do iPhone"><svg><use href="#i-close"/></svg></button></div><p class="help" id="phone-connection-note"></p><ol class="phone-steps"><li>Abra o endereço do estúdio no <strong>Safari</strong> e entre com seu usuário e senha.</li><li>Toque em <strong>Compartilhar → Adicionar à Tela de Início</strong>.</li><li>Abra a Lili pelo novo ícone para enviar vídeos e ajustar seus cortes.</li></ol><p class="voice-note">Mantenha o notebook ligado e conectado à internet. Os vídeos são processados nele.</p></dialog>
 </body>
 </html>

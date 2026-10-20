@@ -1,12 +1,14 @@
 """Importação e exportação locais. Os arquivos originais nunca são alterados."""
 
 import copy
+import array
 import json
 import mimetypes
 import os
 import re
 import shutil
 import subprocess
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -199,6 +201,37 @@ class MediaService:
             if not output.exists():
                 run(["-ss", at, "-i", self.source(project_id, asset), "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "3", output])
         return output
+
+    def waveform(self, project_id, media_id):
+        asset = self.store.media(project_id, media_id)
+        if asset.get("status") != "ready" or not asset.get("has_audio"):
+            raise EditorError("Escolha um arquivo pronto que contenha áudio.")
+        output = self.store.folder(project_id) / "media" / f"{media_id}.waveform.json"
+        with self.lock:
+            if output.exists():
+                return json.loads(output.read_text(encoding="utf-8"))
+            # Decode in small chunks so a long recording cannot fill memory.
+            process = subprocess.Popen([executable(), "-hide_banner", "-loglevel", "error", "-nostdin",
+                                        "-i", str(self.source(project_id, asset)), "-vn", "-ac", "1", "-ar", "8000",
+                                        "-f", "s16le", "-"], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+            window = max(1, int(asset["duration"] * 8000 / 2048))
+            peaks = []
+            try:
+                while raw := process.stdout.read(window * 2):
+                    samples = array.array("h", raw)
+                    if sys.byteorder != "little":
+                        samples.byteswap()
+                    peaks.append(round(max(map(abs, samples), default=0) / 32768, 5))
+                if process.wait(timeout=30):
+                    raise EditorError("Não foi possível ler a forma de onda do áudio.", 422)
+            finally:
+                process.stdout.close()
+                if process.poll() is None:
+                    process.kill()
+                    process.wait()
+            result = {"duration": asset["duration"], "peaks": peaks}
+            output.write_text(json.dumps(result), encoding="utf-8")
+            return result
 
     def export(self, project_id, expected_revision, quality="full"):
         project = self.store.get(project_id)

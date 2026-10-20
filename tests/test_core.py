@@ -69,6 +69,34 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(self.p["timeline"], [])
         self.assertEqual(len(self.p["media"]), 2)
 
+    def test_split_preserves_duration_metadata_and_can_be_undone(self):
+        clip = self.add()
+        self.apply("clip_update", {"clip_id": clip["id"], "title": "Cora", "volume": 0.4, "block_id": "bloco-1"})
+        original = self.p["timeline"][0].copy()
+        self.apply("clip_split", {"clip_id": clip["id"], "at": 2.25})
+        left, right = self.p["timeline"]
+        self.assertEqual(self.p["duration"], 3)
+        self.assertEqual((left["start"], left["end"], right["start"], right["end"]), (1, 2.25, 2.25, 4))
+        self.assertEqual(left["id"], original["id"])
+        self.assertNotEqual(right["id"], left["id"])
+        for key in ("media_id", "label", "title", "volume", "block_id"):
+            self.assertEqual(right[key], original[key])
+        self.apply("undo", {})
+        self.assertEqual(self.p["timeline"], [original])
+
+    def test_invalid_or_locked_split_is_atomic(self):
+        clip = self.add()
+        revision = self.p["revision"]
+        for at in (1, 1.09, 3.95, 4, 9, None, True):
+            with self.subTest(at=at), self.assertRaises(EditorError):
+                self.apply("clip_split", {"clip_id": clip["id"], "at": at})
+        self.refresh()
+        self.assertEqual(self.p["revision"], revision)
+        self.assertEqual(len(self.p["timeline"]), 1)
+        self.apply("clip_update", {"clip_id": clip["id"], "locked": True})
+        with self.assertRaises(EditorError):
+            self.apply("clip_split", {"clip_id": clip["id"], "at": 2})
+
     def test_agent_and_manual_edits_share_state_after_restart(self):
         clip = self.add()
         self.p = self.store.apply(self.p["id"], "clip_update", {"clip_id": clip["id"], "title": "Cora"}, self.p["revision"], "codex")

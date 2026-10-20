@@ -154,7 +154,7 @@ class Store:
             raise EditorError("Escolha um vídeo que já terminou de importar.")
         start = number(data.get("start", 0), 0, asset["duration"])
         end = number(data.get("end", asset["duration"]), 0, asset["duration"])
-        if end - start < 0.1:
+        if round(end - start, 4) < 0.1:
             raise EditorError("A cena precisa ter pelo menos 0,1 segundo.")
         clip_id = data.get("id", uid())
         if not isinstance(clip_id, str) or not re.fullmatch(r"[a-f0-9]{32}", clip_id):
@@ -200,6 +200,16 @@ class Store:
                     raise EditorError("Posição inválida.")
                 p["timeline"].remove(clip)
                 p["timeline"].insert(index, clip)
+            elif operation == "clip_split":
+                clip = self.find(p["timeline"], args.get("clip_id"))
+                if clip["locked"]:
+                    raise EditorError("Desproteja esta cena antes de dividir.", 409)
+                at = number(args.get("at"), clip["start"], clip["end"])
+                if min(round(at - clip["start"], 4), round(clip["end"] - at, 4)) < 0.1:
+                    raise EditorError("Deixe pelo menos 0,1 segundo de cada lado do corte.")
+                right = self.validate_clip(p, {**clip, "id": uid(), "start": at})
+                clip["end"] = at
+                p["timeline"].insert(p["timeline"].index(clip) + 1, right)
             elif operation == "clip_remove":
                 clip = self.find(p["timeline"], args.get("clip_id"))
                 if clip["locked"]:
