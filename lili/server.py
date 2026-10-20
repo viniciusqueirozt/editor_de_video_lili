@@ -14,6 +14,7 @@ from .core import EditorError, Store, text, uid
 from .media import ALLOWED, MediaService
 from .uploads import Uploads
 from .ai import AIEditor
+from .httpguard import validate_headers
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 
@@ -31,6 +32,10 @@ class EditorServer(ThreadingHTTPServer):
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "Lili/0.1"
+
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(120)
 
     def log_message(self, fmt, *args):
         if args and isinstance(args[0], str) and ("/api/jobs" in args[0] or "GET /api/projects" in args[0]):
@@ -81,6 +86,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def handle_request(self):
         try:
+            validate_headers(self.headers)
             # Acesso somente em loopback. Validar Host e Origin evita DNS rebinding e pedidos de páginas externas.
             host = self.headers.get("Host", "")
             allowed_hosts = {f"127.0.0.1:{self.server.server_port}", f"localhost:{self.server.server_port}"}

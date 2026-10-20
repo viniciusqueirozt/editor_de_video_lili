@@ -67,6 +67,7 @@ Ferramentas:
 | `clip_move` | `clip_id`, `index` a partir de zero |
 | `clip_split` | `clip_id`, `at` no tempo do arquivo de origem; deixa pelo menos 0,1 segundo de cada lado |
 | `clip_remove` | `clip_id` |
+| `clip_duplicate` | `clip_id`; insere uma cópia editável após a cena, preservando o original e sua proteção |
 | `timeline_replace` | `clips` como lista; preservar integralmente as cenas protegidas e seus IDs |
 | `narration_set` | `media_id` ou `null`, `volume` opcional, `offset` em segundos opcional |
 | `request_add` | `text` |

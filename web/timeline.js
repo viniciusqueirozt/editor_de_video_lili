@@ -98,6 +98,7 @@ function updatePlayhead(time){
   const c=currentClip(), local=c?time-before():0;
   $("#split-button").disabled=!c||c.locked||local<.1-.00001||c.end-c.start-local<.1-.00001||project.timeline.length>=100;
   $("#delete-button").disabled=!c||c.locked;
+  $("#duplicate-button").disabled=!c||project.timeline.length>=100;
   if(playing){
     const x=time*timelineScale;
     if(x>trackScroll.scrollLeft+trackScroll.clientWidth-35||x<trackScroll.scrollLeft)trackScroll.scrollLeft=Math.max(0,x-40);
@@ -171,6 +172,7 @@ $("#split-button").addEventListener("click",()=>{
   mutate("clip_split",{clip_id:c.id,at:roundTime(c.start+cursor-before())},"Clipe dividido no cursor. Você pode desfazer.");
 });
 $("#delete-button").addEventListener("click",()=>{const c=currentClip();if(c&&!c.locked)mutate("clip_remove",{clip_id:c.id},"Cena removida. Você pode desfazer.");});
+$("#duplicate-button").addEventListener("click",()=>{const c=currentClip();if(c&&!$("#duplicate-button").disabled)mutate("clip_duplicate",{clip_id:c.id},"Cena duplicada. A cópia pode ser ajustada livremente.");});
 trackScroll.addEventListener("keydown",e=>{
   if(e.key==="ArrowLeft"||e.key==="ArrowRight"){
     e.preventDefault();seekTo(cursor+(e.key==="ArrowLeft"?-1:1)*(e.shiftKey?1:1/30));

@@ -241,6 +241,10 @@ class Store:
                 if clip["locked"]:
                     raise EditorError("Desproteja a cena antes de removê-la.", 409)
                 p["timeline"].remove(clip)
+            elif operation == "clip_duplicate":
+                clip = self.find(p["timeline"], args.get("clip_id"))
+                duplicate = self.validate_clip(p, {**clip, "id": uid(), "locked": False})
+                p["timeline"].insert(p["timeline"].index(clip) + 1, duplicate)
             elif operation == "timeline_replace":
                 data = args.get("clips")
                 if not isinstance(data, list) or len(data) > 100:

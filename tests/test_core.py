@@ -158,6 +158,21 @@ class ProjectTests(unittest.TestCase):
     def test_blocks_keep_script_order(self):
         self.assertEqual([b["text"] for b in script_blocks("A\n\nB\ncom outra linha\n\nC")], ["A", "B\ncom outra linha", "C"])
 
+    def test_duplicate_is_editable_preserves_protected_original_and_can_be_undone(self):
+        clip = self.add()
+        self.apply("clip_update", {"clip_id": clip["id"], "locked": True, "title": ""})
+        original = self.p["timeline"][0].copy()
+        self.apply("clip_duplicate", {"clip_id": clip["id"]})
+        left, right = self.p["timeline"]
+        self.assertEqual(left, original)
+        self.assertFalse(right["locked"])
+        self.assertNotEqual(left["id"], right["id"])
+        self.assertEqual((left["start"], left["end"]), (right["start"], right["end"]))
+        self.apply("clip_update", {"clip_id": right["id"], "end": 5})
+        self.apply("undo", {})
+        self.apply("undo", {})
+        self.assertEqual(self.p["timeline"], [original])
+
     def test_requests_remain_pending_until_agent_completes(self):
         self.apply("request_add", {"text": "Trocar a abertura"})
         request = self.p["requests"][0]

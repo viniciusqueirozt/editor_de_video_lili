@@ -51,6 +51,10 @@ class RemoteServer(ThreadingHTTPServer):
 class RemoteHandler(BaseHTTPRequestHandler):
     server_version = "Lili"
 
+    def setup(self):
+        super().setup()
+        self.connection.settimeout(120)
+
     def log_message(self, *args):
         # No URLs, credentials or session cookies in logs.
         pass
@@ -164,6 +168,8 @@ class RemoteHandler(BaseHTTPRequestHandler):
 
     def dispatch(self):
         try:
+            from .httpguard import validate_headers
+            validate_headers(self.headers)
             origin = self.origin()
             if not origin:
                 return self.send("Endereço não permitido.", 403)
