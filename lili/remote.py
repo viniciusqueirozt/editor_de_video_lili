@@ -169,8 +169,15 @@ class RemoteHandler(BaseHTTPRequestHandler):
                 return self.send("Endereço não permitido.", 403)
             if self.headers.get("Sec-Fetch-Site") == "cross-site":
                 return self.send("Origem não permitida.", 403)
-            if self.command not in ("GET", "HEAD") and self.headers.get("Origin") != origin:
-                return self.send("Origem não permitida.", 403)
+            if self.command not in ("GET", "HEAD"):
+                request_origin = self.headers.get("Origin")
+                # A privacy-preserving browser can send Origin: null on a form
+                # navigation. Fetch Metadata is browser-controlled, so accept
+                # only same-origin requests in that case, never same-site or
+                # cross-site. An explicit foreign Origin is always rejected.
+                metadata_same_origin = self.headers.get("Sec-Fetch-Site") == "same-origin"
+                if request_origin != origin and not (request_origin in (None, "null") and metadata_same_origin):
+                    return self.send("Origem não permitida.", 403)
             if self.path in ("/auth/login", "/auth/setup"):
                 return self.auth(self.path == "/auth/setup")
             if not self.server.credential():

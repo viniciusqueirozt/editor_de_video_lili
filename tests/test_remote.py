@@ -96,5 +96,14 @@ class RemoteTests(unittest.TestCase):
         for _ in range(8):self.assertEqual(self.request('/auth/login','POST',{'username':'elisa','password':'incorrect'})[0],401)
         self.assertEqual(self.request('/auth/login','POST',{'username':'elisa','password':self.password})[0],429)
 
+    def test_private_browser_form_uses_same_origin_fetch_metadata(self):
+        self.setup_login()
+        self.cookie=''
+        form={'username':'elisa','password':self.password}
+        self.assertEqual(self.request('/auth/login','POST',form,{'Origin':'null','Sec-Fetch-Site':'same-origin'})[0],303)
+        for headers in ({'Origin':'null'}, {'Origin':'null','Sec-Fetch-Site':'same-site'}, {'Origin':'null','Sec-Fetch-Site':'cross-site'}, {'Origin':'https://evil.example','Sec-Fetch-Site':'same-origin'}):
+            with self.subTest(headers=headers):
+                self.assertEqual(self.request('/auth/login','POST',form,headers)[0],403)
+
 
 if __name__=='__main__':unittest.main()
