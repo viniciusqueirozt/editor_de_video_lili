@@ -4,12 +4,15 @@
 !.env.example
 *.pem
 *.key
+/.codex/config.toml
 
 # Vídeos e materiais de trabalho locais
 /media/
 /videos/
 /exports/
 /work/
+/outputs/*.png
+/outputs/*.jpg
 *.mp4
 *.mov
 *.m4v

@@ -1,41 +1,77 @@
-# Editor de Vídeo Lili
+# Lili — seu estúdio de vídeo
 
-Projeto de edição de vídeo assistida por IA para reduzir o trabalho manual da Elisa e preservar seu estilo, com gravação e revisão pelo iPhone e processamento no computador.
+Editor local para a Elisa revisar uma primeira montagem, ajustar cenas e acrescentar a narração. A interface e o Codex compartilham o mesmo projeto, com proteção de cenas, revisões e histórico de alterações.
 
-## Estado atual
+## Primeira versão funcional
 
-O projeto está na fase de planejamento e validação técnica. Ainda não há aplicativo próprio, integração operacional com o Codex ou edição automática testada com os vídeos da Elisa.
+- Importação de vídeos e áudios, com miniaturas e prévias compatíveis com o navegador.
+- Roteiro dividido em blocos e etiquetas por arquivo.
+- Sequência editável: trocar tomada, ajustar entrada e saída, reordenar, editar título e controlar volume.
+- Proteção de cenas e desfazer, com salvamento no computador.
+- Narração adicionada depois da montagem, com volume e posição inicial.
+- Exportação real em MP4/H.264, em 1080 × 1920 ou prévia leve em 540 × 960.
+- CLI e servidor MCP para o Codex inspecionar mídia e editar a mesma montagem da interface.
+- Pedidos de ajuste salvos em uma fila local para o Codex.
 
-O [plano do piloto](outputs/piloto-elisa.md) registra os requisitos, as verificações realizadas, as limitações conhecidas e o primeiro teste proposto.
+O botão **Montar rascunho** usa etiquetas e comprimento do roteiro. A seleção visual por IA é feita pelo agente ao inspecionar os arquivos e aplicar os trechos escolhidos. Os pedidos da interface ainda dependem de uma sessão ativa do Codex; não há execução autônoma nem integração paga de IA embutida no navegador.
 
-## Fluxo proposto
+## Iniciar no Windows
 
-1. Receber os vídeos originais e o briefing do trabalho.
-2. Analisar o material e aplicar referências de edição aprovadas pela Elisa.
-3. Usar o Codex e o Concat para montar uma primeira versão.
-4. Entregar uma prévia para revisão no iPhone.
-5. Aplicar ajustes solicitados e exportar a versão aprovada.
+Na raiz deste checkout:
 
-Serão avaliadas duas formas de revisão: pedidos por mensagem e finalização manual no CapCut. A transferência de projetos com todas as faixas editáveis para o CapCut ainda não foi confirmada.
+```powershell
+.\iniciar.ps1
+```
 
-## Conteúdo atendido pelo piloto
+Abrir **http://127.0.0.1:8765**. O terminal precisa permanecer aberto. Para iniciar sem janela de terminal, usar `iniciar.ps1 -Background`; o PID e os logs ficam em `work/`.
 
-- Vlogs, rotinas, bastidores e conteúdo lowfi.
-- Reviews, promocionais e depoimentos.
-- Campanhas, ensaios publicitários e trends, em testes posteriores.
+O inicializador usa primeiro `.venv`, depois o Python fornecido pelo Codex se disponível, ou o Python do sistema. Nesta máquina, as dependências já estão disponíveis localmente em `work/python-packages` e no runtime do Codex.
 
-Publicação principalmente no Instagram e depois no TikTok. Durações informadas: 15 a 30 segundos, 1 minuto e 30 segundos a 3 minutos e, ocasionalmente, 4 a 5 minutos.
+Para preparar outra máquina com Python 3.12 ou superior:
 
-## Base técnica em avaliação
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\iniciar.ps1
+```
 
-O [Concat](https://github.com/jub0t/Concat) é o motor de edição candidato. Seu código atual inclui MCP; o código da versão publicada v0.2.7 consultada não contém o comando `--mcp`. A escolha entre a API da versão publicada e uma compilação com MCP depende de um teste de integração.
+Um FFmpeg instalado no sistema pode ser usado; alternativamente, `imageio-ffmpeg` fornece o executável. A variável `LILI_FFMPEG` seleciona outro caminho. Títulos usam Arial no Windows ou DejaVu Sans no Linux; `LILI_FONT` permite escolher outro arquivo de fonte.
 
-Referência consultada do Concat: `79116bd0f9a103c633d888603ad27890e929dbdc`. O código do Concat não foi incorporado a este repositório. Sua licença e os termos das futuras integrações devem ser considerados antes da comercialização.
+## Edição pelo Codex
 
-## Próximo passo
+Ver [CLI, MCP e operações](docs/codex.md). A CLI já permite trabalhar com o servidor em execução:
 
-Selecionar um review ou depoimento já entregue, com o vídeo final, os arquivos originais, o briefing e uma estimativa do tempo de edição. Comparar qualidade e tempo de revisão nos dois fluxos antes de ampliar o sistema.
+```powershell
+python -m lili.cli list
+python -m lili.cli context ID_DO_PROJETO
+```
 
-## Arquivos locais
+O MCP oferece leitura de contexto, folhas de imagens, edição, exportação e consulta de progresso. Uma configuração local por projeto pode ser usada em `.codex/config.toml`; caminhos específicos da máquina são ignorados pelo Git. O cliente precisa carregar esse cadastro para apresentar as ferramentas.
 
-Guardar material de trabalho em `media/`, `videos/`, `exports/` ou `work/`, que são ignoradas pelo Git. Credenciais devem permanecer em arquivos locais ignorados, como `.env`; compartilhar somente exemplos sem segredos.
+## Material já usado no piloto
+
+Foram analisados dois vídeos finalizados da Elisa e recebidos os nove arquivos do passeio na Catedral, além do roteiro. Uma primeira montagem visual foi preparada pelo Codex com esses nove arquivos e salva como projeto editável. Os originais permanecem preservados.
+
+- [Roteiro e plano de montagem](outputs/roteiro-cora-catedral.md).
+- [Análise inicial do estilo](outputs/analise-referencias-elisa.md).
+- [Direção de produto](outputs/direcao-produto.md).
+- [Estado e verificação da versão 0.1](outputs/versao-0.1.md).
+
+## Dados locais
+
+Os projetos, mídias importadas, prévias, exportações e históricos ficam em `work/lili-data/`, fora do versionamento. Os arquivos recebidos não são enviados a serviços externos. O servidor escuta apenas em `127.0.0.1` e esta versão não oferece acesso direto pelo iPhone.
+
+A interface tem layout responsivo e cuidados de toque, mas ainda precisa de teste em iPhone real e de uma conexão autenticada ao computador. O CapCut continua como alternativa de finalização; a transferência de timeline editável entre os programas não foi implementada.
+
+## Motor de processamento
+
+Esta versão usa FFmpeg local. O [Concat](https://github.com/jub0t/Concat) continua como motor candidato para uma etapa posterior; seu código não foi incorporado ao projeto. O código da versão publicada v0.2.7 consultada não tinha o comando MCP disponível na branch principal. Nenhuma integração operacional com o Concat é alegada nesta versão.
+
+## Verificação
+
+```powershell
+python -m unittest discover -s tests -v
+node --check web/app.js
+```
+
+Os testes cobrem persistência, revisões concorrentes, cenas protegidas, desfazer, importação, montagem de vídeo sem áudio, narração adicional, títulos, orientação por metadados, exportação, leitura parcial de mídia e protocolo MCP. O Node é necessário apenas para a verificação de sintaxe do JavaScript, não para executar o editor.

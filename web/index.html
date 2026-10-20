@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <meta name="theme-color" content="#f7f6f2">
+  <meta name="description" content="Seu olhar, com mais tempo para criar. Estúdio local de edição assistida da Lili.">
+  <title>Lili — seu estúdio de vídeo</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <svg class="symbols" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><defs>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="m9 5 11 7-11 7z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5"/></symbol>
+    <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 3v13m-5-5 5 5 5-5M4 17v4h16v-4"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 3 2.7 6.3L21 12l-6.3 2.7L12 21l-2.7-6.3L3 12l6.3-2.7zM20 2v5m-2.5-2.5h5"/></symbol>
+    <symbol id="i-back" viewBox="0 0 24 24"><path d="m10 6-6 6 6 6m-5-6h10a5 5 0 0 1 0 10"/></symbol>
+    <symbol id="i-left" viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></symbol>
+    <symbol id="i-right" viewBox="0 0 24 24"><path d="m10 6 6 6-6 6"/></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="3"/><path d="M8 10V6a4 4 0 0 1 8 0v4M12 14v3"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7m4-7v7"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-film" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M7 3v18M17 3v18M3 8h4m-4 8h4m10-8h4m-4 8h4"/></symbol>
+    <symbol id="i-mic" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="13" rx="4"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v1"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+  </defs></svg>
+  <header class="app-header">
+    <a class="brand" href="/" aria-label="Lili, início"><span class="brand-mark">l</span><span>lili<span class="brand-dot">.</span></span></a>
+    <span class="header-divider"></span>
+    <div class="project-switch"><span class="eyebrow">SEU ESTÚDIO</span><label class="sr-only" for="project-select">Projeto atual</label><select id="project-select"><option>Carregando projetos…</option></select></div>
+    <button class="icon-button" id="new-project" title="Novo projeto" aria-label="Novo projeto"><svg><use href="#i-plus"/></svg></button>
+    <div class="header-spacer"></div>
+    <span class="save-status" id="save-status"><i></i> Salvo neste computador</span>
+    <button class="button quiet" id="context-button">Contexto para o Codex</button>
+    <button class="button primary" id="export-button"><svg><use href="#i-down"/></svg><span>Exportar</span></button>
+  </header>
+  <main class="workspace">
+    <aside class="library panel">
+      <div class="panel-heading"><div><span class="eyebrow">COMECE POR AQUI</span><h1>Seu material<span class="small-count" id="media-count">0</span></h1></div><button class="icon-button" id="import-top" aria-label="Importar arquivos" title="Importar arquivos"><svg><use href="#i-plus"/></svg></button></div>
+      <nav class="tabs" aria-label="Biblioteca do projeto"><button class="tab active" data-tab="media">Mídia</button><button class="tab" data-tab="script">Roteiro</button><button class="tab" data-tab="requests">Pedidos <span id="request-count"></span></button></nav>
+      <section id="tab-media" class="library-content">
+        <button class="upload-zone" id="import-zone"><span class="upload-icon"><svg><use href="#i-upload"/></svg></span><strong>Traga suas gravações</strong><span>Vídeos, áudios e a sua próxima história.</span><small>MOV, MP4, M4A e outros · até 2 GB por arquivo</small></button>
+        <div id="upload-progress" hidden><span id="upload-label"></span><progress id="upload-meter" max="100" value="0"></progress></div>
+        <div class="section-caption"><span>ARQUIVOS DO PROJETO</span><span id="ready-count"></span></div>
+        <div id="media-list" class="media-list"></div>
+      </section>
+      <section id="tab-script" class="library-content" hidden><label class="field-label" for="script-input">O que vamos contar?</label><p class="help">Separe o roteiro em parágrafos. Cada um vira um bloco da história.</p><textarea id="script-input" class="script-input" maxlength="20000" placeholder="Escreva ou cole seu roteiro aqui…"></textarea><button id="save-script" class="button secondary full">Salvar roteiro</button><div id="script-blocks" class="script-blocks"></div></section>
+      <section id="tab-requests" class="library-content" hidden><h2>Um ajuste de cada vez.</h2><p class="help">Registre o que quer mudar. Os pedidos ficam disponíveis para o Codex executar neste projeto.</p><form id="request-form"><label class="sr-only" for="request-input">Ajuste desejado</label><textarea id="request-input" rows="4" maxlength="4000" placeholder="Ex.: aos 12 segundos, usar uma tomada mais próxima da Cora."></textarea><button class="button secondary full" type="submit">Salvar pedido</button></form><p class="microcopy">Aguardam o Codex; não são executados automaticamente.</p><div id="requests-list"></div></section>
+    </aside>
+    <section class="editor">
+      <div class="editor-heading"><div><span class="eyebrow">UM POUCO DE CADA MOMENTO</span><h2 id="project-name">Sua próxima história</h2></div><span class="format-tag">9:16 <span>·</span> 1080p</span></div>
+      <nav class="workflow" aria-label="Etapas da edição"><button class="step active" id="step-visual"><span>01</span> Montagem visual</button><span class="step-line"></span><button class="step" id="step-voice"><span>02</span> Narração</button><span class="step-line"></span><button class="step" id="step-export"><span>03</span> Finalizar</button></nav>
+      <div id="project-note" class="project-note" hidden></div>
+      <div class="preview-stage" id="preview-stage"><span class="stage-label">PRÉVIA DA MONTAGEM</span><div class="video-frame" id="video-frame"><video id="player" playsinline preload="metadata"></video><div class="preview-title" id="preview-title"></div><div class="preview-empty" id="preview-empty"><svg><use href="#i-film"/></svg><h3>Sua história começa aqui.</h3><p>Adicione uma cena ou monte um<br>rascunho a partir do roteiro.</p></div></div><span class="stage-note" id="stage-note">Seu olhar em cada escolha.</span></div>
+      <div class="playback"><div class="playback-buttons"><button class="icon-button" id="previous-clip" aria-label="Cena anterior"><svg><use href="#i-left"/></svg></button><button class="play-button" id="play-button" aria-label="Reproduzir montagem"><svg><use href="#i-play"/></svg></button><button class="icon-button" id="next-clip" aria-label="Próxima cena"><svg><use href="#i-right"/></svg></button></div><span class="timecode" id="timecode">00:00 <span>/ 00:00</span></span><input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Posição na montagem"><span class="scene-position" id="scene-position">Nenhuma cena</span></div>
+      <section class="timeline-panel"><div class="timeline-heading"><div><h2>A sua sequência <span id="clip-count">0 cenas</span></h2><p id="timeline-subtitle">Escolha os momentos. Encontre o ritmo.</p></div><div class="timeline-actions"><button class="icon-button" id="undo-button" aria-label="Desfazer última alteração" title="Desfazer"><svg><use href="#i-back"/></svg></button><button class="button secondary" id="draft-button"><svg><use href="#i-spark"/></svg>Montar rascunho</button></div></div><div id="timeline" class="timeline"><div class="timeline-empty"><span>01</span><p>Os momentos que você escolher aparecem aqui.</p></div></div><div class="timeline-footer"><span><i class="status-dot"></i> Alterações salvas no projeto</span><span id="total-duration">Duração total —</span></div></section>
+    </section>
+    <aside class="inspector panel"><div class="panel-heading"><div><span class="eyebrow">DO SEU JEITO</span><h2>Ajustes finos</h2></div><svg class="heading-icon"><use href="#i-spark"/></svg></div><nav class="tabs" aria-label="Tipo de ajuste"><button class="tab active" data-inspector="scene">Cena</button><button class="tab" data-inspector="voice">Narração</button></nav><div id="scene-inspector" class="inspector-content"></div><div id="voice-inspector" class="inspector-content" hidden></div><div class="inspector-bottom"><span class="tiny-brand">lili.</span><p>Mais tempo para criar.<br>Seu olhar continua aqui.</p></div></aside>
+  </main>
+  <input type="file" id="file-input" multiple accept="video/*,audio/*,.mov,.mkv,.m4a" hidden>
+  <audio id="voice-player" preload="metadata"></audio>
+  <dialog id="new-dialog"><form id="new-form"><div class="dialog-header"><h2>Uma nova história</h2><button type="button" class="icon-button close-dialog" aria-label="Fechar"><svg><use href="#i-close"/></svg></button></div><label class="field-label" for="new-name">Nome do projeto</label><input id="new-name" required maxlength="120" placeholder="Ex.: Um passeio da Cora"><label class="field-label" for="new-script">Roteiro <span class="muted">· opcional</span></label><textarea id="new-script" rows="6" maxlength="20000" placeholder="Pode trazer seu roteiro depois."></textarea><button class="button primary full">Criar projeto</button></form></dialog>
+  <dialog id="export-dialog"><div class="dialog-header"><div><span class="eyebrow">PRONTO PARA SAIR DO ESTÚDIO</span><h2>Leve sua história.</h2></div><button class="icon-button close-dialog" aria-label="Fechar"><svg><use href="#i-close"/></svg></button></div><p class="help">A exportação usa os arquivos originais e preserva o projeto para novos ajustes.</p><label class="field-label" for="export-quality">Qualidade</label><select id="export-quality"><option value="full">Entrega final · 1080 × 1920</option><option value="preview">Prévia leve · 540 × 960</option></select><p id="export-summary" class="export-summary"></p><button class="button primary full" id="start-export"><svg><use href="#i-down"/></svg>Gerar vídeo</button><div id="export-jobs"></div></dialog>
+  <div id="toast" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

@@ -1,0 +1,101 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+from lili.core import EditorError, Store, script_blocks, uid
+
+
+class ProjectTests(unittest.TestCase):
+    def setUp(self):
+        scratch = Path("work/tests").resolve()
+        scratch.mkdir(parents=True, exist_ok=True)
+        self.temp = tempfile.TemporaryDirectory(dir=scratch)
+        self.addCleanup(self.temp.cleanup)
+        self.store = Store(self.temp.name)
+        self.p = self.store.create("Teste", "Chegada ao parque.\n\nCora explora o parque.")
+        self.asset = {"id": uid(), "name": "cora.mov", "filename": "source.mov", "status": "ready", "kind": "video", "duration": 10, "has_audio": True, "tags": ["cora", "parque"]}
+        self.store.add_media(self.p["id"], self.asset)
+        self.refresh()
+
+    def refresh(self):
+        self.p = self.store.get(self.p["id"])
+
+    def apply(self, operation, args):
+        self.p = self.store.apply(self.p["id"], operation, args, self.p["revision"])
+        return self.p
+
+    def add(self):
+        self.apply("clip_add", {"media_id": self.asset["id"], "start": 1, "end": 4})
+        return self.p["timeline"][-1]
+
+    def test_rejects_stale_revision_without_losing_edit(self):
+        revision = self.p["revision"]
+        self.add()
+        with self.assertRaises(EditorError) as error:
+            self.store.apply(self.p["id"], "script_update", {"script": "Antigo"}, revision)
+        self.assertEqual(error.exception.status, 409)
+        self.refresh()
+        self.assertEqual(len(self.p["timeline"]), 1)
+        self.assertNotEqual(self.p["script"], "Antigo")
+
+    def test_lock_protects_clip_from_update_removal_and_replacement(self):
+        clip = self.add()
+        self.apply("clip_update", {"clip_id": clip["id"], "locked": True})
+        for operation, args in [("clip_update", {"clip_id": clip["id"], "end": 5}), ("clip_remove", {"clip_id": clip["id"]}), ("timeline_replace", {"clips": []})]:
+            with self.subTest(operation=operation), self.assertRaises(EditorError):
+                self.apply(operation, args)
+        self.refresh()
+        self.assertEqual(self.p["timeline"][0]["end"], 4)
+        self.apply("timeline_replace", {"clips": self.p["timeline"]})
+        self.apply("clip_update", {"clip_id": clip["id"], "locked": False})
+        self.apply("clip_update", {"clip_id": clip["id"], "end": 5})
+
+    def test_invalid_trim_is_atomic(self):
+        clip = self.add()
+        revision = self.p["revision"]
+        for changes in ({"start": 5, "end": 4}, {"end": 11}, {"end": float("nan")}, {"start": True}):
+            with self.subTest(changes=changes), self.assertRaises(EditorError):
+                self.apply("clip_update", {"clip_id": clip["id"], **changes})
+        self.refresh()
+        self.assertEqual(self.p["revision"], revision)
+        self.assertEqual(self.p["duration"], 3)
+
+    def test_undo_preserves_imported_media(self):
+        self.add()
+        new_asset = {**self.asset, "id": uid(), "name": "outra.mov"}
+        self.store.add_media(self.p["id"], new_asset)
+        self.refresh()
+        self.apply("undo", {})
+        self.assertEqual(self.p["timeline"], [])
+        self.assertEqual(len(self.p["media"]), 2)
+
+    def test_agent_and_manual_edits_share_state_after_restart(self):
+        clip = self.add()
+        self.p = self.store.apply(self.p["id"], "clip_update", {"clip_id": clip["id"], "title": "Cora"}, self.p["revision"], "codex")
+        reread = Store(self.temp.name).get(self.p["id"])
+        self.assertEqual(reread["timeline"][0]["title"], "Cora")
+        self.assertEqual(reread["last_change"]["actor"], "codex")
+
+    def test_draft_is_labeled_and_respects_locks(self):
+        result = self.store.draft(self.p["id"], self.p["revision"])
+        self.p = result["project"]
+        self.assertEqual(result["method"], "tags_and_script_length")
+        self.assertEqual(len(self.p["timeline"]), 2)
+        self.assertTrue(all(c["end"] <= 10 for c in self.p["timeline"]))
+        self.apply("clip_update", {"clip_id": self.p["timeline"][0]["id"], "locked": True})
+        with self.assertRaises(EditorError):
+            self.store.draft(self.p["id"], self.p["revision"])
+
+    def test_blocks_keep_script_order(self):
+        self.assertEqual([b["text"] for b in script_blocks("A\n\nB\ncom outra linha\n\nC")], ["A", "B\ncom outra linha", "C"])
+
+    def test_requests_remain_pending_until_agent_completes(self):
+        self.apply("request_add", {"text": "Trocar a abertura"})
+        request = self.p["requests"][0]
+        self.assertEqual(request["status"], "pending")
+        self.apply("request_complete", {"request_id": request["id"], "result": "Abertura atualizada"})
+        self.assertEqual(self.p["requests"][0]["status"], "done")
+
+
+if __name__ == "__main__":
+    unittest.main()

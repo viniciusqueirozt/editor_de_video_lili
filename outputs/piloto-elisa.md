@@ -2,6 +2,8 @@
 
 Proposta atualizada com os formatos, destinos e preferências informados pelo usuário. As regras de estilo ainda dependem da análise de vídeos e da validação da Elisa.
 
+Uma primeira versão local já foi construída e os nove arquivos originais do passeio foram recebidos. O Codex preparou e exportou uma montagem visual editável com esse material. Ver [estado da versão 0.1](versao-0.1.md). As etapas seguintes deste documento distinguem a direção prevista do que já foi entregue.
+
 ## Contexto confirmado
 
 - Formatos: vlogs, rotinas, bastidores, conteúdo lowfi, reviews promocionais, propaganda, ensaios publicitários, depoimentos e trends.
@@ -9,9 +11,11 @@ Proposta atualizada com os formatos, destinos e preferências informados pelo us
 - Destino principal: Instagram; secundário: TikTok.
 - Captura e edição atuais: iPhone 15 Pro Max e CapCut.
 - Preferência de revisão: avaliar tanto pedidos por mensagem quanto ajustes manuais no CapCut.
+- Processo informado: roteiro → gravação → montagem visual → gravação da narração → união do vídeo com a voz. O roteiro do passeio na Catedral já foi recebido e está em [Roteiro e plano de montagem](roteiro-cora-catedral.md).
+- Direção proposta após a referência externa: permitir IA e ajustes manuais no mesmo projeto, com revisão no iPhone; o CapCut permanece como alternativa a comparar. Ver [Direção de produto](direcao-produto.md).
 - Referências fornecidas: @elisabottelhoat, @elisabottelho e @cora.agatinha. O usuário informa que a Elisa gravou e editou os vídeos desses perfis. Isso não significa que todos os trabalhos tenham as mesmas regras de edição.
 
-Foi possível abrir a página pública de @elisabottelhoat no navegador. A tentativa de abrir um Reel exigiu login. Os vídeos não foram assistidos nem analisados; não inferir fontes, ritmo, paleta ou transições a partir da página do perfil.
+Na consulta inicial, foi possível abrir a página pública de @elisabottelhoat, mas a tentativa de abrir um Reel exigiu login. Depois, o usuário forneceu dois arquivos finalizados locais: IMG_7019_vlog cora 2.MOV e IMG_6447_vlog cora.MOV. Suas imagens, metadados e transcrições automáticas foram analisados localmente. Os resultados estão em [Análise das referências](analise-referencias-elisa.md), com um [perfil descritivo inicial](perfil-vlog-elisa.v0.1.json) sujeito à aprovação da Elisa. Não inferir o estilo a partir da página do perfil.
 
 ## Perfis de edição propostos
 
@@ -33,11 +37,11 @@ A Elisa grava no iPhone, recebe uma primeira edição e revisa pelo celular. O s
 
 1. Enviar os arquivos originais e um briefing: objetivo, público, duração desejada, falas obrigatórias, referências e restrições do cliente.
 2. O computador recebe os arquivos e mantém os originais intactos.
-3. A análise produz transcrição, imagens de referência e uma proposta de seleção e sequência de cenas. Transcrição sozinha não basta para escolher cenas ou avaliar composição e ritmo.
-4. O Codex aplica um plano de edição no Concat e salva um projeto separado para cada versão relevante.
-5. O sistema gera uma prévia leve para revisão no iPhone.
-6. A Elisa pede ajustes associados a momentos do vídeo, por exemplo: “aos 12 segundos, usar a outra tomada; diminuir a música na fala final”.
-7. O Codex aplica os ajustes e gera outra prévia. A entrega final depende da aprovação da Elisa.
+3. A análise relaciona roteiro e imagens dos brutos para propor a seleção e a sequência de cenas. A transcrição entra quando houver fala disponível, sem substituir a análise visual.
+4. O Codex aplica um plano de edição no Concat e preserva versões relevantes do projeto.
+5. O sistema gera uma prévia leve da montagem visual para revisão no iPhone.
+6. A Elisa pede ajustes e grava a narração. O sistema propõe ajustes de duração para acomodar a voz sem perder as escolhas já aprovadas.
+7. Aplicar texto, música e acabamento aprovados. Pedidos por mensagem e os futuros controles manuais devem atuar no mesmo projeto. A entrega final depende da aprovação da Elisa.
 
 O acesso pelo celular e a transferência de arquivos ainda precisam ser implementados e testados. A existência de conversas sincronizadas não demonstra que este computador já possa ser comandado pelo telefone. Para o piloto, o computador executa a edição; ela pode revisar as prévias pelo celular, com você conduzindo o Codex enquanto validamos o processo.
 
@@ -112,10 +116,10 @@ Antes de comercializar, avaliar as obrigações da licença AGPL do Concat, os t
 
 ## Próximos insumos
 
-1. Vídeo finalizado e arquivos originais de um review ou depoimento representativo, em uma pasta acessível neste computador.
+1. Revisão da primeira montagem visual feita com os nove originais já recebidos do passeio na Catedral.
 2. Briefing desse trabalho e estimativa do tempo que ela levou para editar.
-3. O que a Elisa considera especialmente bem resolvido nesse vídeo e quais ajustes ela faz com mais frequência.
-4. Progressivamente, outras referências até cobrir os grupos de conteúdo. A preferência final de revisão será decidida depois da comparação dos dois caminhos.
+3. O que a Elisa considera especialmente bem resolvido nesse vídeo e quais ajustes ela faz com mais frequência. A ordem entre roteiro, montagem e voz já foi informada.
+4. Narração separada para ajustar a montagem final. Progressivamente, outras referências até cobrir os grupos de conteúdo. A preferência final de revisão será decidida depois da comparação dos dois caminhos.
 
 ## Fontes
 

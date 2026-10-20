@@ -1,0 +1,58 @@
+{
+  "schema_version": "0.1",
+  "profile_id": "elisa-vlog-narrado",
+  "status": "draft_pending_elisa_validation",
+  "purpose": "Referência descritiva para o piloto; ainda não é uma configuração executável de edição.",
+  "confirmed_workflow": ["roteiro", "gravação dos vídeos", "montagem visual", "gravação da narração", "união de vídeo e narração"],
+  "first_script": "roteiro-cora-catedral.md",
+  "evidence": [
+    {
+      "file": "IMG_7019_vlog cora 2.MOV",
+      "duration_seconds": 35.734,
+      "content": "passeio com narração e apresentação de atividade/produto",
+      "observations": [
+        "Título branco curto na abertura",
+        "Imagem do local acompanha sua menção na narração perto de 6 segundos",
+        "Sequência de tomadas muito rápidas perto de 25 a 26 segundos",
+        "Encerramento com convite à interação identificado na transcrição"
+      ]
+    },
+    {
+      "file": "IMG_6447_vlog cora.MOV",
+      "duration_seconds": 34.833333,
+      "content": "apresentação de perfil e convite a parcerias",
+      "observations": [
+        "Imagens de personagem, criadora, rotina e produto acompanham a narração",
+        "Gravação de tela do perfil acompanha o assunto comunidade perto de 13 a 18 segundos",
+        "Sequência de tomadas rápidas perto de 4 a 6 segundos",
+        "Encerramento com convite a colaboração identificado na transcrição"
+      ]
+    }
+  ],
+  "observed_delivery": {
+    "width": 1080,
+    "height": 1920,
+    "aspect_ratio": "9:16",
+    "nominal_frame_rate": 30,
+    "video_codec": "hevc",
+    "color": "SDR BT.709, 8 bits",
+    "audio_codec": "aac"
+  },
+  "proposed_editing_rules": {
+    "narrative": "Usar o roteiro e os brutos na primeira montagem; depois relacionar a narração gravada às cenas e ajustar o ritmo preservando escolhas aprovadas.",
+    "pacing": "Variar a duração das tomadas e usar sequências rápidas somente em pontos selecionados.",
+    "shot_roles": ["personagem", "criadora", "ação", "ambiente", "produto", "gravação de tela"],
+    "text": "Tratar título, legendas e chamada final como decisões separadas e sujeitas a aprovação.",
+    "audio": "Preservar a narração fornecida; validar trilha e volumes em teste específico.",
+    "versioning": "Guardar o projeto e os originais para permitir revisão sem reconstruir tudo a partir do MP4."
+  },
+  "unconfirmed": [
+    "Fonte e parâmetros exatos de texto",
+    "Presets de cor e efeitos",
+    "Sincronismo dos cortes com a música",
+    "Volumes e tratamento de áudio",
+    "Transferência de timeline editável para o CapCut",
+    "Representatividade destas duas amostras para outros formatos"
+  ],
+  "pilot_requires": ["brutos do passeio na Catedral", "orientações adicionais do trabalho se existirem", "narração posterior para ajuste final", "validação da Elisa"]
+}
