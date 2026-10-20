@@ -7,6 +7,7 @@ const precise = seconds => `${Number(seconds).toFixed(1).replace(".",",")} s`;
 const player = $("#player"), voice = $("#voice-player");
 let project = null, selected = null, projects = [], queue = Promise.resolve(), toastTimer, uploadRunning = false, playing = false, seekBusy = false, loadedSource = "", dragId = null;
 let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
+let importBatch = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, { ...options, headers: {"Content-Type":"application/json", ...options.headers} });
@@ -79,6 +80,7 @@ function render() {
   $("#draft-button").disabled = !project.script.trim() || !project.media.some(m=>m.kind==="video" && m.status==="ready");
   $("#export-button").disabled = !project.timeline.length;
   $("#export-summary").textContent = `${project.timeline.length} cenas · ${precise(project.duration)} · versão ${project.revision}`;
+  setImportControls();updateImportStatus(project);
 }
 function renderInspector() {
   const c = currentClip();
@@ -229,12 +231,13 @@ $("#seek").addEventListener("change",()=>{seekBusy=false;updateTime();});
 $("#seek").addEventListener("pointercancel",()=>{seekBusy=false;updateTime();});
 
 async function uploadFiles(files){
-  if(uploadRunning){toast("Aguarde o envio atual terminar.");return;}if(!project)return;
-  uploadRunning=true;$("#upload-progress").hidden=false;
+  if(uploadRunning){toast("Aguarde o envio atual terminar.");return;}if(!project||!files.length)return;
+  uploadRunning=true;$("#upload-progress").hidden=false;$("#dismiss-upload").hidden=true;
   const projectId=project.id;
+  importBatch={projectId,total:files.length,mediaIds:[],error:""};setImportControls();
   try{
-    for(const file of files){
-      $("#upload-label").textContent=`Enviando ${file.name}`;$("#upload-meter").value=0;
+    for(const [index,file] of files.entries()){
+      $("#upload-label").textContent=`Enviando ${index+1} de ${files.length}: ${file.name}`;$("#upload-meter").value=0;
       const upload=await api(`/api/projects/${projectId}/uploads`,{method:"POST",body:JSON.stringify({name:file.name,size:file.size})});
       for(let offset=0;offset<file.size;offset+=upload.chunk_size){
         const end=Math.min(file.size,offset+upload.chunk_size);
@@ -255,16 +258,57 @@ async function uploadFiles(files){
         // A repeat of the same block is acknowledged without appending it twice.
         try{await sendBlock();}catch(first){await sendBlock();}
       }
-      await api(`/api/projects/${projectId}/uploads/${upload.upload_id}/complete`,{method:"POST",body:"{}"});
+      const imported=await api(`/api/projects/${projectId}/uploads/${upload.upload_id}/complete`,{method:"POST",body:"{}"});
+      importBatch.mediaIds.push(imported.media_id);
     }
     toast("Arquivos recebidos. As prévias estão sendo preparadas.");
     if(project.id===projectId){project=await api(`/api/projects/${projectId}`);render();}
   }
-  catch(e){toast(e.message,true);}finally{uploadRunning=false;$("#upload-progress").hidden=true;$("#file-input").value="";}
+  catch(e){importBatch.error=e.message;toast(e.message,true);}finally{uploadRunning=false;setImportControls();updateImportStatus(project);$("#file-input").value="";}
 }
-$("#file-input").addEventListener("change",e=>uploadFiles([...e.target.files]));["#import-top","#import-zone"].forEach(s=>$(s).addEventListener("click",()=>$("#file-input").click()));
+function setImportControls(){
+  ["#project-select","#new-project","#import-main","#import-mobile","#import-top","#import-zone"].forEach(selector=>$(selector).disabled=uploadRunning||!project);
+}
+function updateImportStatus(snapshot){
+  const status=$("#upload-progress");
+  if(!importBatch||snapshot?.id!==importBatch.projectId){status.hidden=true;return;}
+  status.hidden=false;
+  if(uploadRunning)return;
+  $("#dismiss-upload").hidden=false;
+  const assets=importBatch.mediaIds.map(id=>snapshot.media.find(m=>m.id===id));
+  const ready=assets.filter(m=>m?.status==="ready").length,failed=assets.filter(m=>m?.status==="error").length;
+  if(importBatch.error){$("#upload-label").textContent=`Envio interrompido: ${importBatch.error}`;$("#upload-meter").value=0;}
+  else if(failed){$("#upload-label").textContent=`${ready} prontos · ${failed} com falha. Veja os detalhes em Arquivos.`;$("#upload-meter").value=100;}
+  else if(ready===importBatch.total){$("#upload-label").textContent=ready===1?"Arquivo pronto para usar.":`${ready} arquivos prontos para usar.`;$("#upload-meter").value=100;}
+  else{$("#upload-label").textContent=`Arquivos recebidos. Preparando prévias (${ready} de ${importBatch.total} prontas)…`;$("#upload-meter").removeAttribute("value");}
+}
+function openFilePicker(){
+  if(!project)return;if(uploadRunning){toast("Aguarde o envio atual terminar.");return;}
+  pause();$("#file-input").click();
+}
+function markMobilePanel(name){document.querySelectorAll("[data-mobile-panel]").forEach(button=>{if(button.dataset.mobilePanel===name)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");});}
+function revealPanel(selector){
+  if(matchMedia("(max-width:930px)").matches)$(selector).scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
+}
+function openLibraryTab(name,focus=false){
+  document.querySelectorAll("[data-tab]").forEach(tab=>tab.classList.toggle("active",tab.dataset.tab===name));
+  ["media","script","requests"].forEach(tab=>$("#tab-"+tab).hidden=tab!==name);
+  markMobilePanel(name);revealPanel(".library");
+  if(focus)$(name==="requests"?"#request-input":"#script-input").focus({preventScroll:true});
+}
+$("#file-input").addEventListener("change",e=>uploadFiles([...e.target.files]));
+["#import-top","#import-zone","#import-main","#import-mobile"].forEach(s=>$(s).addEventListener("click",openFilePicker));
+$("#codex-main").addEventListener("click",()=>openLibraryTab("requests",true));
+$("#view-uploaded").addEventListener("click",()=>openLibraryTab("media"));
+$("#dismiss-upload").addEventListener("click",()=>{importBatch=null;$("#upload-progress").hidden=true;});
+document.querySelectorAll("[data-mobile-panel]").forEach(button=>button.addEventListener("click",()=>{
+  const name=button.dataset.mobilePanel;
+  if(name==="timeline"){markMobilePanel(name);$(".timeline-panel").scrollIntoView({behavior:"auto",block:"start"});}
+  else if(name==="scene"){markMobilePanel(name);setInspector("scene");revealPanel(".inspector");}
+  else openLibraryTab(name,name==="requests");
+}));
 $("#import-zone").addEventListener("dragover",e=>e.preventDefault());$("#import-zone").addEventListener("drop",e=>{e.preventDefault();uploadFiles([...e.dataTransfer.files]);});
-document.querySelectorAll("[data-tab]").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(t=>t.classList.toggle("active",t===b));["media","script","requests"].forEach(t=>$("#tab-"+t).hidden=t!==b.dataset.tab);}));
+document.querySelectorAll("[data-tab]").forEach(button=>button.addEventListener("click",()=>openLibraryTab(button.dataset.tab)));
 document.querySelectorAll("[data-inspector]").forEach(b=>b.addEventListener("click",()=>setInspector(b.dataset.inspector)));
 $("#step-visual").addEventListener("click",()=>setInspector("scene"));$("#step-voice").addEventListener("click",()=>{setInspector("voice");if(matchMedia("(max-width:640px)").matches)$(".inspector").scrollIntoView({behavior:"smooth",block:"start"});});
 $("#save-script").addEventListener("click",()=>mutate("script_update",{script:$("#script-input").value},"Roteiro salvo."));
@@ -281,7 +325,7 @@ $("#start-export").addEventListener("click",async()=>{await queue;try{await api(
 async function refreshJobs(){if(!project)return;const jobs=await api(`/api/projects/${project.id}/jobs`),exports=jobs.filter(j=>j.kind==="export").reverse();const running=exports.some(j=>["queued","running"].includes(j.status));$("#start-export").disabled=running||!project.timeline.length;$("#export-jobs").innerHTML=exports.map(j=>`<div class="export-job"><strong>${j.status==="done"?"Seu vídeo está pronto.":j.status==="error"?"A exportação não terminou.":"Preparando seu vídeo…"}</strong>${j.status==="done"?`<small>${j.result.width} × ${j.result.height} · ${precise(j.result.duration)} · versão ${j.result.revision}</small><a href="${j.result.url}" download>Baixar vídeo MP4 ↓</a>`:j.status==="error"?`<p>${esc(j.error)}</p>`:`<progress max="100" value="${j.progress}"></progress><small>${j.progress}% · você pode fechar esta janela.</small>`}</div>`).join("");}
 $("#context-button").addEventListener("click",async()=>{try{const context=await api(`/api/projects/${project.id}/context`),blob=new Blob([JSON.stringify(context,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="lili-contexto.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("Contexto salvo. O Codex também pode acessar o projeto pela CLI ou pelo MCP.");}catch(e){toast(e.message,true);}});
 document.addEventListener("keydown",e=>{if(e.code==="Space"&&!/INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)&&!document.querySelector("dialog[open]")){e.preventDefault();playing?pause():play();}});
-setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}if($("#export-dialog").open)await refreshJobs();}catch{$("#save-status").textContent="Servidor desconectado";}},2500);
+setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}if($("#export-dialog").open)await refreshJobs();}catch{$("#save-status").textContent="Servidor desconectado";}},2500);
 (async()=>{try{await listProjects();if(!projects.length){const p=await api("/api/projects",{method:"POST",body:JSON.stringify({name:"Minha primeira história"})});await listProjects();await openProject(p.id);}else{const saved=localStorage.getItem("lili-project");await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);}}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});

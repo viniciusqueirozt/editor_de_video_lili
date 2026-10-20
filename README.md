@@ -5,6 +5,7 @@ Editor local para a Elisa revisar uma primeira montagem, ajustar cenas e acresce
 ## Primeira versão funcional
 
 - Importação de vídeos e áudios, com miniaturas e prévias compatíveis com o navegador.
+- No celular, importação em destaque, andamento do envio na área principal e barra inferior de ferramentas.
 - Roteiro dividido em blocos e etiquetas por arquivo.
 - Sequência editável: trocar tomada, ajustar entrada e saída, reordenar, editar título e controlar volume.
 - Linha do tempo com régua, cursor, zoom, miniaturas proporcionais, divisão no cursor e aparo por arrasto.
@@ -15,7 +16,7 @@ Editor local para a Elisa revisar uma primeira montagem, ajustar cenas e acresce
 - CLI e servidor MCP para o Codex inspecionar mídia e editar a mesma montagem da interface.
 - Pedidos de ajuste salvos em uma fila local para o Codex.
 
-O botão **Montar rascunho** usa etiquetas e comprimento do roteiro. A seleção visual por IA é feita pelo agente ao inspecionar os arquivos e aplicar os trechos escolhidos. Os pedidos da interface ainda dependem de uma sessão ativa do Codex; não há execução autônoma nem integração paga de IA embutida no navegador.
+O botão **Rascunho por etiquetas** usa etiquetas e comprimento do roteiro. A seleção visual por IA é feita pelo agente ao inspecionar os arquivos e aplicar os trechos escolhidos. Os pedidos da interface ainda dependem de uma sessão ativa do Codex; não há execução autônoma nem integração paga de IA embutida no navegador.
 
 ## Iniciar no Windows
 

@@ -81,4 +81,4 @@ Todos os tempos são segundos. O volume 1 corresponde a 100%; o piloto admite de
 4. Ler a revisão resultante, verificar os cortes e exportar uma cópia para revisão.
 5. Marcar um pedido como concluído somente depois de realizar e verificar a alteração.
 
-O botão “Montar rascunho” usa etiquetas e comprimento do roteiro; não executa análise visual por IA. O campo Pedidos salva uma fila local para o agente. Não há execução autônoma desses pedidos nem consumo de uma API paga pelo navegador.
+O botão “Rascunho por etiquetas” usa etiquetas e comprimento do roteiro; não executa análise visual por IA. O campo Pedidos salva uma fila local para o agente. Não há execução autônoma desses pedidos nem consumo de uma API paga pelo navegador.
