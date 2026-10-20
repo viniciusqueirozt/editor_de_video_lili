@@ -1,0 +1,38 @@
+# Credenciais e configurações locais
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Vídeos e materiais de trabalho locais
+/media/
+/videos/
+/exports/
+/work/
+*.mp4
+*.mov
+*.m4v
+*.mkv
+*.avi
+*.webm
+*.wav
+*.mp3
+*.m4a
+*.aac
+
+# Dependências e artefatos gerados
+node_modules/
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+target/
+dist/
+build/
+*.log
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+Desktop.ini
