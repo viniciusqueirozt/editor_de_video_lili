@@ -94,6 +94,15 @@ class IntegrationTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as error:
             urlopen(Request(self.base + result["url"], headers={"Range": "bytes=999999999-"}))
         self.assertEqual(error.exception.code, 416)
+        # Trash hides every media endpoint without deleting the source on disk.
+        source_path = self.store.folder(p["id"]) / "media" / asset["filename"]
+        edit("media_remove", {"media_id": asset["id"], "remove_usage": True})
+        self.assertTrue(source_path.exists())
+        with self.assertRaises(HTTPError) as missing:
+            urlopen(self.base + f"/api/projects/{p['id']}/media/{asset['id']}/thumbnail")
+        self.assertEqual(missing.exception.code, 404)
+        edit("undo", {})
+        self.assertTrue(self.client.call("GET", f"/api/projects/{p['id']}/media/{asset['id']}/thumbnail", binary=True))
         messages = [
             {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2024-11-05"}},
             {"jsonrpc": "2.0", "method": "notifications/initialized"},

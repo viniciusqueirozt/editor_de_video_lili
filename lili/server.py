@@ -148,7 +148,7 @@ class Handler(BaseHTTPRequestHandler):
                     if job["project_id"] != project_id or job["status"] != "done":
                         raise EditorError("Esta exportação não está disponível.", 404)
                     return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True)
-            if path in ("/", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
+            if path in ("/", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
                 return self.file(WEB / ("index.html" if path == "/" else path[1:]))
             raise EditorError("Página não encontrada.", 404)
         if path == "/api/projects" and self.command == "POST":

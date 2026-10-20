@@ -7,7 +7,7 @@ const precise = seconds => `${Number(seconds).toFixed(1).replace(".",",")} s`;
 const player = $("#player"), voice = $("#voice-player");
 let project = null, selected = null, projects = [], queue = Promise.resolve(), toastTimer, uploadRunning = false, playing = false, seekBusy = false, loadedSource = "", dragId = null;
 let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
-let importBatch = null;
+let importBatch = null, pendingRemoval = null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, { ...options, headers: {"Content-Type":"application/json", ...options.headers} });
@@ -67,14 +67,19 @@ function render() {
   $("#script-blocks").innerHTML = project.blocks.map((b,i)=>`<div class="script-block"><strong>BLOCO ${String(i+1).padStart(2,"0")}</strong>${esc(b.text)}</div>`).join("");
   $("#media-list").innerHTML = project.media.map(m => {
     const ready = m.status === "ready", video = m.kind === "video";
-    return `<article class="media-card">${ready && video ? `<img class="media-thumb" alt="" src="${assetUrl(m,"thumbnail")}">` : `<span class="media-thumb audio-thumb">${icon(m.kind==="audio"?"mic":"film")}</span>`}<div class="media-detail"><p class="media-name" title="${esc(m.name)}">${esc(m.name)}</p><p class="media-info">${ready ? `${precise(m.duration)} · ${video ? `${m.width}×${m.height}` : "Áudio"}` : esc(m.status==="error" ? "Falha ao importar" : "Preparando…")}</p>${ready ? `<button class="media-add" data-add="${m.id}">${icon(video ? "plus" : "mic")}${video ? "Adicionar" : "Usar narração"}</button>` : `<span class="microcopy">${esc(m.error || "Criando prévia")}</span>`}</div>${ready && video ? `<input class="tags-input" data-tags="${m.id}" aria-label="Etiquetas de ${esc(m.name)}" placeholder="Etiquetas: passeio, Cora…" value="${esc((m.tags||[]).join(", "))}">` : ""}</article>`;
+    return `<article class="media-card"><button class="icon-button media-delete" data-delete-media="${m.id}" aria-label="Excluir arquivo ${esc(m.name)}" title="Excluir arquivo" ${["ready","error"].includes(m.status)?"":"disabled"}>${icon("trash")}</button>${ready && video ? `<img class="media-thumb" alt="" src="${assetUrl(m,"thumbnail")}">` : `<span class="media-thumb audio-thumb">${icon(m.kind==="audio"?"mic":"film")}</span>`}<div class="media-detail"><p class="media-name" title="${esc(m.name)}">${esc(m.name)}</p><p class="media-info">${ready ? `${precise(m.duration)} · ${video ? `${m.width}×${m.height}` : "Áudio"}` : esc(m.status==="error" ? "Falha ao importar" : "Preparando…")}</p>${ready ? `<button class="media-add" data-add="${m.id}">${icon(video ? "plus" : "mic")}${video ? "Adicionar" : "Usar narração"}</button>` : `<span class="microcopy">${esc(m.error || "Criando prévia")}</span>`}</div>${ready && video ? `<input class="tags-input" data-tags="${m.id}" aria-label="Etiquetas de ${esc(m.name)}" placeholder="Etiquetas: passeio, Cora…" value="${esc((m.tags||[]).join(", "))}">` : ""}</article>`;
   }).join("") || '<p class="empty-note">Cada gravação guarda um momento.<br>Importe o primeiro para começar.</p>';
   $("#media-list").querySelectorAll("[data-add]").forEach(button=>button.addEventListener("click",()=>{
     const m = project.media.find(a=>a.id===button.dataset.add);
-    if(m.kind==="audio") { mutate("narration_set",{media_id:m.id},"Narração adicionada. Revise os volumes e a duração."); setInspector("voice"); }
-    else mutate("clip_add",{media_id:m.id,start:0,end:Math.min(4,m.duration)},"Cena adicionada à sequência.");
+    if(m.kind==="audio") { mutate("narration_set",{media_id:m.id},"Narração adicionada. Revise os volumes e a duração.").then(ok=>{if(ok)openInspector("voice");}); }
+    else mutate("clip_add",{media_id:m.id,start:0,end:Math.min(4,m.duration)},"Cena adicionada à sequência.").then(ok=>{if(ok)closeSheet();});
   }));
   $("#media-list").querySelectorAll("[data-tags]").forEach(input=>input.addEventListener("change",()=>mutate("media_annotate",{media_id:input.dataset.tags,tags:input.value.split(",").map(s=>s.trim()).filter(Boolean)},"Etiquetas salvas.")));
+  $("#media-list").querySelectorAll("[data-delete-media]").forEach(button=>button.addEventListener("click",()=>confirmMediaRemoval(button.dataset.deleteMedia)));
+  const trash=project.trash||[];
+  $("#trash-count").textContent=trash.length?`(${trash.length})`:"";
+  $("#trash-list").innerHTML=trash.map(m=>`<article class="trash-card"><div>${icon(m.kind==="audio"?"mic":"film")}<strong>${esc(m.name)}</strong></div><button class="button secondary" data-restore-media="${m.id}">Restaurar</button></article>`).join("")||'<p class="empty-note">Nenhum arquivo na Lixeira.</p>';
+  $("#trash-list").querySelectorAll("[data-restore-media]").forEach(button=>button.addEventListener("click",()=>mutate("media_restore",{media_id:button.dataset.restoreMedia},"Arquivo restaurado à biblioteca.")));
   renderTimeline(); renderRequests(); seekTo(Math.min(cursor, project.duration));
   $("#undo-button").disabled = !project.undo_available;
   $("#draft-button").disabled = !project.script.trim() || !project.media.some(m=>m.kind==="video" && m.status==="ready");
@@ -275,7 +280,7 @@ function updateImportStatus(snapshot){
   status.hidden=false;
   if(uploadRunning)return;
   $("#dismiss-upload").hidden=false;
-  const assets=importBatch.mediaIds.map(id=>snapshot.media.find(m=>m.id===id));
+  const assets=importBatch.mediaIds.map(id=>[...snapshot.media,...(snapshot.trash||[])].find(m=>m.id===id));
   const ready=assets.filter(m=>m?.status==="ready").length,failed=assets.filter(m=>m?.status==="error").length;
   if(importBatch.error){$("#upload-label").textContent=`Envio interrompido: ${importBatch.error}`;$("#upload-meter").value=0;}
   else if(failed){$("#upload-label").textContent=`${ready} prontos · ${failed} com falha. Veja os detalhes em Arquivos.`;$("#upload-meter").value=100;}
@@ -287,15 +292,43 @@ function openFilePicker(){
   pause();$("#file-input").click();
 }
 function markMobilePanel(name){document.querySelectorAll("[data-mobile-panel]").forEach(button=>{if(button.dataset.mobilePanel===name)button.setAttribute("aria-current","page");else button.removeAttribute("aria-current");});}
+function closeSheet(){delete document.body.dataset.mobileSheet;$("#sheet-backdrop").hidden=true;markMobilePanel("timeline");}
+function openInspector(name){setInspector(name);markMobilePanel("scene");revealPanel(".inspector");}
 function revealPanel(selector){
+  if(matchMedia("(max-width:640px)").matches){
+    document.body.dataset.mobileSheet=selector===".library"?"library":"inspector";$("#sheet-backdrop").hidden=false;return;
+  }
   if(matchMedia("(max-width:930px)").matches)$(selector).scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
 }
 function openLibraryTab(name,focus=false){
   document.querySelectorAll("[data-tab]").forEach(tab=>tab.classList.toggle("active",tab.dataset.tab===name));
-  ["media","script","requests"].forEach(tab=>$("#tab-"+tab).hidden=tab!==name);
+  ["media","script","requests","trash"].forEach(tab=>$("#tab-"+tab).hidden=tab!==name);
   markMobilePanel(name);revealPanel(".library");
   if(focus)$(name==="requests"?"#request-input":"#script-input").focus({preventScroll:true});
 }
+function confirmMediaRemoval(id){
+  const m=project.media.find(a=>a.id===id);if(!m)return;
+  pause();pendingRemoval={projectId:project.id,mediaId:id,revision:project.revision};
+  const clips=project.timeline.filter(c=>c.media_id===id), narration=project.narration?.media_id===id, locked=clips.some(c=>c.locked);
+  $("#delete-media-name").textContent=m.name;
+  $("#delete-media-impact").textContent=locked?"Este arquivo tem cenas protegidas. Desproteja essas cenas em Ajustes antes de excluir.":clips.length||narration?`Também serão removidas ${clips.length} cena(s) da linha do tempo${narration?" e a faixa de narração":""}. A duração e o encaixe dos cortes seguintes podem mudar.`:"Este arquivo não está sendo usado na montagem.";
+  $("#confirm-delete-media").disabled=locked;
+  $("#delete-media-dialog").showModal();
+}
+$("#delete-media-form").addEventListener("submit",async e=>{
+  e.preventDefault();const target=pendingRemoval;if(!target)return;
+  // Await queued edits, then require review again if any usage may have changed.
+  await queue;
+  if(project.id!==target.projectId){$("#delete-media-dialog").close();return;}
+  if(project.revision!==target.revision){$("#delete-media-dialog").close();toast("O projeto mudou. Revise a exclusão novamente.",true);return;}
+  $("#confirm-delete-media").disabled=true;
+  if(await mutate("media_remove",{media_id:target.mediaId,remove_usage:true},"Arquivo enviado à Lixeira. Você pode desfazer."))$("#delete-media-dialog").close();
+  else $("#confirm-delete-media").disabled=false;
+});
+document.querySelectorAll("[data-close-sheet]").forEach(b=>b.addEventListener("click",closeSheet));
+$("#sheet-backdrop").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.querySelector("dialog[open]"))closeSheet();});
+matchMedia("(max-width:640px)").addEventListener("change",()=>closeSheet());
 $("#file-input").addEventListener("change",e=>uploadFiles([...e.target.files]));
 ["#import-top","#import-zone","#import-main","#import-mobile"].forEach(s=>$(s).addEventListener("click",openFilePicker));
 $("#codex-main").addEventListener("click",()=>openLibraryTab("requests",true));
@@ -303,14 +336,14 @@ $("#view-uploaded").addEventListener("click",()=>openLibraryTab("media"));
 $("#dismiss-upload").addEventListener("click",()=>{importBatch=null;$("#upload-progress").hidden=true;});
 document.querySelectorAll("[data-mobile-panel]").forEach(button=>button.addEventListener("click",()=>{
   const name=button.dataset.mobilePanel;
-  if(name==="timeline"){markMobilePanel(name);$(".timeline-panel").scrollIntoView({behavior:"auto",block:"start"});}
-  else if(name==="scene"){markMobilePanel(name);setInspector("scene");revealPanel(".inspector");}
+  if(name==="timeline"){closeSheet();markMobilePanel(name);$(".timeline-panel").scrollIntoView({behavior:"auto",block:"start"});}
+  else if(name==="scene"){openInspector("scene");}
   else openLibraryTab(name,name==="requests");
 }));
 $("#import-zone").addEventListener("dragover",e=>e.preventDefault());$("#import-zone").addEventListener("drop",e=>{e.preventDefault();uploadFiles([...e.dataTransfer.files]);});
 document.querySelectorAll("[data-tab]").forEach(button=>button.addEventListener("click",()=>openLibraryTab(button.dataset.tab)));
 document.querySelectorAll("[data-inspector]").forEach(b=>b.addEventListener("click",()=>setInspector(b.dataset.inspector)));
-$("#step-visual").addEventListener("click",()=>setInspector("scene"));$("#step-voice").addEventListener("click",()=>{setInspector("voice");if(matchMedia("(max-width:640px)").matches)$(".inspector").scrollIntoView({behavior:"smooth",block:"start"});});
+$("#step-visual").addEventListener("click",()=>setInspector("scene"));$("#step-voice").addEventListener("click",()=>{setInspector("voice");if(matchMedia("(max-width:640px)").matches)revealPanel(".inspector");});
 $("#save-script").addEventListener("click",()=>mutate("script_update",{script:$("#script-input").value},"Roteiro salvo."));
 $("#request-form").addEventListener("submit",async e=>{e.preventDefault();const input=$("#request-input");if(!input.value.trim())return;if(await mutate("request_add",{text:input.value},"Pedido salvo para o Codex. A execução depende de uma sessão do agente."))input.value="";});
 $("#undo-button").addEventListener("click",()=>mutate("undo",{},"Última alteração desfeita."));

@@ -66,11 +66,11 @@ function renderTimeline(){
 
 function renderAudioTrack(){
   const n=project.narration, track=$("#audio-track");
-  if(!n){track.innerHTML='<button class="add-voice-track" id="add-voice-track">+ Adicionar narração</button>';$("#add-voice-track").addEventListener("click",()=>setInspector("voice"));return;}
+  if(!n){track.innerHTML='<button class="add-voice-track" id="add-voice-track">+ Adicionar narração</button>';$("#add-voice-track").addEventListener("click",()=>openInspector("voice"));return;}
   const asset=project.media.find(m=>m.id===n.media_id), visible=Math.max(0,Math.min(asset.duration,project.duration-n.offset));
-  if(visible<=0){track.innerHTML='<button class="add-voice-track" id="add-voice-track">Narração começa após o fim · ajustar</button>';$("#add-voice-track").addEventListener("click",()=>setInspector("voice"));return;}
+  if(visible<=0){track.innerHTML='<button class="add-voice-track" id="add-voice-track">Narração começa após o fim · ajustar</button>';$("#add-voice-track").addEventListener("click",()=>openInspector("voice"));return;}
   track.innerHTML=`<button class="audio-region" id="audio-region" style="left:${n.offset*timelineScale}px;width:${visible*timelineScale}px" title="${esc(asset.name)}"><svg id="audio-waveform" preserveAspectRatio="none" aria-hidden="true"></svg><span>${icon("mic")}${esc(asset.name)}</span><small id="waveform-status">Lendo áudio…</small></button>`;
-  $("#audio-region").addEventListener("click",()=>setInspector("voice"));
+  $("#audio-region").addEventListener("click",()=>openInspector("voice"));
   const pid=project.id, key=`${pid}/${asset.id}`;
   if(!waveforms.has(key)) waveforms.set(key,api(assetUrl(asset,"waveform.json")).catch(error=>{waveforms.delete(key);throw error;}));
   waveforms.get(key).then(data=>{

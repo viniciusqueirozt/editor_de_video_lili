@@ -91,6 +91,8 @@ class Store:
         result["undo_available"] = bool(result.pop("history", []))
         result["duration"] = duration(result)
         result["blocks"] = script_blocks(result["script"])
+        result["trash"] = [m for m in result["media"] if m.get("deleted_at")]
+        result["media"] = [m for m in result["media"] if not m.get("deleted_at")]
         return result
 
     def get(self, project_id):
@@ -150,7 +152,7 @@ class Store:
         if not isinstance(data, dict):
             raise EditorError("Cada cena precisa ser um objeto com arquivo, entrada e saída.")
         asset = self.find(p["media"], data.get("media_id"), "Arquivo")
-        if asset.get("status") != "ready" or asset.get("kind") != "video":
+        if asset.get("deleted_at") or asset.get("status") != "ready" or asset.get("kind") != "video":
             raise EditorError("Escolha um vídeo que já terminou de importar.")
         start = number(data.get("start", 0), 0, asset["duration"])
         end = number(data.get("end", asset["duration"]), 0, asset["duration"])
@@ -174,17 +176,41 @@ class Store:
             if isinstance(expected_revision, bool) or expected_revision != p["revision"]:
                 raise EditorError("O projeto mudou. Atualize a página ou leia a revisão atual antes de editar.", 409)
             snapshot = {k: copy.deepcopy(p[k]) for k in self.SNAPSHOT_FIELDS}
+            snapshot["media_visibility"] = {m["id"]: m.get("deleted_at") for m in p["media"]}
             if operation == "script_update":
                 p["script"] = text(args.get("script", p["script"]))
                 p["name"] = text(args.get("name", p["name"]), 120) or p["name"]
                 p["description"] = text(args.get("description", p["description"]), 1000)
             elif operation == "media_annotate":
                 asset = self.find(p["media"], args.get("media_id"), "Arquivo")
+                if asset.get("deleted_at"):
+                    raise EditorError("Restaure o arquivo da Lixeira antes de editar.", 409)
                 tags = args.get("tags", asset.get("tags", []))
                 if not isinstance(tags, list) or len(tags) > 40:
                     raise EditorError("Use até 40 etiquetas.")
                 asset["tags"] = [text(t, 80) for t in tags if text(t, 80)]
                 asset["note"] = text(args.get("note", asset.get("note", "")), 2000)
+            elif operation == "media_remove":
+                asset = self.find(p["media"], args.get("media_id"), "Arquivo")
+                if asset.get("deleted_at"):
+                    raise EditorError("O arquivo já está na Lixeira.", 409)
+                if asset.get("status") not in ("ready", "error"):
+                    raise EditorError("Aguarde a importação terminar antes de excluir.", 409)
+                clips = [c for c in p["timeline"] if c["media_id"] == asset["id"]]
+                narration = p["narration"] and p["narration"]["media_id"] == asset["id"]
+                if any(c["locked"] for c in clips):
+                    raise EditorError("Desproteja as cenas deste arquivo antes de excluir.", 409)
+                if (clips or narration) and args.get("remove_usage") is not True:
+                    raise EditorError("Confirme também a remoção das cenas e da narração que usam este arquivo.", 409)
+                p["timeline"] = [c for c in p["timeline"] if c["media_id"] != asset["id"]]
+                if narration:
+                    p["narration"] = None
+                asset["deleted_at"] = now()
+            elif operation == "media_restore":
+                asset = self.find(p["media"], args.get("media_id"), "Arquivo")
+                if not asset.get("deleted_at"):
+                    raise EditorError("O arquivo não está na Lixeira.", 409)
+                asset.pop("deleted_at")
             elif operation == "clip_add":
                 p["timeline"].append(self.validate_clip(p, args))
             elif operation == "clip_update":
@@ -232,7 +258,7 @@ class Store:
                     p["narration"] = None
                 else:
                     asset = self.find(p["media"], media_id, "Arquivo")
-                    if asset.get("status") != "ready" or not asset.get("has_audio"):
+                    if asset.get("deleted_at") or asset.get("status") != "ready" or not asset.get("has_audio"):
                         raise EditorError("Escolha um arquivo importado que contenha áudio.")
                     p["narration"] = {"media_id": media_id, "volume": number(args.get("volume", 1), 0, 2),
                                       "offset": number(args.get("offset", 0), 0, 3600)}
@@ -247,7 +273,15 @@ class Store:
             elif operation == "undo":
                 if not p["history"]:
                     raise EditorError("Ainda não há alterações para desfazer.")
-                p.update(p["history"].pop())
+                previous = p["history"].pop()
+                visibility = previous.pop("media_visibility", {})
+                for asset in p["media"]:
+                    if asset["id"] in visibility:
+                        if visibility[asset["id"]]:
+                            asset["deleted_at"] = visibility[asset["id"]]
+                        else:
+                            asset.pop("deleted_at", None)
+                p.update(previous)
             else:
                 raise EditorError("Operação desconhecida.")
             if operation not in ("undo", "media_annotate", "request_add", "request_complete"):

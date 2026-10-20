@@ -84,6 +84,47 @@ class ProjectTests(unittest.TestCase):
         self.apply("undo", {})
         self.assertEqual(self.p["timeline"], [original])
 
+    def test_trash_removal_cascades_only_after_confirmation_and_undo_restores_usage(self):
+        clip = self.add()
+        self.apply("narration_set", {"media_id": self.asset["id"]})
+        with self.assertRaises(EditorError):
+            self.apply("media_remove", {"media_id": self.asset["id"]})
+        self.apply("media_remove", {"media_id": self.asset["id"], "remove_usage": True})
+        self.assertEqual(self.p["media"], [])
+        self.assertEqual(self.p["timeline"], [])
+        self.assertIsNone(self.p["narration"])
+        self.assertEqual(len(self.p["trash"]), 1)
+        with self.assertRaises(EditorError):
+            self.store.media(self.p["id"], self.asset["id"])
+        for operation in ("clip_add", "narration_set", "media_annotate"):
+            with self.subTest(operation=operation), self.assertRaises(EditorError):
+                self.apply(operation, {"media_id": self.asset["id"]})
+        newer = {**self.asset, "id": uid(), "status": "processing"}
+        self.store.add_media(self.p["id"], newer)
+        self.store.update_media(self.p["id"], self.asset["id"], {"note": "Preservar metadados"})
+        self.refresh()
+        self.apply("undo", {})
+        self.assertEqual(self.p["timeline"], [clip])
+        self.assertEqual(self.p["narration"]["media_id"], self.asset["id"])
+        self.assertEqual(len(self.p["media"]), 2)
+        self.assertEqual(self.p["media"][0]["note"], "Preservar metadados")
+
+    def test_trash_respects_locks_and_processing_and_restore_is_library_only(self):
+        clip = self.add()
+        self.apply("clip_update", {"clip_id": clip["id"], "locked": True})
+        with self.assertRaises(EditorError):
+            self.apply("media_remove", {"media_id": self.asset["id"], "remove_usage": True})
+        self.apply("clip_update", {"clip_id": clip["id"], "locked": False})
+        self.apply("media_remove", {"media_id": self.asset["id"], "remove_usage": True})
+        self.apply("media_restore", {"media_id": self.asset["id"]})
+        self.assertEqual(len(self.p["media"]), 1)
+        self.assertEqual(self.p["timeline"], [])
+        self.assertEqual(self.p["trash"], [])
+        self.store.update_media(self.p["id"], self.asset["id"], {"status": "processing"})
+        self.refresh()
+        with self.assertRaises(EditorError):
+            self.apply("media_remove", {"media_id": self.asset["id"]})
+
     def test_invalid_or_locked_split_is_atomic(self):
         clip = self.add()
         revision = self.p["revision"]

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
-  <meta name="theme-color" content="#f7f6f2">
+  <meta name="theme-color" content="#151719">
   <meta name="description" content="Seu olhar, com mais tempo para criar. Estúdio local de edição assistida da Lili.">
   <title>Lili — seu estúdio de vídeo</title>
   <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -13,6 +13,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/timeline.css">
+  <link rel="stylesheet" href="/editor.css">
   <script src="/app.js" defer></script>
   <script src="/timeline.js" defer></script>
 </head>
@@ -50,8 +51,8 @@
   </header>
   <main class="workspace">
     <aside class="library panel">
-      <div class="panel-heading"><div><span class="eyebrow">COMECE POR AQUI</span><h1>Seu material<span class="small-count" id="media-count">0</span></h1></div><button class="icon-button" id="import-top" aria-label="Importar arquivos" title="Importar arquivos"><svg><use href="#i-plus"/></svg></button></div>
-      <nav class="tabs" aria-label="Biblioteca do projeto"><button class="tab active" data-tab="media">Arquivos</button><button class="tab" data-tab="script">Roteiro</button><button class="tab" data-tab="requests">Codex <span id="request-count"></span></button></nav>
+      <div class="panel-heading"><div><span class="eyebrow">BIBLIOTECA</span><h1>Mídia do projeto<span class="small-count" id="media-count">0</span></h1></div><button class="icon-button sheet-close" data-close-sheet aria-label="Fechar biblioteca"><svg><use href="#i-close"/></svg></button><button class="icon-button" id="import-top" aria-label="Importar arquivos" title="Importar arquivos"><svg><use href="#i-plus"/></svg></button></div>
+      <nav class="tabs" aria-label="Biblioteca do projeto"><button class="tab active" data-tab="media">Arquivos</button><button class="tab" data-tab="script">Roteiro</button><button class="tab" data-tab="requests">Codex <span id="request-count"></span></button><button class="tab" data-tab="trash">Lixeira <span id="trash-count"></span></button></nav>
       <section id="tab-media" class="library-content">
         <button class="upload-zone" id="import-zone"><span class="upload-icon"><svg><use href="#i-upload"/></svg></span><strong>Traga suas gravações</strong><span>Vídeos, áudios e a sua próxima história.</span><small>MOV, MP4, M4A e outros · até 2 GB por arquivo</small></button>
         <div class="section-caption"><span>ARQUIVOS DO PROJETO</span><span id="ready-count"></span></div>
@@ -59,9 +60,10 @@
       </section>
       <section id="tab-script" class="library-content" hidden><label class="field-label" for="script-input">O que vamos contar?</label><p class="help">Separe o roteiro em parágrafos. Cada um vira um bloco da história.</p><textarea id="script-input" class="script-input" maxlength="20000" placeholder="Escreva ou cole seu roteiro aqui…"></textarea><button id="save-script" class="button secondary full">Salvar roteiro</button><div id="script-blocks" class="script-blocks"></div></section>
       <section id="tab-requests" class="library-content" hidden><h2>Edição com o Codex</h2><p class="help">Descreva o ajuste que você quer. O pedido fica salvo para o Codex aplicar durante uma sessão de trabalho neste projeto.</p><div class="agent-status"><i></i> Execução automática ainda não conectada</div><form id="request-form"><label class="sr-only" for="request-input">Ajuste desejado</label><textarea id="request-input" rows="4" maxlength="4000" placeholder="Ex.: encaixar a despedida na última frase e terminar no aceno."></textarea><button class="button secondary full" type="submit">Salvar pedido para o Codex</button></form><p class="microcopy">O pedido aguarda o agente. Você pode continuar editando pelos controles da linha do tempo.</p><div id="requests-list"></div><hr class="divider"><h3 class="draft-heading">Começar pelo roteiro</h3><p class="microcopy">Monta uma sequência inicial usando o roteiro e as etiquetas dos arquivos. A escolha visual por IA depende do Codex.</p><button class="button secondary full" id="draft-button"><svg><use href="#i-film"/></svg>Rascunho por etiquetas</button></section>
+      <section id="tab-trash" class="library-content" hidden><h2>Lixeira</h2><p class="help">Restaure arquivos para a biblioteca. Para recuperar também os cortes e a narração removidos, use Desfazer logo após a exclusão.</p><div id="trash-list"></div><p class="microcopy">Os arquivos ficam guardados no notebook. A Lixeira não libera espaço em disco.</p></section>
     </aside>
     <section class="editor">
-      <div class="editor-heading"><div><span class="eyebrow">UM POUCO DE CADA MOMENTO</span><h2 id="project-name">Sua próxima história</h2></div><span class="format-tag">9:16 <span>·</span> 1080p</span></div>
+      <div class="editor-heading"><div><span class="eyebrow">MONITOR</span><h2 id="project-name">Sua próxima história</h2></div><span class="format-tag">9:16 <span>·</span> 1080p</span></div>
       <div class="editor-mobile-actions"><button class="button primary" id="import-main"><svg><use href="#i-plus"/></svg>Importar arquivos</button><button class="button secondary" id="codex-main"><svg><use href="#i-spark"/></svg>Pedir ao Codex</button></div>
       <div id="upload-progress" class="upload-status" hidden><div class="upload-status-heading"><span id="upload-label" role="status" aria-live="polite"></span><button id="dismiss-upload" class="icon-button" aria-label="Fechar aviso de importação" hidden><svg><use href="#i-close"/></svg></button></div><progress id="upload-meter" aria-label="Andamento da importação" max="100" value="0"></progress><button id="view-uploaded" class="upload-link" type="button">Ver meus arquivos <span aria-hidden="true">→</span></button></div>
       <nav class="workflow" aria-label="Etapas da edição"><button class="step active" id="step-visual"><span>01</span> Montagem visual</button><span class="step-line"></span><button class="step" id="step-voice"><span>02</span> Narração</button><span class="step-line"></span><button class="step" id="step-export"><span>03</span> Finalizar</button></nav>
@@ -70,7 +72,7 @@
       <div class="playback"><div class="playback-buttons"><button class="icon-button" id="previous-clip" aria-label="Cena anterior"><svg><use href="#i-left"/></svg></button><button class="play-button" id="play-button" aria-label="Reproduzir montagem"><svg><use href="#i-play"/></svg></button><button class="icon-button" id="next-clip" aria-label="Próxima cena"><svg><use href="#i-right"/></svg></button></div><span class="timecode" id="timecode">00:00 <span>/ 00:00</span></span><input id="seek" type="range" min="0" max="1" step="0.01" value="0" aria-label="Posição na montagem"><span class="scene-position" id="scene-position">Nenhuma cena</span></div>
 
     </section>
-    <aside class="inspector panel"><div class="panel-heading"><div><span class="eyebrow">DO SEU JEITO</span><h2>Ajustes finos</h2></div><svg class="heading-icon"><use href="#i-spark"/></svg></div><nav class="tabs" aria-label="Tipo de ajuste"><button class="tab active" data-inspector="scene">Cena</button><button class="tab" data-inspector="voice">Narração</button></nav><div id="scene-inspector" class="inspector-content"></div><div id="voice-inspector" class="inspector-content" hidden></div><div class="inspector-bottom"><span class="tiny-brand">lili.</span><p>Mais tempo para criar.<br>Seu olhar continua aqui.</p></div></aside>
+    <aside class="inspector panel"><div class="panel-heading"><div><span class="eyebrow">PROPRIEDADES</span><h2>Ajustes</h2></div><button class="icon-button sheet-close" data-close-sheet aria-label="Fechar ajustes"><svg><use href="#i-close"/></svg></button></div><nav class="tabs" aria-label="Tipo de ajuste"><button class="tab active" data-inspector="scene">Cena</button><button class="tab" data-inspector="voice">Narração</button></nav><div id="scene-inspector" class="inspector-content"></div><div id="voice-inspector" class="inspector-content" hidden></div><div class="inspector-bottom"><span class="tiny-brand">lili.</span><p>Mais tempo para criar.<br>Seu olhar continua aqui.</p></div></aside>
 
     <section class="timeline-panel" aria-label="Linha do tempo">
       <div class="timeline-heading">
@@ -99,8 +101,10 @@
     </section>
   </main>
   <nav class="mobile-toolbar" aria-label="Ferramentas do editor"><button id="import-mobile"><svg><use href="#i-plus"/></svg><span>Importar</span></button><button data-mobile-panel="media"><svg><use href="#i-film"/></svg><span>Arquivos</span></button><button data-mobile-panel="timeline" aria-current="page"><svg><use href="#i-scissors"/></svg><span>Cortes</span></button><button data-mobile-panel="requests"><svg><use href="#i-spark"/></svg><span>Codex</span></button><button data-mobile-panel="scene"><svg><use href="#i-info"/></svg><span>Ajustes</span></button></nav>
+  <button id="sheet-backdrop" aria-label="Voltar à montagem" hidden></button>
   <input type="file" id="file-input" multiple accept="video/*,audio/*,.mov,.mkv,.m4a" hidden>
   <audio id="voice-player" preload="metadata"></audio>
+  <dialog id="delete-media-dialog" aria-labelledby="delete-media-title"><form id="delete-media-form"><div class="dialog-header"><h2 id="delete-media-title">Excluir arquivo?</h2><button type="button" class="icon-button close-dialog" aria-label="Cancelar exclusão"><svg><use href="#i-close"/></svg></button></div><p id="delete-media-name" class="delete-filename"></p><p id="delete-media-impact" class="help"></p><p class="microcopy">O arquivo vai para a Lixeira da Lili e poderá ser restaurado. O original no seu celular ou na pasta Downloads permanece intacto.</p><div class="dialog-actions"><button type="button" class="button secondary close-dialog">Cancelar</button><button id="confirm-delete-media" class="button destructive" type="submit">Mover para a Lixeira</button></div></form></dialog>
   <dialog id="new-dialog"><form id="new-form"><div class="dialog-header"><h2>Uma nova história</h2><button type="button" class="icon-button close-dialog" aria-label="Fechar"><svg><use href="#i-close"/></svg></button></div><label class="field-label" for="new-name">Nome do projeto</label><input id="new-name" required maxlength="120" placeholder="Ex.: Um passeio da Cora"><label class="field-label" for="new-script">Roteiro <span class="muted">· opcional</span></label><textarea id="new-script" rows="6" maxlength="20000" placeholder="Pode trazer seu roteiro depois."></textarea><button class="button primary full">Criar projeto</button></form></dialog>
   <dialog id="export-dialog"><div class="dialog-header"><div><span class="eyebrow">PRONTO PARA SAIR DO ESTÚDIO</span><h2>Leve sua história.</h2></div><button class="icon-button close-dialog" aria-label="Fechar"><svg><use href="#i-close"/></svg></button></div><p class="help">A exportação usa os arquivos originais e preserva o projeto para novos ajustes.</p><label class="field-label" for="export-quality">Qualidade</label><select id="export-quality"><option value="full">Entrega final · 1080 × 1920</option><option value="preview">Prévia leve · 540 × 960</option></select><p id="export-summary" class="export-summary"></p><button class="button primary full" id="start-export"><svg><use href="#i-down"/></svg>Gerar vídeo</button><div id="export-jobs"></div></dialog>
   <div id="toast" role="status" aria-live="polite" hidden></div>
