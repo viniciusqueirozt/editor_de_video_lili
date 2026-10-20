@@ -13,6 +13,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 from .core import EditorError, Store, text, uid
 from .media import ALLOWED, MediaService
 from .uploads import Uploads
+from .ai import AIEditor
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 
@@ -25,6 +26,7 @@ class EditorServer(ThreadingHTTPServer):
         self.store = store
         self.media = MediaService(store)
         self.uploads = Uploads(store, self.media)
+        self.ai = AIEditor(store, self.media)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -110,6 +112,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json({"authenticated": False})
             if path == "/api/projects":
                 return self.json(store.list())
+            if path == "/api/ai/status":
+                return self.json(self.server.ai.availability())
             if len(parts) == 3 and parts[:2] == ["api", "jobs"]:
                 return self.json(media.job(parts[2]))
             if len(parts) >= 3 and parts[:2] == ["api", "projects"]:
@@ -199,6 +203,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.json(store.apply(project_id, data.get("operation"), data.get("args", {}), data.get("expected_revision"), data.get("actor", "editor")))
                 if operation == "draft":
                     return self.json(store.draft(project_id, data.get("expected_revision")))
+                if operation == "ai-edit":
+                    return self.json(self.server.ai.start(project_id, data.get("expected_revision"), data.get("instructions", "")), 202)
                 if operation == "exports":
                     return self.json(media.export(project_id, data.get("expected_revision"), data.get("quality", "full")), 202)
         raise EditorError("Operação não encontrada.", 404)

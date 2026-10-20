@@ -15,8 +15,13 @@ Editor local para a Elisa revisar uma primeira montagem, ajustar cenas e acresce
 - Exportação real em MP4/H.264, em 1080 × 1920 ou prévia leve em 540 × 960.
 - CLI e servidor MCP para o Codex inspecionar mídia e editar a mesma montagem da interface.
 - Pedidos de ajuste salvos em uma fila local para o Codex.
+- Botão **Editar com IA**: analisa o roteiro e folhas de contato dos vídeos usando o Codex instalado, e aplica uma montagem editável na linha do tempo.
 
-O botão **Rascunho por etiquetas** usa etiquetas e comprimento do roteiro. A seleção visual por IA é feita pelo agente ao inspecionar os arquivos e aplicar os trechos escolhidos. Os pedidos da interface ainda dependem de uma sessão ativa do Codex; não há execução autônoma nem integração paga de IA embutida no navegador.
+O botão **Editar com IA** executa uma análise visual pelo Codex CLI conectado à conta ChatGPT do notebook; consome os limites dessa conta. Não exige uma chave de API. O notebook precisa estar ligado, conectado e com `codex login` concluído. A análise recebe o roteiro e uma folha com 12 quadros por vídeo, seleciona trechos e aplica a montagem na mesma linha do tempo, com opção de Desfazer. São aceitos até 40 vídeos por análise. É uma primeira montagem: amostragem visual não identifica com precisão todos os gestos nem mede sincronismo por frase. A narração selecionada é preservada, e não há geração de voz ou música.
+
+Importe os arquivos, preencha o roteiro em **Arquivos → Roteiro**, abra **Editar com IA**, informe uma direção opcional e toque em **Montar na linha do tempo**. O roteiro digitado é salvo ao abrir esse fluxo. Acompanhe o andamento nessa janela, mesmo se acessando pelo iPhone. Cenas protegidas precisam ser mantidas. Mudanças na revisão durante a análise impedem a aplicação do resultado para preservar a edição manual. A montagem é validada pelo servidor antes de ser salva; o processo Codex roda em modo somente leitura, sem shell nem ferramentas conectadas do projeto.
+
+O botão **Rascunho por etiquetas** continua como alternativa local sem IA. Os **pedidos de ajuste** escritos na aba Codex ainda formam uma fila para uma sessão do agente; eles são independentes do botão de montagem automática.
 
 ## Iniciar no Windows
 
@@ -63,7 +68,7 @@ Foram analisados dois vídeos finalizados da Elisa e recebidos os nove arquivos 
 
 ## Dados locais
 
-Os projetos, mídias importadas, prévias, exportações e históricos ficam em `work/lili-data/`, fora do versionamento. O editor escuta apenas em `127.0.0.1`. O processamento não envia arquivos a serviços de IA.
+Os projetos, mídias importadas, prévias, exportações e históricos ficam em `work/lili-data/`, fora do versionamento. O editor escuta apenas em `127.0.0.1`. Importação, edição manual e exportação usam processamento local. Ao iniciar **Editar com IA**, o roteiro, metadados e folhas de contato são enviados ao Codex para análise.
 
 O acesso pelo iPhone foi preparado como PWA, com um gateway de login separado. Executar `acesso-remoto.ps1 -Modo Preparar` e criar o login no notebook em `http://127.0.0.1:8767/auth/setup`. Depois, `acesso-remoto.ps1 -Modo Ativar` abre um endereço HTTPS temporário da Cloudflare para o gateway autenticado. Essa ativação dá acesso pela internet aos usuários que tiverem a senha; vídeos e comandos transitam pelo túnel até o celular. Ainda falta testar a ativação externa e o uso em iPhone real. `-Modo Desativar` encerra o acesso externo. O túnel nunca deve apontar diretamente para a porta 8765 do editor.
 

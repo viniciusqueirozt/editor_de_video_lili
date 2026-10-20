@@ -85,4 +85,10 @@ A exclusão é reversível: o projeto retorna os arquivos removidos em `trash`, 
 4. Ler a revisão resultante, verificar os cortes e exportar uma cópia para revisão.
 5. Marcar um pedido como concluído somente depois de realizar e verificar a alteração.
 
-O botão “Rascunho por etiquetas” usa etiquetas e comprimento do roteiro; não executa análise visual por IA. O campo Pedidos salva uma fila local para o agente. Não há execução autônoma desses pedidos nem consumo de uma API paga pelo navegador.
+O botão “Rascunho por etiquetas” usa etiquetas e comprimento do roteiro; não executa análise visual por IA. O campo Pedidos salva uma fila local para o agente. Esses pedidos não são executados automaticamente.
+
+## Montagem automática
+
+`GET /api/ai/status` verifica se o Codex CLI está disponível no PATH do servidor. Isso não garante login válido nem créditos. `POST /api/projects/{id}/ai-edit`, com `expected_revision` e `instructions` opcionais, inicia um job `ai_edit`, consultável pelos endpoints de jobs existentes. Exige roteiro salvo, de 1 a 40 vídeos, todos os arquivos prontos e revisão atual. Apenas uma análise por servidor é executada de cada vez.
+
+O Codex usa o login ChatGPT existente. Recebe roteiro, metadados, montagem atual e folhas de 12 quadros por vídeo; retorna um plano JSON sob esquema. O processo roda em pasta temporária isolada, sem configurações do usuário, sem shell, apps, navegador, hooks ou multiagentes, em sandbox somente leitura e com prazo de 20 minutos. O servidor valida limites, revisão e cenas protegidas antes de aplicar `timeline_replace`. A narração existente permanece. Não há geração de voz/música nem alinhamento automático por transcrição. Para revisar ou desfazer, use os mesmos controles da edição manual.
