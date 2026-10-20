@@ -58,7 +58,7 @@ Ferramentas:
 
 | Operação | Argumentos principais |
 | --- | --- |
-| `script_update` | `script`, `name` opcional |
+| `script_update` | `script`, `name` e `description` opcionais |
 | `media_annotate` | `media_id`, `tags` como lista, `note` opcional |
 | `clip_add` | `media_id`, `start`, `end`, `label`, `title`, `volume`, `block_id` opcionais |
 | `clip_update` | `clip_id`, campos a alterar; `locked` para proteção |

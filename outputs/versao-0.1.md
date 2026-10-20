@@ -41,3 +41,9 @@ Testes automatizados de estado, persistência, proteção de cenas, revisões, p
 ## Próximo ciclo
 
 Revisar a seleção de cenas com a Elisa, receber a narração e ajustar o ritmo final. Em seguida, medir o tempo de revisão e priorizar os controles e a conexão móvel necessários para que ela use o fluxo pelo iPhone.
+
+## Atualização — áudio da edição final
+
+A pedido do usuário, o áudio de IMG_7019_vlog cora 2.MOV foi extraído para M4A por cópia dos pacotes AAC, sem recompressão. A igualdade dos dados de áudio foi verificada por hash. A faixa tem aproximadamente 35,7 segundos e contém toda a mixagem do vídeo final, incluindo eventual música e efeitos; não houve isolamento de voz.
+
+O arquivo foi importado para o mesmo projeto como faixa de narração, a partir de zero segundo e com volume de 100%. As 16 cenas e seus ajustes foram preservados. Uma nova cópia com áudio foi exportada para revisão do sincronismo; a montagem visual anterior foi mantida.

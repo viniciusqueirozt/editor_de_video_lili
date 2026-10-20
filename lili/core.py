@@ -59,7 +59,7 @@ def duration(project):
 
 
 class Store:
-    SNAPSHOT_FIELDS = ("name", "script", "timeline", "narration", "settings")
+    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings")
 
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -177,6 +177,7 @@ class Store:
             if operation == "script_update":
                 p["script"] = text(args.get("script", p["script"]))
                 p["name"] = text(args.get("name", p["name"]), 120) or p["name"]
+                p["description"] = text(args.get("description", p["description"]), 1000)
             elif operation == "media_annotate":
                 asset = self.find(p["media"], args.get("media_id"), "Arquivo")
                 tags = args.get("tags", asset.get("tags", []))
