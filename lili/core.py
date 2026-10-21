@@ -3,6 +3,7 @@
 import copy
 import json
 import math
+import os
 import re
 import threading
 import unicodedata
@@ -71,19 +72,59 @@ class Store:
             raise EditorError("Projeto não encontrado.", 404)
         return self.root / project_id
 
+    @staticmethod
+    def _decode_project(path, project_id):
+        project = json.loads(path.read_text(encoding="utf-8"))
+        required = {"id": str, "name": str, "description": str, "script": str,
+                    "revision": int, "updated_at": str, "media": list, "timeline": list,
+                    "narration": (dict, type(None)), "requests": list, "history": list,
+                    "settings": dict, "last_change": dict}
+        if (not isinstance(project, dict) or project.get("id") != project_id
+                or any(not isinstance(project.get(k), kind) for k, kind in required.items())
+                or isinstance(project["revision"], bool) or project["revision"] < 1):
+            raise ValueError("Estrutura de projeto inválida")
+        return project
+
     def _read(self, project_id):
+        folder = self.folder(project_id)
+        target, backup = folder / "project.json", folder / "project.json.bak"
         try:
-            return json.loads((self.folder(project_id) / "project.json").read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            raise EditorError("Projeto não encontrado.", 404) from None
+            return self._decode_project(target, project_id)
+        except (FileNotFoundError, ValueError, UnicodeError):
+            missing = not target.exists()
+        try:
+            project = self._decode_project(backup, project_id)
+        except (FileNotFoundError, ValueError, UnicodeError):
+            if missing and not backup.exists():
+                raise EditorError("Projeto não encontrado.", 404) from None
+            raise EditorError("O projeto está ilegível e não há uma cópia de segurança válida. Os arquivos de mídia foram preservados.", 422) from None
+        project["recovery_notice"] = (
+            "Projeto aberto pela cópia de segurança. Confira os últimos ajustes antes de continuar; "
+            "a cópia pode estar uma gravação atrás se o salvamento foi interrompido. "
+            "Uma nova alteração salva o estado recuperado.")
+        return project
+
+    @staticmethod
+    def _atomic_save(path, payload):
+        temp = path.with_name(path.name + ".tmp")
+        try:
+            with temp.open("w", encoding="utf-8") as stream:
+                stream.write(payload)
+                stream.flush()
+                os.fsync(stream.fileno())
+            temp.replace(path)
+        finally:
+            temp.unlink(missing_ok=True)
 
     def _write(self, project):
         folder = self.folder(project["id"])
         folder.mkdir(parents=True, exist_ok=True)
-        target = folder / "project.json"
-        temp = target.with_suffix(".tmp")
-        temp.write_text(json.dumps(project, ensure_ascii=False, indent=2, allow_nan=False), encoding="utf-8")
-        temp.replace(target)
+        project.pop("recovery_notice", None)
+        payload = json.dumps(project, ensure_ascii=False, indent=2, allow_nan=False)
+        self._atomic_save(folder / "project.json", payload)
+        # The mirror contains the latest complete save, including imported media.
+        # A crash before this second replacement leaves the previous valid mirror.
+        self._atomic_save(folder / "project.json.bak", payload)
 
     @staticmethod
     def public(project):
@@ -102,8 +143,9 @@ class Store:
     def list(self):
         with self.lock:
             result = []
-            for path in self.root.glob("*/project.json"):
-                p = self._read(path.parent.name)
+            folders = {p.parent for pattern in ("*/project.json", "*/project.json.bak") for p in self.root.glob(pattern)}
+            for folder in folders:
+                p = self._read(folder.name)
                 result.append({k: p[k] for k in ("id", "name", "revision", "updated_at", "description")})
             return sorted(result, key=lambda p: p["updated_at"], reverse=True)
 

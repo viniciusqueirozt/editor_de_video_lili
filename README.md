@@ -88,3 +88,10 @@ node --check web/sw.js
 ```
 
 Os testes cobrem persistência, revisões concorrentes, cenas protegidas, divisão de clipes, desfazer, importação, envio em blocos, montagem de vídeo sem áudio, narração adicional, forma de onda, títulos, orientação por metadados, exportação, leitura parcial de mídia, protocolo MCP e autenticação do gateway remoto. O Node é necessário apenas para a verificação de sintaxe do JavaScript, não para executar o editor.
+
+
+## Recuperação do estado do projeto
+
+Cada novo salvamento mantém `project.json.bak` na pasta privada do projeto. Se o principal ficar ausente ou ilegível, o editor tenta abrir esse espelho e mostra um aviso no desktop. Uma leitura não modifica os arquivos; a próxima edição salva o estado recuperado. Projetos antigos recebem o espelho no próximo salvamento.
+
+O espelho contém o estado da edição e as referências às mídias, não uma cópia dos vídeos. Se houver interrupção entre as duas gravações, poderá estar um salvamento atrás. Não substitui backup externo nem oferece histórico completo de versões. Arquivos sem recuperação válida são preservados e retornam um erro explicativo.

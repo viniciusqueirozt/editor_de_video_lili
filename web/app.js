@@ -61,7 +61,8 @@ function render() {
   $("#project-select").value = project.id;
   const option = $("#project-select").selectedOptions[0]; if(option) option.textContent = project.name;
   $("#save-status").innerHTML = '<i></i> Salvo neste computador';
-  $("#project-note").hidden = !project.description; $("#project-note").textContent = project.description;
+  const projectNotice=[project.recovery_notice,project.description].filter(Boolean).join(" ");
+  $("#project-note").hidden = !projectNotice; $("#project-note").textContent = projectNotice;
   $("#media-count").textContent = project.media.length;
   $("#ready-count").textContent = `${project.media.filter(m=>m.status==="ready").length} prontos`;
   if (document.activeElement !== $("#script-input")) $("#script-input").value = project.script;
