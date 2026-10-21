@@ -132,6 +132,13 @@ class IntegrationTests(unittest.TestCase):
             req = Request(self.base+f"/api/projects/{p['id']}/uploads/{upload['upload_id']}?offset={offset}", data=data, method="PUT")
             with urlopen(req) as response:
                 self.assertEqual(json.loads(response.read())["received"], offset+len(data))
+        # Conflicting retransmissions and fractional byte positions fail over
+        # HTTP too, before import; the successfully received source stays intact.
+        for offset, data, status in ((str(split), b"x" * (len(raw)-split), 409), ("0.00001", b"x", 400)):
+            req = Request(self.base+f"/api/projects/{p['id']}/uploads/{upload['upload_id']}?offset={offset}", data=data, method="PUT")
+            with self.subTest(offset=offset), self.assertRaises(HTTPError) as error:
+                urlopen(req)
+            self.assertEqual(error.exception.code, status)
         job = self.client.call("POST", f"/api/projects/{p['id']}/uploads/{upload['upload_id']}/complete", {})
         self.wait_job(job["job"]["id"])
         asset = self.store.media(p['id'], job['media_id'])

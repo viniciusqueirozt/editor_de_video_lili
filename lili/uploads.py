@@ -1,9 +1,10 @@
 """Sequential uploads in 8 MiB requests, including through an HTTPS tunnel."""
 
 import threading
+import re
 from pathlib import Path
 
-from .core import EditorError, number, text, uid
+from .core import EditorError, text, uid
 from .media import ALLOWED
 
 CHUNK_SIZE = 8 * 1024**2
@@ -21,9 +22,9 @@ class Uploads:
         suffix = Path(name).suffix.lower()
         if suffix not in ALLOWED:
             raise EditorError("Envie um vídeo ou áudio compatível.", 415)
-        size = number(data.get("size"), 1, 2*1024**3)
-        if size != int(size):
-            raise EditorError("Tamanho de arquivo inválido.")
+        size = data.get("size")
+        if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= 2*1024**3:
+            raise EditorError("Informe o tamanho do arquivo como um número inteiro de bytes, até 2 GB.")
         with self.lock:
             if len(self.pending) >= 20:
                 raise EditorError("Há muitos envios pendentes. Termine os envios atuais ou reinicie o editor.", 409)
@@ -44,11 +45,25 @@ class Uploads:
     def append(self, project_id, upload_id, offset, length, stream):
         with self.lock:
             item = self.find(project_id, upload_id)
-            offset = number(offset, 0, item["size"])
-            if not 0 < length <= CHUNK_SIZE or offset+length > item["size"]:
+            if isinstance(offset, str) and re.fullmatch(r"[0-9]{1,12}", offset):
+                offset = int(offset)
+            if isinstance(offset, bool) or not isinstance(offset, int) or not 0 <= offset <= item["size"]:
+                raise EditorError("A posição do bloco precisa ser um número inteiro válido.")
+            if isinstance(length, bool) or not isinstance(length, int) or not 0 < length <= CHUNK_SIZE or offset+length > item["size"]:
                 raise EditorError("Bloco de envio inválido.", 413)
-            # A lost response may cause the browser to repeat the last block.
+            # A retry is acknowledged only when its entire body matches the
+            # bytes already on disk. Never acknowledge an unread request body.
             if offset+length == item["received"]:
+                with item["path"].open("rb") as original:
+                    original.seek(offset)
+                    remaining = length
+                    while remaining:
+                        chunk = stream.read(min(65536, remaining))
+                        if not chunk:
+                            raise EditorError("Reenvio interrompido. Tente novamente.")
+                        if chunk != original.read(len(chunk)):
+                            raise EditorError("O bloco reenviado difere do arquivo recebido. Reenvie o mesmo bloco ou importe o arquivo novamente.", 409)
+                        remaining -= len(chunk)
                 return {"received": item["received"]}
             if offset != item["received"]:
                 raise EditorError("Os blocos precisam chegar na ordem do arquivo.", 409)

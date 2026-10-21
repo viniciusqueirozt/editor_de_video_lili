@@ -31,7 +31,7 @@ Solicitadas cinco rodadas por hora neste mesmo chat. Uma melhoria completa por r
 2. Melhorias úteis de áudio: fades e nível, sempre com prévia e exportação consistentes.
 3. Velocidade e ajustes visuais; não adicionar controle que só altere a prévia.
 4. Legendas locais: verificar dependências existentes antes de prometer automação ou baixar modelos.
-5. Auditar uploads abandonados, limitação de concorrência/recursos, validação de entradas e proteção do processamento de IA.
+5. Integridade de reenvios e contagem inteira de bytes entregue em 21/10 às 20h. Permanecem pendentes uploads abandonados, limites de concorrência/recursos e auditoria adicional do processamento de IA.
 
 Não é auditoria completa de segurança. iPhone/Safari real continua pendente. Registrar cada entrega concreta abaixo e remover itens já resolvidos da lista.
 
@@ -45,3 +45,13 @@ Não é auditoria completa de segurança. iPhone/Safari real continua pendente. 
 - Verificação: suíte completa com 38 testes passou antes do sexto caso de recuperação; os seis testes focados de recuperação passaram, incluindo falha entre gravação do principal e do espelho. Sem chamadas reais de IA. Sintaxe de app.js e diff verificados. Safari real continua pendente.
 - Ativação: o editor estava desligado (porta 8765 recusou conexão). Foi iniciado somente o editor local com a versão testada; saúde e listagem dos três projetos confirmadas. Gateway, sessões e túnel não foram alterados. O espelho de projetos antigos será criado no próximo salvamento normal; nenhum salvamento foi forçado na montagem aprovada. Código, testes e este relatório seguem para o GitHub autorizado.
 - Próximo passo: áudio/fades, garantindo prévia e exportação consistentes; ou auditar envios abandonados se for menor. A recuperação básica já foi entregue, sem ampliar esta rodada para snapshots manuais ou exportação de backups de mídia.
+
+
+## Rodada de continuidade — 21/10/2026, 20h (Brasília)
+
+- Uma melhoria de segurança e confiabilidade dos uploads: reenvios só são confirmados após ler e comparar todo o bloco com os bytes já recebidos. Conteúdo diferente retorna 409; reenvio truncado retorna 400. Nenhum desses casos altera os bytes nem avança o progresso.
+- Tamanho do arquivo, tamanho do bloco e posição do bloco precisam representar quantidades inteiras de bytes. Posições fracionárias, inclusive valores que antes seriam arredondados, são rejeitadas. O protocolo normal do navegador continua enviando inteiros e aceitando reenvios idênticos.
+- Verificação: quatro testes de upload e cinco de integração passaram; foi acrescentado um quinto teste de upload para tamanhos declarados inválidos, com repetição apenas da suíte focada de upload. A integração verifica pelo HTTP rejeição 409/400 seguida de importação bem-sucedida com arquivo idêntico ao original. A mesma suíte também cobre exportação, narração e MCP existentes. Sem inferência real de IA nem nova pesquisa geral.
+- Ativação: código preparado para o próximo início do editor. Não reiniciar o servidor nesta rodada: um upload ainda em trânsito pode não aparecer na lista de jobs, e o usuário utilizou recentemente o acesso remoto. Gateway, sessões, credenciais, endereço externo e projetos reais não foram modificados.
+- Limites: não implementa limpeza/expiração de envios abandonados, retomada após reinício do servidor ou comparação dos vídeos após processamento. O limite de pendências e o modelo de concorrência existentes continuam. Safari real pendente.
+- Próximo passo: manter a prioridade de áudio/fades para função útil de edição, ou expiração/cancelamento de uploads em uma rodada separada. Não ampliar esta entrega nem criar novas agendas.
