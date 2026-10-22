@@ -64,3 +64,10 @@ O acesso externo antigo permanece funcionando enquanto o portal é preparado. N�
 - Acesso anônimo a /api/portal/meta confirmou setupRequired=false; /api/portal/status retornou 401. Cinco testes focados do conector passaram. Prova desktop: outputs/lili-portal-conectado.png (arquivo local, fora do Git).
 - Sem reinício do editor, gateway ou túnel. Reconexão real após queda e Safari real permanecem pendentes; não derrubar um túnel saudável apenas para teste.
 - O conector roda enquanto este processo e notebook permanecerem ligados. Ainda não foi configurada inicialização automática após reiniciar o Windows. Convites são compartilhados manualmente; envio e recuperação por e-mail não foram implementados.
+
+
+## Correção da abertura pelo portal — 22/10/2026
+
+- O gateway bloqueava todo Sec-Fetch-Site: cross-site, incluindo o clique legítimo em Abrir editor no portal. Agora permite apenas GET iniciado pelo usuário (Sec-Fetch-User: ?1), modo navigate e destino document para / e /auth/login. Host continua restrito; APIs, embeds, configuração inicial e alterações externas permanecem bloqueados.
+- Seis testes de gateway passaram, incluindo navegação, rejeição de API/iframe/POST e proteções existentes. Teste desktop real clicou Abrir editor e chegou a /auth/login com Entre no seu estúdio, sem erro de origem. Prova local: outputs/lili-acesso-origem-corrigida.png. Safari real pendente.
+- Reiniciado somente o gateway gerenciado para ativar a correção. Sessões em memória do editor remoto foram encerradas; é necessário entrar novamente. Credenciais, processo do editor, conector e túnel/endereço permaneceram preservados. Nenhuma senha real foi lida ou preenchida.

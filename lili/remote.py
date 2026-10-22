@@ -173,7 +173,16 @@ class RemoteHandler(BaseHTTPRequestHandler):
             origin = self.origin()
             if not origin:
                 return self.send("Endereço não permitido.", 403)
-            if self.headers.get("Sec-Fetch-Site") == "cross-site":
+            # Following a link from the portal is a cross-site navigation.
+            # Admit only a user-initiated document GET to the entry pages;
+            # cross-site API requests, embeds and mutations remain blocked.
+            entry_navigation = (
+                self.command == "GET" and self.path in ("/", "/auth/login")
+                and self.headers.get("Sec-Fetch-Mode") == "navigate"
+                and self.headers.get("Sec-Fetch-Dest") == "document"
+                and self.headers.get("Sec-Fetch-User") == "?1"
+            )
+            if self.headers.get("Sec-Fetch-Site") == "cross-site" and not entry_navigation:
                 return self.send("Origem não permitida.", 403)
             if self.command not in ("GET", "HEAD"):
                 request_origin = self.headers.get("Origin")

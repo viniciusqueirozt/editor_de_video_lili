@@ -105,5 +105,24 @@ class RemoteTests(unittest.TestCase):
             with self.subTest(headers=headers):
                 self.assertEqual(self.request('/auth/login','POST',form,headers)[0],403)
 
+    def test_portal_link_navigation_allows_login_but_not_cross_site_requests(self):
+        self.setup_login()
+        self.cookie=''
+        navigation={'Sec-Fetch-Site':'cross-site','Sec-Fetch-Mode':'navigate',
+                    'Sec-Fetch-Dest':'document','Sec-Fetch-User':'?1'}
+        status,headers,_=self.request('/',headers=navigation)
+        self.assertEqual(status,303)
+        self.assertEqual(headers['Location'],'/auth/login')
+        status,_,body=self.request('/auth/login',headers=navigation)
+        self.assertEqual(status,200)
+        self.assertIn('Entre no seu estúdio',body.decode())
+        for path in ('/api/projects','/auth/setup','/app.js','/auth/status'):
+            with self.subTest(path=path):
+                self.assertEqual(self.request(path,headers=navigation)[0],403)
+        for change in ({'Sec-Fetch-Mode':'cors'},{'Sec-Fetch-Dest':'iframe'},{'Sec-Fetch-User':''}):
+            with self.subTest(change=change):
+                self.assertEqual(self.request('/',headers={**navigation,**change})[0],403)
+        self.assertEqual(self.request('/auth/login','POST',{'username':'elisa','password':self.password},navigation)[0],403)
+
 
 if __name__=='__main__':unittest.main()
