@@ -190,11 +190,14 @@ class Handler(BaseHTTPRequestHandler):
                 folder.mkdir(exist_ok=True)
                 target = folder / (media_id + suffix)
                 temp = target.with_suffix(".upload")
+                self.server.uploads.require_space(folder, length)
                 try:
                     with temp.open("wb") as out:
                         remaining = length
                         while remaining:
-                            chunk = self.rfile.read(min(1024 * 1024, remaining))
+                            block_size = min(1024 * 1024, remaining)
+                            self.server.uploads.require_space(folder, block_size)
+                            chunk = self.rfile.read(block_size)
                             if not chunk:
                                 raise EditorError("Envio interrompido. Tente novamente.")
                             out.write(chunk)

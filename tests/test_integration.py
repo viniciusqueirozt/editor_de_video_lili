@@ -6,11 +6,13 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 from urllib.error import HTTPError
 from urllib.request import Request, urlopen
 
 from lili.client import Client
-from lili.core import Store, uid
+from lili.core import EditorError, Store, uid
 from lili.media import executable, probe, run
 from lili.server import EditorServer
 
@@ -173,6 +175,27 @@ class IntegrationTests(unittest.TestCase):
         asset = self.store.media(p['id'], job['media_id'])
         self.assertEqual(self.server.media.source(p['id'], asset).read_bytes(), raw)
         self.assertEqual(asset['status'], 'ready')
+
+    def test_direct_upload_low_disk_rejects_before_creating_media(self):
+        p = self.client.call("POST", "/api/projects", {"name": "Disco insuficiente"})
+        with patch("lili.uploads.shutil.disk_usage", return_value=SimpleNamespace(free=0)):
+            with self.assertRaises(HTTPError) as error:
+                urlopen(Request(self.base+f"/api/projects/{p['id']}/upload?name=test.mp4", data=b"video", method="PUT"))
+        self.assertEqual(error.exception.code,507)
+        self.assertIn("Espaço insuficiente",error.exception.read().decode())
+        self.assertEqual(self.store.get(p['id'])['media'],[])
+        self.assertEqual(list((self.store.folder(p['id'])/'media').iterdir()),[])
+
+    def test_direct_upload_disk_check_failure_cleans_partial_file(self):
+        p = self.client.call("POST", "/api/projects", {"name": "Disco ocupado durante envio"})
+        # Initial check and first 1 MiB succeed; the next block is rejected.
+        with patch.object(self.server.uploads,"require_space",side_effect=[None,None,EditorError("Espaço insuficiente.",507)]) as check:
+            with self.assertRaises(HTTPError) as error:
+                urlopen(Request(self.base+f"/api/projects/{p['id']}/upload?name=test.mp4", data=b"x"*(1024*1024+1), method="PUT"))
+        self.assertEqual(error.exception.code,507)
+        self.assertEqual(check.call_count,3)
+        self.assertEqual(self.store.get(p['id'])['media'],[])
+        self.assertEqual(list((self.store.folder(p['id'])/'media').iterdir()),[])
 
     def test_external_origin_and_host_are_rejected(self):
         for headers in ({"Origin": "https://external.example"}, {"Host": "external.example"}):

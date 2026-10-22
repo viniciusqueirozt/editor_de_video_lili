@@ -81,3 +81,13 @@ Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver 
 - Ativação no próximo início normal do editor: nenhum serviço reiniciado para preservar envios em trânsito. Originais, montagem aprovada, credenciais, sessões e link remoto preservados. Safari real permanece pendente.
 - Atualização de contexto: o usuário concluiu e liberou o portal entre as rodadas. O conector foi ativado e verificado no atendimento anterior; ver outputs/portal-acesso.md. Esta rodada não alterou o portal nem o túnel.
 - Próximo passo: cancelamento/expiração segura de envios abandonados ou controles de velocidade consistentes com exportação, em uma rodada separada. Não prolongar a agenda existente.
+
+
+## Última rodada da agenda — 21/10/2026, 23h (Brasília)
+
+- Completa a proteção de espaço no endpoint legado de upload direto, usado pelo cliente local/MCP. Verifica tamanho declarado antes de criar o temporário e repete a checagem antes de cada bloco de até 1 MiB, preservando margem de 256 MiB.
+- Falta de espaço retorna HTTP 507. O temporário de um envio direto incompleto é removido pelo fluxo de limpeza já existente; nenhum arquivo é registrado na biblioteca. O arquivo de origem enviado pelo cliente não é alterado. Diferentemente do envio em blocos, o envio direto não oferece retomada de uma transferência parcial.
+- Oito testes de integração passaram: novos testes HTTP verificam recusa antes da criação e falha após o primeiro MiB, sem temporário ou mídia registrada; os demais continuam cobrindo importação, reenvio, exportação, fades e proteções HTTP. Usados somente projetos sintéticos isolados. Diff conferido; nenhuma chamada real de IA.
+- Limites: checagem preventiva, sem reserva exclusiva de disco. O envio direto não participa do orçamento compartilhado em memória dos envios em blocos. Outros processos podem ocupar espaço entre checagem e escrita. Não garante espaço para proxies/exportações nem implementa cancelamento/expiração de pendências.
+- Código preparado para o próximo início normal do editor. Nenhum servidor, gateway, conector ou túnel foi reiniciado. Originais, montagem aprovada, credenciais, sessões e endereço remoto preservados. Safari real continua pendente.
+- A agenda de cinco execuções encerra aqui, sem novas automações. Próximos trabalhos registrados para retomada pelo usuário: cancelamento/expiração segura de uploads, velocidade com prévia/exportação consistentes, inicialização do conector após reiniciar Windows e teste real de Safari. Não são entregas desta rodada.
