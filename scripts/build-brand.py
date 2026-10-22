@@ -18,11 +18,7 @@ def symbol(ink,dots=None):
             f'<rect x="96" y="58" width="16" height="50" rx="8" fill="{ink}"/>')
 
 def logo(ink,dots):
-    letters=(f'<path d="M124 22v42q0 12 12 12" fill="none" stroke="{ink}" stroke-width="16" stroke-linecap="round"/>'
-             f'<circle cx="157" cy="29" r="8" fill="{ink}"/><path d="M157 53v24" stroke="{ink}" stroke-width="16" stroke-linecap="round"/>'
-             f'<path d="M186 22v42q0 12 12 12" fill="none" stroke="{ink}" stroke-width="16" stroke-linecap="round"/>'
-             f'<circle cx="219" cy="29" r="8" fill="{ink}"/><path d="M219 53v24" stroke="{ink}" stroke-width="16" stroke-linecap="round"/>')
-    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 242 96" role="img" aria-label="Lili — Ritmo"><g transform="translate(0 0) scale(.75)">{symbol(ink,dots)}</g>{letters}</svg>'
+    return f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Lili — Ritmo">{symbol(ink,dots)}</svg>'
 
 if __name__=="__main__":
     WEB.joinpath("logo-ritmo.svg").write_text(logo(FOREST,SAGE),encoding="utf-8")

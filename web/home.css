@@ -3,4 +3,4 @@
 
 .trash-actions{display:flex;gap:8px;flex-wrap:wrap;padding:0 14px 15px}.trash-actions .restore{width:auto;margin:0;flex:1}.trash-actions .purge{font-size:11px;flex:1}.project-grid.list .trash-actions{padding:0 8px;max-width:340px}.danger-note{background:#f8e7df;color:#8b4436}.future-grid summary{cursor:pointer;min-height:44px;padding-top:12px;font-size:12px;color:#4c6443}.future-grid details[open] p{padding-top:9px}@media(max-width:740px){.trash-actions{padding:0 10px 12px;display:grid;grid-template-columns:1fr}.trash-actions .button{width:100%;font-size:11px}.project-grid.list .trash-actions{padding:4px;max-width:140px}}
 
-.sidebar .brand{display:inline-flex;align-items:center;line-height:1}.sidebar .brand svg{display:block;width:150px;height:59px;stroke:none;overflow:visible}
+.sidebar .brand{display:inline-flex;align-items:center;line-height:1}.sidebar .brand svg{display:block;width:64px;height:64px;stroke:none;overflow:visible}
