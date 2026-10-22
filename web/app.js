@@ -9,12 +9,15 @@ let project = null, selected = null, projects = [], queue = Promise.resolve(), t
 let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
 let importBatch = null, pendingRemoval = null, aiAvailable = null, aiStarting = false, aiJobsKey = "";
 const aiNotified = new Set();
+let selectingMedia=false;
+const selectedMedia=new Set();
+let pendingProjectRemoval=null;
 
 async function api(path, options = {}) {
   const response = await fetch(path, { ...options, headers: {"Content-Type":"application/json", ...options.headers} });
   if(response.status===401){location.assign("/auth/login");throw new Error("Entre novamente para continuar.");}
   const result = await response.json();
-  if (!response.ok) throw new Error(result.error || "Não foi possível concluir.");
+  if (!response.ok) throw Object.assign(new Error(result.error || "Não foi possível concluir."),{status:response.status});
   return result;
 }
 function toast(message, error = false) {
@@ -51,8 +54,9 @@ async function listProjects() {
 }
 async function openProject(id) {
   await queue; pause();
+  selectingMedia=false;selectedMedia.clear();
   project = await api(`/api/projects/${id}`); selected = project.timeline[0]?.id || null; loadedSource = ""; cursor = 0;
-  localStorage.setItem("lili-project",id); render(); await refreshJobs();
+  localStorage.setItem("lili-project",id);history.replaceState(null,"",`/editor?project=${id}`); render(); await refreshJobs();
 }
 function render() {
   if (!project) return;
@@ -69,7 +73,7 @@ function render() {
   $("#script-blocks").innerHTML = project.blocks.map((b,i)=>`<div class="script-block"><strong>BLOCO ${String(i+1).padStart(2,"0")}</strong>${esc(b.text)}</div>`).join("");
   $("#media-list").innerHTML = project.media.map(m => {
     const ready = m.status === "ready", video = m.kind === "video";
-    return `<article class="media-card"><button class="icon-button media-delete" data-delete-media="${m.id}" aria-label="Excluir arquivo ${esc(m.name)}" title="Excluir arquivo" ${["ready","error"].includes(m.status)?"":"disabled"}>${icon("trash")}</button>${ready && video ? `<img class="media-thumb" alt="" src="${assetUrl(m,"thumbnail")}">` : `<span class="media-thumb audio-thumb">${icon(m.kind==="audio"?"mic":"film")}</span>`}<div class="media-detail"><p class="media-name" title="${esc(m.name)}">${esc(m.name)}</p><p class="media-info">${ready ? `${precise(m.duration)} · ${video ? `${m.width}×${m.height}` : "Áudio"}` : esc(m.status==="error" ? "Falha ao importar" : "Preparando…")}</p>${ready ? `<button class="media-add" data-add="${m.id}">${icon(video ? "plus" : "mic")}${video ? "Adicionar" : "Usar narração"}</button>` : `<span class="microcopy">${esc(m.error || "Criando prévia")}</span>`}</div>${ready && video ? `<input class="tags-input" data-tags="${m.id}" aria-label="Etiquetas de ${esc(m.name)}" placeholder="Etiquetas: passeio, Cora…" value="${esc((m.tags||[]).join(", "))}">` : ""}</article>`;
+    return `<article class="media-card">${selectingMedia?`<label class="media-pick"><input type="checkbox" data-pick-media="${m.id}" aria-label="Selecionar ${esc(m.name)}" ${selectedMedia.has(m.id)?"checked":""} ${["ready","error"].includes(m.status)?"":"disabled"}></label>`:""}<button class="icon-button media-delete" data-delete-media="${m.id}" aria-label="Excluir arquivo ${esc(m.name)}" title="Excluir arquivo" ${["ready","error"].includes(m.status)?"":"disabled"}>${icon("trash")}</button>${ready && video ? `<img class="media-thumb" alt="" src="${assetUrl(m,"thumbnail")}">` : `<span class="media-thumb audio-thumb">${icon(m.kind==="audio"?"mic":"film")}</span>`}<div class="media-detail"><p class="media-name" title="${esc(m.name)}">${esc(m.name)}</p><p class="media-info">${ready ? `${precise(m.duration)} · ${video ? `${m.width}×${m.height}` : "Áudio"}` : esc(m.status==="error" ? "Falha ao importar" : "Preparando…")}</p>${ready ? `<button class="media-add" data-add="${m.id}">${icon(video ? "plus" : "mic")}${video ? "Adicionar" : "Usar narração"}</button>` : `<span class="microcopy">${esc(m.error || "Criando prévia")}</span>`}</div>${ready && video ? `<input class="tags-input" data-tags="${m.id}" aria-label="Etiquetas de ${esc(m.name)}" placeholder="Etiquetas: passeio, Cora…" value="${esc((m.tags||[]).join(", "))}">` : ""}</article>`;
   }).join("") || '<p class="empty-note">Cada gravação guarda um momento.<br>Importe o primeiro para começar.</p>';
   $("#media-list").querySelectorAll("[data-add]").forEach(button=>button.addEventListener("click",()=>{
     const m = project.media.find(a=>a.id===button.dataset.add);
@@ -78,6 +82,9 @@ function render() {
   }));
   $("#media-list").querySelectorAll("[data-tags]").forEach(input=>input.addEventListener("change",()=>mutate("media_annotate",{media_id:input.dataset.tags,tags:input.value.split(",").map(s=>s.trim()).filter(Boolean)},"Etiquetas salvas.")));
   $("#media-list").querySelectorAll("[data-delete-media]").forEach(button=>button.addEventListener("click",()=>confirmMediaRemoval(button.dataset.deleteMedia)));
+  for(const id of selectedMedia) if(!project.media.some(m=>m.id===id))selectedMedia.delete(id);
+  $("#media-list").querySelectorAll("[data-pick-media]").forEach(input=>input.addEventListener("change",()=>{input.checked?selectedMedia.add(input.dataset.pickMedia):selectedMedia.delete(input.dataset.pickMedia);updateMediaSelection();}));
+  updateMediaSelection();
   const trash=project.trash||[];
   $("#trash-count").textContent=trash.length?`(${trash.length})`:"";
   $("#trash-list").innerHTML=trash.map(m=>`<article class="trash-card"><div>${icon(m.kind==="audio"?"mic":"film")}<strong>${esc(m.name)}</strong></div><button class="button secondary" data-restore-media="${m.id}">Restaurar</button></article>`).join("")||'<p class="empty-note">Nenhum arquivo na Lixeira.</p>';
@@ -167,7 +174,7 @@ function updatePlayer(resume=false, time=before()){
   $("#preview-empty").hidden=!!c; player.hidden=!c;
   $("#preview-title").textContent=c?.title || "";
   cursor=Math.max(0,Math.min(project.duration,time));
-  if(!c){player.removeAttribute("src");loadedSource="";cursor=0;updateTime();return;}
+  if(!c){player.removeAttribute("src");voice.pause();loadedSource="";cursor=0;$("#scene-position").textContent="Nenhuma cena";updateTime();return;}
   const source=assetUrl(m), clipId=c.id;
   const position=Math.min(c.end-.001,c.start+Math.max(0,cursor-before()));
   const seekAndPlay=()=>{
@@ -365,12 +372,24 @@ function openLibraryTab(name,focus=false){
   markMobilePanel(name);revealPanel(".library");
   if(focus)$(name==="requests"?"#request-input":"#script-input").focus({preventScroll:true});
 }
-function confirmMediaRemoval(id){
-  const m=project.media.find(a=>a.id===id);if(!m)return;
-  pause();pendingRemoval={projectId:project.id,mediaId:id,revision:project.revision};
-  const clips=project.timeline.filter(c=>c.media_id===id), narration=project.narration?.media_id===id, locked=clips.some(c=>c.locked);
-  $("#delete-media-name").textContent=m.name;
-  $("#delete-media-impact").textContent=locked?"Este arquivo tem cenas protegidas. Desproteja essas cenas em Ajustes antes de excluir.":clips.length||narration?`Também serão removidas ${clips.length} cena(s) da linha do tempo${narration?" e a faixa de narração":""}. A duração e o encaixe dos cortes seguintes podem mudar.`:"Este arquivo não está sendo usado na montagem.";
+function updateMediaSelection(){
+  $("#select-media").textContent=selectingMedia?"Cancelar seleção":"Selecionar";
+  $("#select-all-media").hidden=!selectingMedia;
+  $("#remove-selected-media").hidden=!selectingMedia;
+  $("#remove-selected-media").disabled=!selectedMedia.size;
+  $("#selection-count").textContent=selectingMedia?`${selectedMedia.size} selecionado(s)`:"";
+}
+$("#select-media").addEventListener("click",()=>{selectingMedia=!selectingMedia;selectedMedia.clear();render();});
+$("#select-all-media").addEventListener("click",()=>{project.media.filter(m=>["ready","error"].includes(m.status)).forEach(m=>selectedMedia.add(m.id));render();});
+$("#remove-selected-media").addEventListener("click",()=>confirmMediaRemoval([...selectedMedia]));
+function confirmMediaRemoval(value){
+  const ids=Array.isArray(value)?value:[value], assets=ids.map(id=>project.media.find(a=>a.id===id));
+  if(!ids.length||assets.some(a=>!a))return;
+  pause();pendingRemoval={projectId:project.id,mediaIds:ids,revision:project.revision};
+  const clips=project.timeline.filter(c=>ids.includes(c.media_id)), narration=ids.includes(project.narration?.media_id), locked=clips.some(c=>c.locked);
+  $("#delete-media-title").textContent=ids.length>1?`Excluir ${ids.length} arquivos?`:"Excluir arquivo?";
+  $("#delete-media-name").textContent=ids.length>1?assets.slice(0,4).map(a=>a.name).join(", ")+(ids.length>4?` e mais ${ids.length-4}`:""):assets[0].name;
+  $("#delete-media-impact").textContent=locked?"A seleção contém cenas protegidas. Desproteja-as ou retire esses arquivos da seleção antes de excluir.":clips.length||narration?`Também serão removidas ${clips.length} cena(s) da linha do tempo${narration?" e a faixa de narração":""}. Você pode recuperar tudo com um único Desfazer.`:"Os arquivos selecionados não estão em uso na montagem.";
   $("#confirm-delete-media").disabled=locked;
   $("#delete-media-dialog").showModal();
 }
@@ -381,7 +400,7 @@ $("#delete-media-form").addEventListener("submit",async e=>{
   if(project.id!==target.projectId){$("#delete-media-dialog").close();return;}
   if(project.revision!==target.revision){$("#delete-media-dialog").close();toast("O projeto mudou. Revise a exclusão novamente.",true);return;}
   $("#confirm-delete-media").disabled=true;
-  if(await mutate("media_remove",{media_id:target.mediaId,remove_usage:true},"Arquivo enviado à Lixeira. Você pode desfazer."))$("#delete-media-dialog").close();
+  if(await mutate("media_remove_many",{media_ids:target.mediaIds,remove_usage:true},"Arquivos enviados à Lixeira. Você pode desfazer."))$("#delete-media-dialog").close();
   else $("#confirm-delete-media").disabled=false;
 });
 document.querySelectorAll("[data-close-sheet]").forEach(b=>b.addEventListener("click",closeSheet));
@@ -417,8 +436,8 @@ $("#start-export").addEventListener("click",async()=>{await queue;try{await api(
 async function refreshJobs(){if(!project)return;const jobs=await api(`/api/projects/${project.id}/jobs`),exports=jobs.filter(j=>j.kind==="export").reverse();renderAIJobs(jobs);const running=exports.some(j=>["queued","running"].includes(j.status));$("#start-export").disabled=running||!project.timeline.length;$("#export-jobs").innerHTML=exports.map(j=>`<div class="export-job"><strong>${j.status==="done"?"Seu vídeo está pronto.":j.status==="error"?"A exportação não terminou.":"Preparando seu vídeo…"}</strong>${j.status==="done"?`<small>${j.result.width} × ${j.result.height} · ${precise(j.result.duration)} · versão ${j.result.revision}</small><a href="${j.result.url}" download>Baixar vídeo MP4 ↓</a>`:j.status==="error"?`<p>${esc(j.error)}</p>`:`<progress max="100" value="${j.progress}"></progress><small>${j.progress}% · você pode fechar esta janela.</small>`}</div>`).join("");}
 $("#context-button").addEventListener("click",async()=>{try{const context=await api(`/api/projects/${project.id}/context`),blob=new Blob([JSON.stringify(context,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="lili-contexto.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("Contexto salvo. O Codex também pode acessar o projeto pela CLI ou pelo MCP.");}catch(e){toast(e.message,true);}});
 document.addEventListener("keydown",e=>{if(e.code==="Space"&&!/INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)&&!document.querySelector("dialog[open]")){e.preventDefault();playing?pause():play();}});
-setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}await refreshJobs();}catch{$("#save-status").textContent="Servidor desconectado";}},2500);
-(async()=>{try{await listProjects();if(!projects.length){const p=await api("/api/projects",{method:"POST",body:JSON.stringify({name:"Minha primeira história"})});await listProjects();await openProject(p.id);}else{const saved=localStorage.getItem("lili-project");await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);}}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
+setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
+(async()=>{try{await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 $("#phone-help").addEventListener("click",()=>{
@@ -426,3 +445,15 @@ $("#phone-help").addEventListener("click",()=>{
   $("#phone-dialog").showModal();
 });
 fetch("/auth/status").then(r=>r.ok?r.json():null).then(data=>{if(data?.authenticated)$("#logout-form").hidden=false;}).catch(()=>{});
+
+$("#delete-project-current").addEventListener("click",async()=>{
+  await queue;if(!project||uploadRunning){toast("Aguarde o envio terminar.",true);return;}
+  pause();pendingProjectRemoval={id:project.id,revision:project.revision};
+  $("#delete-project-name").textContent=project.name;$("#delete-project-dialog").showModal();
+});
+$("#delete-project-form").addEventListener("submit",async e=>{
+  e.preventDefault();const target=pendingProjectRemoval;if(!target)return;
+  const button=$("#confirm-delete-project");button.disabled=true;
+  try{await queue;await api(`/api/projects/${target.id}/trash`,{method:"POST",body:JSON.stringify({expected_revision:target.revision})});location.assign("/#trash");}
+  catch(error){$("#delete-project-dialog").close();toast(error.message+" Revise e tente novamente.",true);}finally{button.disabled=false;}
+});

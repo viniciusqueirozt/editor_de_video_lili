@@ -197,6 +197,29 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(self.store.get(p['id'])['media'],[])
         self.assertEqual(list((self.store.folder(p['id'])/'media').iterdir()),[])
 
+    def test_home_editor_routes_and_project_trash_restore_api(self):
+        for path,marker in (("/",b"project-grid"),("/editor",b"media-list"),("/home.js",b"loadProjects"),("/home.css",b".project-grid")):
+            with urlopen(self.base+path) as response:
+                self.assertEqual(response.status,200)
+                self.assertIn(marker,response.read())
+        p=self.client.call("POST","/api/projects",{"name":"Lixeira HTTP"})
+        hidden=self.client.call("POST",f"/api/projects/{p['id']}/trash",{"expected_revision":p['revision']})
+        self.assertNotIn(p['id'],[x['id'] for x in self.client.call("GET","/api/projects")])
+        self.assertIn(p['id'],[x['id'] for x in self.client.call("GET","/api/projects?trash=1")])
+        for suffix in ("","/jobs","/context"):
+            with self.assertRaises(HTTPError) as error:urlopen(self.base+f"/api/projects/{p['id']}"+suffix)
+            self.assertEqual(error.exception.code,404)
+        self.client.call("POST",f"/api/projects/{p['id']}/restore",{"expected_revision":hidden['revision']})
+        self.assertEqual(self.client.call("GET",f"/api/projects/{p['id']}")['name'],p['name'])
+
+    def test_project_with_pending_upload_cannot_be_hidden(self):
+        p=self.client.call("POST","/api/projects",{"name":"Envio em andamento"})
+        self.client.call("POST",f"/api/projects/{p['id']}/uploads",{"name":"test.mp4","size":10})
+        with self.assertRaises(HTTPError) as error:
+            urlopen(Request(self.base+f"/api/projects/{p['id']}/trash",method="POST",data=json.dumps({"expected_revision":p['revision']}).encode(),headers={"Content-Type":"application/json"}))
+        self.assertEqual(error.exception.code,409)
+        self.assertEqual(self.client.call("GET",f"/api/projects/{p['id']}")['revision'],p['revision'])
+
     def test_external_origin_and_host_are_rejected(self):
         for headers in ({"Origin": "https://external.example"}, {"Host": "external.example"}):
             with self.subTest(headers=headers), self.assertRaises(HTTPError) as error:

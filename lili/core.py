@@ -138,16 +138,42 @@ class Store:
 
     def get(self, project_id):
         with self.lock:
-            return self.public(self._read(project_id))
+            p = self._read(project_id)
+            if p.get("deleted_at"):
+                raise EditorError("Projeto na Lixeira. Restaure pela página inicial.", 404)
+            return self.public(p)
 
-    def list(self):
+    def list(self, trash=False):
         with self.lock:
             result = []
             folders = {p.parent for pattern in ("*/project.json", "*/project.json.bak") for p in self.root.glob(pattern)}
             for folder in folders:
                 p = self._read(folder.name)
-                result.append({k: p[k] for k in ("id", "name", "revision", "updated_at", "description")})
+                if bool(p.get("deleted_at")) != trash:
+                    continue
+                item = {k: p[k] for k in ("id", "name", "revision", "updated_at", "description")}
+                active = [m for m in p["media"] if not m.get("deleted_at")]
+                item.update(media_count=len(active), duration=duration(p),
+                            thumbnail_id=next((m["id"] for m in active if m.get("kind")=="video" and m.get("status")=="ready"), None))
+                result.append(item)
             return sorted(result, key=lambda p: p["updated_at"], reverse=True)
+
+    def project_trash(self, project_id, expected_revision, restore=False):
+        with self.lock:
+            p = self._read(project_id)
+            if isinstance(expected_revision, bool) or expected_revision != p["revision"]:
+                raise EditorError("O projeto mudou. Atualize e confirme novamente.", 409)
+            if bool(p.get("deleted_at")) == (not restore):
+                raise EditorError("O estado do projeto mudou. Atualize a lista.", 409)
+            if not restore and any(m.get("status") not in ("ready", "error") for m in p["media"]):
+                raise EditorError("Aguarde a preparação dos arquivos antes de excluir o projeto.", 409)
+            if restore:
+                p.pop("deleted_at", None)
+            else:
+                p["deleted_at"] = now()
+            self._touch(p, "editor", "project_restore" if restore else "project_remove")
+            self._write(p)
+            return {"id": p["id"], "revision": p["revision"]}
 
     def create(self, name, script="", description=""):
         with self.lock:
@@ -215,6 +241,8 @@ class Store:
             raise EditorError("Os argumentos devem ser um objeto.")
         with self.lock:
             p = self._read(project_id)
+            if p.get("deleted_at"):
+                raise EditorError("Restaure o projeto antes de editar.", 404)
             if isinstance(expected_revision, bool) or expected_revision != p["revision"]:
                 raise EditorError("O projeto mudou. Atualize a página ou leia a revisão atual antes de editar.", 409)
             snapshot = {k: copy.deepcopy(p[k]) for k in self.SNAPSHOT_FIELDS}
@@ -232,22 +260,28 @@ class Store:
                     raise EditorError("Use até 40 etiquetas.")
                 asset["tags"] = [text(t, 80) for t in tags if text(t, 80)]
                 asset["note"] = text(args.get("note", asset.get("note", "")), 2000)
-            elif operation == "media_remove":
-                asset = self.find(p["media"], args.get("media_id"), "Arquivo")
-                if asset.get("deleted_at"):
-                    raise EditorError("O arquivo já está na Lixeira.", 409)
-                if asset.get("status") not in ("ready", "error"):
+            elif operation in ("media_remove", "media_remove_many"):
+                ids = args.get("media_ids") if operation == "media_remove_many" else [args.get("media_id")]
+                if (not isinstance(ids, list) or not 1 <= len(ids) <= 1000
+                        or any(not isinstance(i, str) for i in ids) or len(set(ids)) != len(ids)):
+                    raise EditorError("Selecione de 1 a 1000 arquivos diferentes.")
+                assets = [self.find(p["media"], i, "Arquivo") for i in ids]
+                if any(a.get("deleted_at") for a in assets):
+                    raise EditorError("Há arquivos que já estão na Lixeira.", 409)
+                if any(a.get("status") not in ("ready", "error") for a in assets):
                     raise EditorError("Aguarde a importação terminar antes de excluir.", 409)
-                clips = [c for c in p["timeline"] if c["media_id"] == asset["id"]]
-                narration = p["narration"] and p["narration"]["media_id"] == asset["id"]
+                clips = [c for c in p["timeline"] if c["media_id"] in ids]
+                narration = p["narration"] and p["narration"]["media_id"] in ids
                 if any(c["locked"] for c in clips):
                     raise EditorError("Desproteja as cenas deste arquivo antes de excluir.", 409)
                 if (clips or narration) and args.get("remove_usage") is not True:
                     raise EditorError("Confirme também a remoção das cenas e da narração que usam este arquivo.", 409)
-                p["timeline"] = [c for c in p["timeline"] if c["media_id"] != asset["id"]]
+                p["timeline"] = [c for c in p["timeline"] if c["media_id"] not in ids]
                 if narration:
                     p["narration"] = None
-                asset["deleted_at"] = now()
+                stamp = now()
+                for asset in assets:
+                    asset["deleted_at"] = stamp
             elif operation == "media_restore":
                 asset = self.find(p["media"], args.get("media_id"), "Arquivo")
                 if not asset.get("deleted_at"):

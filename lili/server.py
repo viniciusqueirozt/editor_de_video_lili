@@ -117,7 +117,7 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/auth/status":
                 return self.json({"authenticated": False})
             if path == "/api/projects":
-                return self.json(store.list())
+                return self.json(store.list(trash=parse_qs(url.query).get("trash") == ["1"]))
             if path == "/api/ai/status":
                 return self.json(self.server.ai.availability())
             if len(parts) == 3 and parts[:2] == ["api", "jobs"]:
@@ -158,14 +158,22 @@ class Handler(BaseHTTPRequestHandler):
                     if job["project_id"] != project_id or job["status"] != "done":
                         raise EditorError("Esta exportação não está disponível.", 404)
                     return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True)
-            if path in ("/", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
-                return self.file(WEB / ("index.html" if path == "/" else path[1:]))
+            if path in ("/", "/editor", "/home.js", "/home.css", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
+                return self.file(WEB / ({"/": "home.html", "/editor": "index.html"}.get(path, path[1:])))
             raise EditorError("Página não encontrada.", 404)
         if path == "/api/projects" and self.command == "POST":
             data = self.read_json()
             return self.json(store.create(data.get("name", "Novo projeto"), data.get("script", ""), data.get("description", "")), 201)
         if len(parts) >= 4 and parts[:2] == ["api", "projects"]:
             project_id, operation = parts[2], parts[3]
+            if len(parts) == 4 and operation in ("trash", "restore") and self.command == "POST":
+                data = self.read_json()
+                if operation == "trash":
+                    with self.server.uploads.lock:
+                        if any(u["project"] == project_id for u in self.server.uploads.pending.values()):
+                            raise EditorError("Termine os envios pendentes antes de excluir o projeto.", 409)
+                        return self.json(store.project_trash(project_id, data.get("expected_revision")))
+                return self.json(store.project_trash(project_id, data.get("expected_revision"), restore=True))
             store.get(project_id)
             if operation == "uploads":
                 if len(parts) == 4 and self.command == "POST":
