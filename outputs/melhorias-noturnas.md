@@ -35,6 +35,10 @@ Solicitadas cinco rodadas por hora neste mesmo chat. Uma melhoria completa por r
 
 Não é auditoria completa de segurança. iPhone/Safari real continua pendente. Registrar cada entrega concreta abaixo e remover itens já resolvidos da lista.
 
+## Novo trabalho autorizado pelo usuário: portal fixo
+
+Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver outputs/portal-acesso.md para identidade e estado exato. A conta administradora depende de cadastro humano; o Site está temporariamente privado. Não iniciar lili.portal_agent nem regenerar suas chaves/pepper durante as rodadas noturnas. Não alterar o túnel saudável. A liberação pública e a ativação do conector serão concluídas depois do primeiro cadastro, neste chat.
+
 
 ## Rodada de continuidade — 21/10/2026
 
