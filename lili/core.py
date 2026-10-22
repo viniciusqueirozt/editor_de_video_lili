@@ -5,6 +5,8 @@ import json
 import math
 import os
 import re
+import shutil
+import stat
 import threading
 import unicodedata
 import uuid
@@ -174,6 +176,38 @@ class Store:
             self._touch(p, "editor", "project_restore" if restore else "project_remove")
             self._write(p)
             return {"id": p["id"], "revision": p["revision"]}
+
+    def purge_project(self, project_id, expected_revision, confirmation):
+        """Remove only an explicitly confirmed, trashed project inside this store."""
+        with self.lock:
+            folder = self.folder(project_id)
+            if folder.parent != self.root or folder.resolve().parent != self.root:
+                raise EditorError("Caminho do projeto inseguro. Nenhum arquivo foi excluído.", 409)
+            # Refuse symlinks, junctions and other reparse points before reading
+            # project metadata or recursively deleting anything.
+            def inventory(path):
+                info = path.lstat()
+                if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400):
+                    raise EditorError("O projeto contém links de arquivos. A exclusão foi bloqueada para proteger outros locais.", 409)
+                if stat.S_ISDIR(info.st_mode):
+                    return sum(inventory(child) for child in path.iterdir())
+                return info.st_size
+            try:
+                size = inventory(folder)
+            except OSError:
+                raise EditorError("Não foi possível verificar os arquivos do projeto. Atualize a Lixeira.", 409) from None
+            p = self._read(project_id)
+            if not p.get("deleted_at"):
+                raise EditorError("Mova o projeto para a Lixeira antes de excluir permanentemente.", 409)
+            if isinstance(expected_revision, bool) or expected_revision != p["revision"]:
+                raise EditorError("O projeto mudou. Atualize e confirme novamente.", 409)
+            if confirmation != "EXCLUIR":
+                raise EditorError("Digite EXCLUIR para confirmar a exclusão permanente.")
+            try:
+                shutil.rmtree(folder)
+            except OSError:
+                raise EditorError("Não foi possível remover todos os arquivos. Feche os arquivos abertos e atualize a Lixeira; a exclusão pode ter sido parcial.", 409) from None
+            return {"id": project_id, "removed_bytes": size, "permanent": True}
 
     def create(self, name, script="", description=""):
         with self.lock:

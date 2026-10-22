@@ -220,6 +220,24 @@ class IntegrationTests(unittest.TestCase):
         self.assertEqual(error.exception.code,409)
         self.assertEqual(self.client.call("GET",f"/api/projects/{p['id']}")['revision'],p['revision'])
 
+    def test_permanent_project_deletion_api_blocks_jobs_and_stale_submissions(self):
+        p=self.client.call('POST','/api/projects',{'name':'Purge HTTP sintético'})
+        hidden=self.client.call('POST',f"/api/projects/{p['id']}/trash",{'expected_revision':p['revision']})
+        job_id=uid()
+        with self.server.media.lock:self.server.media.jobs[job_id]={'id':job_id,'project_id':p['id'],'status':'running','kind':'export'}
+        def purge(data):
+            return urlopen(Request(self.base+f"/api/projects/{p['id']}/purge",method='POST',data=json.dumps(data).encode(),headers={'Content-Type':'application/json'}))
+        args={'expected_revision':hidden['revision'],'confirmation':'EXCLUIR'}
+        with self.assertRaises(HTTPError) as error:purge(args)
+        self.assertEqual(error.exception.code,409)
+        with self.server.media.lock:self.server.media.jobs[job_id]['status']='done'
+        with self.assertRaises(HTTPError) as error:purge({'expected_revision':hidden['revision']})
+        self.assertEqual(error.exception.code,400)
+        result=self.client.call('POST',f"/api/projects/{p['id']}/purge",args)
+        self.assertTrue(result['permanent']);self.assertFalse(self.store.folder(p['id']).exists())
+        with self.assertRaises(EditorError):self.server.media.submit(p['id'],'export',lambda _:None)
+        self.assertEqual(len([j for j in self.server.media.jobs.values() if j['project_id']==p['id']]),1)
+
     def test_external_origin_and_host_are_rejected(self):
         for headers in ({"Origin": "https://external.example"}, {"Host": "external.example"}):
             with self.subTest(headers=headers), self.assertRaises(HTTPError) as error:

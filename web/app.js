@@ -361,7 +361,7 @@ function markMobilePanel(name){document.querySelectorAll("[data-mobile-panel]").
 function closeSheet(){delete document.body.dataset.mobileSheet;$("#sheet-backdrop").hidden=true;markMobilePanel("timeline");}
 function openInspector(name){setInspector(name);markMobilePanel("scene");revealPanel(".inspector");}
 function revealPanel(selector){
-  if(matchMedia("(max-width:640px)").matches){
+  if(matchMedia("(max-width:740px)").matches){
     document.body.dataset.mobileSheet=selector===".library"?"library":"inspector";$("#sheet-backdrop").hidden=false;return;
   }
   if(matchMedia("(max-width:930px)").matches)$(selector).scrollIntoView({behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth",block:"start"});
@@ -406,7 +406,7 @@ $("#delete-media-form").addEventListener("submit",async e=>{
 document.querySelectorAll("[data-close-sheet]").forEach(b=>b.addEventListener("click",closeSheet));
 $("#sheet-backdrop").addEventListener("click",closeSheet);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.querySelector("dialog[open]"))closeSheet();});
-matchMedia("(max-width:640px)").addEventListener("change",()=>closeSheet());
+matchMedia("(max-width:740px)").addEventListener("change",()=>closeSheet());
 $("#file-input").addEventListener("change",e=>uploadFiles([...e.target.files]));
 ["#import-top","#import-zone","#import-main","#import-mobile"].forEach(s=>$(s).addEventListener("click",openFilePicker));
 $("#codex-main").addEventListener("click",()=>openLibraryTab("requests",true));
@@ -421,7 +421,7 @@ document.querySelectorAll("[data-mobile-panel]").forEach(button=>button.addEvent
 $("#import-zone").addEventListener("dragover",e=>e.preventDefault());$("#import-zone").addEventListener("drop",e=>{e.preventDefault();uploadFiles([...e.dataTransfer.files]);});
 document.querySelectorAll("[data-tab]").forEach(button=>button.addEventListener("click",()=>openLibraryTab(button.dataset.tab)));
 document.querySelectorAll("[data-inspector]").forEach(b=>b.addEventListener("click",()=>setInspector(b.dataset.inspector)));
-$("#step-visual").addEventListener("click",()=>setInspector("scene"));$("#step-voice").addEventListener("click",()=>{setInspector("voice");if(matchMedia("(max-width:640px)").matches)revealPanel(".inspector");});
+$("#step-visual").addEventListener("click",()=>setInspector("scene"));$("#step-voice").addEventListener("click",()=>{setInspector("voice");if(matchMedia("(max-width:740px)").matches)revealPanel(".inspector");});
 $("#save-script").addEventListener("click",()=>mutate("script_update",{script:$("#script-input").value},"Roteiro salvo."));
 $("#request-form").addEventListener("submit",async e=>{e.preventDefault();const input=$("#request-input");if(!input.value.trim())return;if(await mutate("request_add",{text:input.value},"Pedido salvo para o Codex. A execução depende de uma sessão do agente."))input.value="";});
 $("#undo-button").addEventListener("click",()=>mutate("undo",{},"Última alteração desfeita."));
@@ -457,3 +457,8 @@ $("#delete-project-form").addEventListener("submit",async e=>{
   try{await queue;await api(`/api/projects/${target.id}/trash`,{method:"POST",body:JSON.stringify({expected_revision:target.revision})});location.assign("/#trash");}
   catch(error){$("#delete-project-dialog").close();toast(error.message+" Revise e tente novamente.",true);}finally{button.disabled=false;}
 });
+
+$("#project-menu-button").addEventListener("click",()=>{pause();closeSheet();$("#project-menu-dialog").showModal();});
+for(const [menu,target] of [["menu-new-project","new-project"],["menu-delete-project","delete-project-current"],["menu-phone-help","phone-help"]]){
+ $("#"+menu).addEventListener("click",()=>{$("#project-menu-dialog").close();$("#"+target).click();});
+}

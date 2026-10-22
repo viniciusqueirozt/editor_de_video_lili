@@ -158,7 +158,7 @@ class Handler(BaseHTTPRequestHandler):
                     if job["project_id"] != project_id or job["status"] != "done":
                         raise EditorError("Esta exportação não está disponível.", 404)
                     return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True)
-            if path in ("/", "/editor", "/home.js", "/home.css", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
+            if path in ("/", "/editor", "/home.js", "/home.css", "/studio.css", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
                 return self.file(WEB / ({"/": "home.html", "/editor": "index.html"}.get(path, path[1:])))
             raise EditorError("Página não encontrada.", 404)
         if path == "/api/projects" and self.command == "POST":
@@ -166,6 +166,14 @@ class Handler(BaseHTTPRequestHandler):
             return self.json(store.create(data.get("name", "Novo projeto"), data.get("script", ""), data.get("description", "")), 201)
         if len(parts) >= 4 and parts[:2] == ["api", "projects"]:
             project_id, operation = parts[2], parts[3]
+            if len(parts) == 4 and operation == "purge" and self.command == "POST":
+                data = self.read_json()
+                with self.server.uploads.lock, media.lock:
+                    if any(u["project"] == project_id for u in self.server.uploads.pending.values()):
+                        raise EditorError("Há envios pendentes deste projeto. Conclua-os antes de excluir.", 409)
+                    if any(j["project_id"] == project_id and j["status"] in ("queued", "running") for j in media.jobs.values()):
+                        raise EditorError("Aguarde os processamentos deste projeto antes de excluir permanentemente.", 409)
+                    return self.json(store.purge_project(project_id, data.get("expected_revision"), data.get("confirmation")))
             if len(parts) == 4 and operation in ("trash", "restore") and self.command == "POST":
                 data = self.read_json()
                 if operation == "trash":

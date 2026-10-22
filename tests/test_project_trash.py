@@ -1,6 +1,9 @@
 import tempfile
 import unittest
 from pathlib import Path
+import stat
+from types import SimpleNamespace
+from unittest.mock import patch
 from lili.core import Store, EditorError, uid
 
 class TrashTests(unittest.TestCase):
@@ -66,3 +69,42 @@ class TrashTests(unittest.TestCase):
         self.refresh()
         with self.assertRaises(EditorError):self.store.project_trash(self.p["id"],self.p["revision"])
         self.assertEqual(len(self.store.list()),1)
+
+    def test_permanent_delete_requires_trash_confirmation_and_current_revision(self):
+        folder=self.store.folder(self.p['id'])
+        with self.assertRaises(EditorError):self.store.purge_project(self.p['id'],self.p['revision'],'EXCLUIR')
+        hidden=self.store.project_trash(self.p['id'],self.p['revision'])
+        for revision,confirmation in ((hidden['revision'],'excluir'),(hidden['revision'],None),(hidden['revision']-1,'EXCLUIR'),(True,'EXCLUIR')):
+            with self.subTest(revision=revision,confirmation=confirmation),self.assertRaises(EditorError):
+                self.store.purge_project(self.p['id'],revision,confirmation)
+            self.assertTrue(folder.exists())
+
+    def test_permanent_delete_removes_only_the_selected_project_files(self):
+        folder=self.store.folder(self.p['id'])
+        external=Path(self.temp.name)/'downloads-original.mov';external.write_bytes(b'outside')
+        other=self.store.create('Outro projeto');other_folder=self.store.folder(other['id'])
+        for name in ('media/original.mov','media/proxy.mp4','exports/job/video.mp4'):
+            f=folder/name;f.parent.mkdir(parents=True,exist_ok=True);f.write_bytes(b'synthetic video bytes')
+        hidden=self.store.project_trash(self.p['id'],self.p['revision'])
+        result=self.store.purge_project(self.p['id'],hidden['revision'],'EXCLUIR')
+        self.assertTrue(result['permanent']);self.assertGreater(result['removed_bytes'],60)
+        self.assertFalse(folder.exists());self.assertTrue(other_folder.exists());self.assertEqual(external.read_bytes(),b'outside')
+        self.assertEqual(self.store.list(trash=True),[])
+        with self.assertRaises(EditorError):self.store.project_trash(self.p['id'],hidden['revision'],restore=True)
+
+    def test_reparse_point_in_project_blocks_deletion_before_any_file_is_removed(self):
+        folder=self.store.folder(self.p['id']);link=folder/'external-link';link.write_bytes(b'keep')
+        hidden=self.store.project_trash(self.p['id'],self.p['revision'])
+        original=Path.lstat
+        def lstat(path,*args,**kwargs):
+            if path==link:return SimpleNamespace(st_mode=stat.S_IFDIR,st_file_attributes=0x400,st_size=0)
+            return original(path,*args,**kwargs)
+        with patch.object(Path,'lstat',lstat),patch('lili.core.shutil.rmtree') as remove:
+            with self.assertRaises(EditorError):self.store.purge_project(self.p['id'],hidden['revision'],'EXCLUIR')
+            remove.assert_not_called()
+        self.assertEqual(link.read_bytes(),b'keep');self.assertTrue((folder/'project.json').exists())
+
+    def test_permanent_delete_rejects_paths_outside_project_ids(self):
+        for value in ('..','../outside','',None,'0'*31):
+            with self.subTest(value=value),self.assertRaises(EditorError):self.store.purge_project(value,1,'EXCLUIR')
+        self.assertTrue(self.store.folder(self.p['id']).exists())

@@ -108,6 +108,8 @@ class MediaService:
         job = {"id": job_id, "project_id": project_id, "kind": kind, "status": "queued",
                "progress": 0, "created_at": now(), "error": None}
         with self.lock:
+            # Do not enqueue a stale snapshot after a project was trashed/purged.
+            self.store.get(project_id)
             self.jobs[job_id] = job
             self._save_jobs()
 
