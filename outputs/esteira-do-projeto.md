@@ -24,12 +24,27 @@ Entregar em incrementos pequenos. Não esperar todas as etapas para liberar fun�
 
 ### Estado atual e migração
 
-As contas do portal são individuais, mas o editor ainda usa um login compartilhado e não associa projetos a proprietários. Não há isolamento por usuário implementado; esconder cartões na interface não resolve isso. Será necessário integrar a identidade ao servidor do editor e conferir permissões em cada operação. Não apresentar o estado atual como ambiente privado entre colegas.
+Base de autorização preparada em código e testes nesta etapa: identidade confiável injetada pelo servidor, proprietário por projeto, permissões separadas e revogação. A base só é aplicada quando há um resolvedor de identidade configurado na construção do servidor; não há configuração ativa no ambiente real nem opção de ativação pela interface.
+
+As contas do portal são individuais, mas o editor em produção ainda usa um login compartilhado e não associa os projetos existentes a proprietários. Não há isolamento por usuário implementado; esconder cartões na interface não resolve isso. Será necessário integrar a identidade ao servidor do editor e conferir permissões em cada operação. Não apresentar o estado atual como ambiente privado entre colegas.
 
 - Associar cada projeto a um proprietário identificado por ID estável, nunca apenas pelo nome exibido ou por e-mail enviado pelo navegador.
 - Migrar os projetos existentes com associação explícita ao proprietário correto, preservando arquivos, montagem aprovada e histórico. Não atribuir ao primeiro visitante que entrar.
 - Validar uma sessão individual no editor vinculada à conta autorizada; não reutilizar a senha do portal em outro serviço nem depender de um ID de usuário livremente informado pelo cliente.
 - Separar a capacidade de administrar convites do portal da autorização para abrir material de todos os projetos. Acesso de suporte/administração ao conteúdo exige regra explícita e registro.
+
+### Progresso da primeira etapa
+
+- [x] Política de autorização no servidor e criação privada a partir de identidade autenticada fornecida pelo servidor.
+- [x] Regras separadas de visualizar, editar, baixar final e baixar originais; só o dono gerencia permissões e exclusão de projeto.
+- [x] Rotas de projeto, mídia, jobs e operações verificadas em testes com duas identidades; revogação bloqueia requisições seguintes.
+- [x] Sem confiar em cabeçalhos/IDs de usuário enviados livremente pelo navegador; metadados de acesso fora do contexto público; Desfazer não restaura autorizações revogadas.
+- [ ] Integrar identidade e sessão individual ao portal/gateway, incluindo expiração/revogação e validação da conta.
+- [ ] Associar explicitamente os projetos existentes aos proprietários corretos; nunca atribuir ao primeiro visitante.
+- [ ] Diretório de contas, confirmação de identidade/e-mail e interface de Compartilhar/Compartilhados comigo.
+- [ ] Validar transporte real com duas contas e autorizações em todos os caminhos antes de ativar privacidade em produção.
+
+Detalhes: outputs/base-de-permissoes.md. Os itens marcados não significam que o modo privado já esteja disponível para os usuários.
 
 ### Permissões por projeto
 

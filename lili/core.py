@@ -131,6 +131,7 @@ class Store:
     @staticmethod
     def public(project):
         result = copy.deepcopy(project)
+        result.pop("access", None)  # Sharing metadata has a separate owner-only API.
         result["undo_available"] = bool(result.pop("history", []))
         result["duration"] = duration(result)
         result["blocks"] = script_blocks(result["script"])
@@ -209,13 +210,17 @@ class Store:
                 raise EditorError("Não foi possível remover todos os arquivos. Feche os arquivos abertos e atualize a Lixeira; a exclusão pode ter sido parcial.", 409) from None
             return {"id": project_id, "removed_bytes": size, "permanent": True}
 
-    def create(self, name, script="", description=""):
+    def create(self, name, script="", description="", *, owner_id=None):
         with self.lock:
             p = {"id": uid(), "name": text(name, 120) or "Novo projeto", "script": text(script),
                  "description": text(description, 1000), "revision": 1, "updated_at": now(),
                  "media": [], "timeline": [], "narration": None, "requests": [], "history": [],
                  "settings": {"width": 1080, "height": 1920, "fps": 30},
                  "last_change": {"actor": "editor", "operation": "create"}}
+            if owner_id is not None:
+                from .access import valid_subject
+                if not valid_subject(owner_id):raise EditorError("Proprietário inválido.")
+                p["access"] = {"owner_id": owner_id, "grants": {}}
             self._write(p)
             return self.public(p)
 
@@ -407,7 +412,7 @@ class Store:
                 p["history"] = (p["history"] + [snapshot])[-30:]
             if len(p["timeline"]) > 100 or duration(p) > 1800:
                 raise EditorError("O piloto aceita até 100 cenas e 30 minutos por montagem.")
-            self._touch(p, text(actor, 40), operation)
+            self._touch(p, text(actor, 160), operation)
             self._write(p)
             return self.public(p)
 

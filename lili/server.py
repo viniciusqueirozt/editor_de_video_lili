@@ -14,6 +14,7 @@ from .core import EditorError, Store, text, uid
 from .media import ALLOWED, MediaService
 from .uploads import Uploads
 from .ai import AIEditor
+from .access import Principal, ProjectAccess
 from .httpguard import validate_headers
 
 WEB = Path(__file__).resolve().parent.parent / "web"
@@ -22,9 +23,11 @@ WEB = Path(__file__).resolve().parent.parent / "web"
 class EditorServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address, store):
+    def __init__(self, address, store, *, identity_resolver=None):
         super().__init__(address, Handler)
         self.store = store
+        self.identity_resolver = identity_resolver
+        self.access = ProjectAccess(store)
         self.media = MediaService(store)
         self.uploads = Uploads(store, self.media)
         self.ai = AIEditor(store, self.media)
@@ -97,6 +100,11 @@ class Handler(BaseHTTPRequestHandler):
                 raise EditorError("Origem não permitida.", 403)
             if self.headers.get("Sec-Fetch-Site") == "cross-site":
                 raise EditorError("Origem não permitida.", 403)
+            self.principal = None
+            if self.server.identity_resolver is not None:
+                self.principal = self.server.identity_resolver(self)
+                if not isinstance(self.principal, Principal):
+                    raise EditorError("Entre com sua conta individual para continuar.", 401)
             self.route()
         except EditorError as exc:
             self.json({"error": str(exc)}, exc.status)
@@ -105,6 +113,10 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             print(f"Erro no servidor: {exc!r}", file=sys.stderr, flush=True)
             self.json({"error": "Não foi possível concluir. Consulte o terminal do servidor."}, 500)
+
+    def require_project(self, project_id, permission):
+        if self.server.identity_resolver is not None:
+            self.server.access.require(self.principal, project_id, permission)
 
     def route(self):
         url = urlsplit(self.path)
@@ -115,16 +127,26 @@ class Handler(BaseHTTPRequestHandler):
             if path == "/api/health":
                 return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg"})
             if path == "/auth/status":
-                return self.json({"authenticated": False})
+                return self.json({"authenticated": self.server.identity_resolver is not None})
             if path == "/api/projects":
-                return self.json(store.list(trash=parse_qs(url.query).get("trash") == ["1"]))
+                trash = parse_qs(url.query).get("trash") == ["1"]
+                rows = store.list(trash=trash)
+                if self.server.identity_resolver is not None:
+                    rows = [p for p in rows if self.server.access.can(self.principal,p["id"],"own" if trash else "view")]
+                return self.json(rows)
             if path == "/api/ai/status":
                 return self.json(self.server.ai.availability())
             if len(parts) == 3 and parts[:2] == ["api", "jobs"]:
-                return self.json(media.job(parts[2]))
+                job = media.job(parts[2])
+                self.require_project(job["project_id"], "view")
+                return self.json(job)
             if len(parts) >= 3 and parts[:2] == ["api", "projects"]:
                 project_id = parts[2]
+                self.require_project(project_id, "view")
                 project = store.get(project_id)
+                if len(parts)==4 and parts[3]=="sharing":
+                    if self.server.identity_resolver is None:raise EditorError("Contas individuais ainda não estão ativadas.",503)
+                    return self.json(self.server.access.sharing(self.principal,project_id))
                 if len(parts) == 3:
                     return self.json(project)
                 if len(parts) == 4 and parts[3] == "jobs":
@@ -148,6 +170,7 @@ class Handler(BaseHTTPRequestHandler):
                         return self.file(media.frame(project_id, asset["id"], parse_qs(url.query).get("at", ["0"])[0]))
                     if kind not in ("proxy", "thumbnail", "original"):
                         raise EditorError("Arquivo não encontrado.", 404)
+                    if kind == "original":self.require_project(project_id,"download_sources")
                     key = "filename" if kind == "original" else kind
                     filename = asset.get(key)
                     if not filename:
@@ -157,15 +180,21 @@ class Handler(BaseHTTPRequestHandler):
                     job = media.job(parts[4])
                     if job["project_id"] != project_id or job["status"] != "done":
                         raise EditorError("Esta exportação não está disponível.", 404)
+                    self.require_project(project_id,"download_exports")
                     return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True)
             if path in ("/", "/editor", "/home.js", "/home.css", "/studio.css", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
                 return self.file(WEB / ({"/": "home.html", "/editor": "index.html"}.get(path, path[1:])))
             raise EditorError("Página não encontrada.", 404)
         if path == "/api/projects" and self.command == "POST":
             data = self.read_json()
-            return self.json(store.create(data.get("name", "Novo projeto"), data.get("script", ""), data.get("description", "")), 201)
+            return self.json(store.create(data.get("name", "Novo projeto"), data.get("script", ""), data.get("description", ""), owner_id=self.principal.subject if self.principal else None), 201)
         if len(parts) >= 4 and parts[:2] == ["api", "projects"]:
             project_id, operation = parts[2], parts[3]
+            self.require_project(project_id, "own" if operation in ("trash","restore","purge","sharing") else "edit")
+            if len(parts)==4 and operation=="sharing" and self.command=="POST":
+                if self.server.identity_resolver is None:raise EditorError("Contas individuais ainda não estão ativadas.",503)
+                data=self.read_json()
+                return self.json(self.server.access.set_grant(self.principal,project_id,data.get("subject"),data.get("permissions"),data.get("expected_revision")))
             if len(parts) == 4 and operation == "purge" and self.command == "POST":
                 data = self.read_json()
                 with self.server.uploads.lock, media.lock:
@@ -225,7 +254,7 @@ class Handler(BaseHTTPRequestHandler):
             if self.command == "POST" and len(parts) == 4:
                 data = self.read_json()
                 if operation == "commands":
-                    return self.json(store.apply(project_id, data.get("operation"), data.get("args", {}), data.get("expected_revision"), data.get("actor", "editor")))
+                    return self.json(store.apply(project_id, data.get("operation"), data.get("args", {}), data.get("expected_revision"), "user:"+self.principal.subject if self.principal else data.get("actor", "editor")))
                 if operation == "draft":
                     return self.json(store.draft(project_id, data.get("expected_revision")))
                 if operation == "ai-edit":
