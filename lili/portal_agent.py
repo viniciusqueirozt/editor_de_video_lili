@@ -46,7 +46,8 @@ class PortalClient:
             raise ValueError("Ação do conector não permitida.")
         req = Request(self.origin + "/api/device/" + action,
                       data=json.dumps(data).encode() if data is not None else None,
-                      headers={"Authorization": "Bearer " + self.key, "Content-Type": "application/json"})
+                      headers={"Authorization": "Bearer " + self.key, "Content-Type": "application/json",
+                               "User-Agent": "Lili-Portal-Connector/1.0", "Accept": "application/json"})
         with self.opener.open(req, timeout=15) as response:
             raw = response.read(16385)
             if len(raw) > 16384:

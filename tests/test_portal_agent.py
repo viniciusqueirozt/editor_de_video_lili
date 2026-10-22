@@ -8,6 +8,18 @@ from lili.portal_agent import Agent, PortalClient, TunnelController, tunnel_url
 
 
 class PortalAgentTests(unittest.TestCase):
+    def test_client_identifies_itself_and_sends_report_as_json(self):
+        response=Mock();response.read.return_value=b'{"ok":true}'
+        response.__enter__=Mock(return_value=response);response.__exit__=Mock(return_value=False)
+        opener=Mock();opener.open.return_value=response
+        client=PortalClient("https://portal.owner.chatgpt.site","a"*64,opener=opener)
+        self.assertEqual(client.call("report",{"healthy":False,"url":None}),{"ok":True})
+        request=opener.open.call_args.args[0]
+        self.assertEqual(request.get_header("User-agent"),"Lili-Portal-Connector/1.0")
+        self.assertEqual(request.get_header("Accept"),"application/json")
+        self.assertEqual(request.get_method(),"POST")
+        self.assertEqual(request.full_url,"https://portal.owner.chatgpt.site/api/device/report")
+
     def test_healthy_tunnel_is_never_replaced(self):
         scratch=Path("work/tests").resolve();scratch.mkdir(parents=True,exist_ok=True)
         with tempfile.TemporaryDirectory(dir=scratch) as folder:

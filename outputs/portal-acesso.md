@@ -42,7 +42,25 @@ O acesso externo antigo permanece funcionando enquanto o portal é preparado. N�
 
 - Versão privada publicada com sucesso: appgprj_6ad95236fe688191b78a2079f3fb85c6~appgver_6d10745a19f48191936fe5e02a174495.
 - Commit da fonte no Sites: 6d7b7ba88ed70ed5d8d806e3d29264c9e7a952c1.
-- Ambiente de bootstrap: ALLOW_SETUP ainda habilitado. PASSWORD_PEPPER e DEVICE_KEY estão em ambiente secreto. Nunca regenerar o pepper após criar contas, pois isso invalidaria a verificação das senhas existentes.
+- Ambiente de bootstrap: ALLOW_SETUP desabilitado após cadastro humano confirmado em 21/10/2026. PASSWORD_PEPPER e DEVICE_KEY estão em ambiente secreto. Nunca regenerar o pepper após criar contas, pois isso invalidaria a verificação das senhas existentes.
 - Conector preparado, porém ainda não iniciado: a camada privada do Sites bloqueia o acesso anônimo do dispositivo. Aguardar o proprietário criar a conta, desabilitar o bootstrap, aplicar o ambiente e liberar a página pública com autenticação própria antes de iniciar o conector.
 - A tela nativa de login ChatGPT foi aberta apenas para a configuração privada do proprietário. Nenhum e-mail ou senha real foi preenchido pelo agente. O usuário deve usar a conta proprietária do Sites para essa etapa única; as contas convidadas depois são próprias da Lili.
 - Oito testes iniciais e o nono caso de limites/expiração passaram; quatro testes Python passaram. A prova visual de cadastro é da prévia local com dados vazios, não de uma conta real criada.
+
+
+## Continuidade após cadastro — 21/10/2026
+
+- Conta administradora confirmada pela interface autenticada do proprietário, sem ler ou preencher sua senha.
+- ALLOW_SETUP=false aplicado na revisão 2 do ambiente, mantendo os outros segredos. Publicação da mesma versão concluída: appgdep_6ad95ca3d4c881918964d194d0a28670.
+- A tentativa de alterar o acesso do Site para público foi rejeitada pela revisão automática: entendeu que o usuário autorizou convidados por convite, sem autorização explícita para abertura pública do recurso. Não houve tentativa por caminho alternativo.
+- Site permanece privado; conector permanece desligado. Aguardando autorização explícita para tornar pública somente a página de entrada e cadastro; APIs de estado, link e administração continuam exigindo autenticação própria. O editor mantém seu login separado.
+
+
+## Portal ativado — 21/10/2026
+
+- Usuário liberou o acesso; get_site confirmou access_mode=public. Conta administradora e convites próprios continuam protegidos pela autenticação da aplicação. Bootstrap desativado, revisão de ambiente 2.
+- Conector iniciado em segundo plano. O User-Agent padrão do Python era rejeitado pela hospedagem com HTTP 403/1010; identificação explícita Lili-Portal-Connector/1.0 corrigiu a comunicação, sem alterar proteções do servidor.
+- Estado real enviado com sucesso, túnel existente saudável preservado. Interface autenticada confirmou Conectado, Seu estúdio está pronto e Abrir editor; reconexão não é oferecida enquanto o link está ativo.
+- Acesso anônimo a /api/portal/meta confirmou setupRequired=false; /api/portal/status retornou 401. Cinco testes focados do conector passaram. Prova desktop: outputs/lili-portal-conectado.png (arquivo local, fora do Git).
+- Sem reinício do editor, gateway ou túnel. Reconexão real após queda e Safari real permanecem pendentes; não derrubar um túnel saudável apenas para teste.
+- O conector roda enquanto este processo e notebook permanecerem ligados. Ainda não foi configurada inicialização automática após reiniciar o Windows. Convites são compartilhados manualmente; envio e recuperação por e-mail não foram implementados.
