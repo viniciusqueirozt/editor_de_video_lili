@@ -282,8 +282,15 @@ class MediaService:
             if narration:
                 asset = self.store.find(project["media"], narration["media_id"], "Arquivo")
                 delay = round(narration["offset"] * 1000)
+                voice_filters = [f"volume={narration['volume']}"]
+                if narration.get("fade_in", 0):
+                    voice_filters.append(f"afade=t=in:st=0:d={narration['fade_in']}")
+                if narration.get("fade_out", 0):
+                    voice_filters.append(f"afade=t=out:st={max(0, asset['duration'] - narration['fade_out'])}:d={narration['fade_out']}")
+                voice_filters.append(f"adelay={delay}:all=1")
+                voice_filter = ",".join(voice_filters)
                 run(["-i", base, "-i", self.source(project_id, asset), "-filter_complex",
-                     f"[1:a]adelay={delay}:all=1,volume={narration['volume']},apad,atrim=duration={duration(project)}[voice];[0:a][voice]amix=inputs=2:duration=first:normalize=0[a]",
+                     f"[1:a]{voice_filter},apad,atrim=duration={duration(project)}[voice];[0:a][voice]amix=inputs=2:duration=first:normalize=0[a]",
                      "-map", "0:v:0", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-movflags", "+faststart", output])
             else:
                 base.replace(output)

@@ -59,3 +59,14 @@ Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver 
 - Ativação: código preparado para o próximo início do editor. Não reiniciar o servidor nesta rodada: um upload ainda em trânsito pode não aparecer na lista de jobs, e o usuário utilizou recentemente o acesso remoto. Gateway, sessões, credenciais, endereço externo e projetos reais não foram modificados.
 - Limites: não implementa limpeza/expiração de envios abandonados, retomada após reinício do servidor ou comparação dos vídeos após processamento. O limite de pendências e o modelo de concorrência existentes continuam. Safari real pendente.
 - Próximo passo: manter a prioridade de áudio/fades para função útil de edição, ou expiração/cancelamento de uploads em uma rodada separada. Não ampliar esta entrega nem criar novas agendas.
+
+
+## Rodada de continuidade — 21/10/2026, 21h (Brasília)
+
+- Adicionadas Entrada suave e Saída suave da narração, em segundos, no painel de áudio. Zero desativa. Aplicação local, sem API paga ou inferência do Codex.
+- O backend rejeita valores negativos, não finitos, booleanos, durações maiores que o áudio e soma dos fades maior que sua duração; erro mantém a revisão anterior. Desfazer restaura os valores. Projetos antigos sem esses campos usam zero.
+- Prévia aplica a curva linear ao tempo da narração, incluindo atraso e busca. Exportação aplica afade antes do atraso, terminando a saída no fim do arquivo de áudio. Se a montagem terminar antes da voz, permanece o aviso existente: prolongar as cenas para ouvir o final completo.
+- Verificação: 14 testes de estado e seis de integração passaram. A nova integração exporta mídia sintética e mede a energia do áudio no silêncio inicial, entrada, meio, saída e silêncio final. Teste Node da lógica real da prévia cobre fades, atraso/busca e narração antiga; sintaxe JavaScript e diff também conferidos. Sem chamadas reais de IA, sem mídia pessoal nos testes.
+- Ativação pendente do próximo início normal do editor, para preservar possíveis uploads em andamento. Não houve reinício, mudança de gateway/sessões/túnel ou alteração da montagem aprovada. Portal continua aguardando cadastro humano, sem ativação do conector. Safari real e avaliação visual dos novos controles permanecem pendentes.
+- Limites: os fades são apenas da narração adicional. Não são transições entre cenas nem fades individuais dos sons originais. O navegador continua limitado a ganho de 100% na prévia; ganho legado acima de 100% é aplicado pela exportação, como antes.
+- Próximo passo: em rodada separada, controles de velocidade com exportação consistente ou limite/expiração de uploads abandonados. Não ampliar esta entrega.

@@ -28,6 +28,22 @@ class ProjectTests(unittest.TestCase):
         self.apply("clip_add", {"media_id": self.asset["id"], "start": 1, "end": 4})
         return self.p["timeline"][-1]
 
+    def test_narration_fades_validate_atomically_and_undo(self):
+        self.apply("narration_set", {"media_id": self.asset["id"]})
+        original = self.p["narration"].copy()
+        self.assertEqual(original["fade_in"], 0)
+        revision = self.p["revision"]
+        for changes in ({"fade_in": -1}, {"fade_out": 11}, {"fade_in": True},
+                        {"fade_out": float("nan")}, {"fade_in": 6, "fade_out": 5}):
+            with self.subTest(changes=changes), self.assertRaises(EditorError):
+                self.apply("narration_set", {**original, **changes})
+        self.refresh()
+        self.assertEqual(self.p["revision"], revision)
+        self.assertEqual(self.p["narration"], original)
+        self.apply("narration_set", {**original, "fade_in": 2, "fade_out": 3})
+        self.apply("undo", {})
+        self.assertEqual(self.p["narration"], original)
+
     def test_rejects_stale_revision_without_losing_edit(self):
         revision = self.p["revision"]
         self.add()

@@ -51,6 +51,35 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.08)
         self.fail("Tempo excedido no processamento")
 
+    def test_narration_fades_in_export_with_offset(self):
+        import array
+        import math
+        p = self.client.call("POST", "/api/projects", {"name": "Fades sintéticos"})
+        video = self.client.upload(p["id"], self.source)
+        self.wait_job(video["job"]["id"])
+        audio = self.client.upload(p["id"], self.audio)
+        self.wait_job(audio["job"]["id"])
+        p = self.client.call("GET", "/api/projects/" + p["id"])
+        for operation, args in [
+            ("timeline_replace", {"clips": [{"media_id": video["media_id"], "start": 0, "end": 1.6, "volume": 0}] * 2}),
+            ("narration_set", {"media_id": audio["media_id"], "offset": .3, "fade_in": .6, "fade_out": .6}),
+        ]:
+            p = self.client.call("POST", f"/api/projects/{p['id']}/commands", {"operation": operation, "args": args, "expected_revision": p["revision"]})
+        job = self.client.call("POST", f"/api/projects/{p['id']}/exports", {"expected_revision": p["revision"], "quality": "preview"})
+        self.wait_job(job["id"])
+        output = self.store.folder(p["id"]) / "exports" / job["id"] / "video.mp4"
+        decoded = subprocess.run([executable(), "-v", "error", "-i", str(output), "-f", "f32le", "-ac", "1", "-ar", "16000", "pipe:1"], capture_output=True, check=True)
+        samples = array.array("f", decoded.stdout)
+        def rms(start, end):
+            values = samples[int(start*16000):int(end*16000)]
+            return math.sqrt(sum(v*v for v in values)/len(values))
+        middle = rms(1.2, 1.4)
+        self.assertGreater(middle, .04)
+        self.assertLess(rms(.05, .15), middle*.01)
+        self.assertLess(rms(.35, .45), middle*.3)
+        self.assertLess(rms(2.6, 2.7), middle*.4)
+        self.assertLess(rms(2.95, 3.05), middle*.01)
+
     def test_full_upload_edit_export_narration_and_mcp(self):
         p = self.client.call("POST", "/api/projects", {"name": "Integração", "script": "Cora no parque"})
         job = self.client.upload(p["id"], self.source)

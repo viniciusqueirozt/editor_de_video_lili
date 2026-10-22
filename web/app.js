@@ -109,10 +109,10 @@ function renderInspector() {
     $("#remove-clip").addEventListener("click",()=>mutate("clip_remove",{clip_id:c.id}));
   }
   const n=project.narration, audios=project.media.filter(m=>m.status==="ready"&&m.has_audio), na=n&&project.media.find(m=>m.id===n.media_id);
-  $("#voice-inspector").innerHTML = `<p class="help">Monte as cenas primeiro. Depois, traga a narração para encontrar o ritmo final.</p><label class="field-label" for="voice-source">Arquivo de narração</label><select id="voice-source"><option value="">Sem narração adicional</option>${audios.map(a=>`<option value="${a.id}" ${a.id===n?.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><button class="button secondary full" id="import-voice" style="margin-top:12px">${icon("upload")}Importar áudio</button>${n?`<label class="field-label" for="voice-volume">Volume da narração</label><div class="range-row"><input id="voice-volume" type="range" min="0" max="100" value="${Math.round(n.volume*100)}"><output id="voice-volume-value">${Math.round(n.volume*100)}%</output></div><label class="field-label" for="voice-offset">Começar após · segundos</label><input id="voice-offset" type="number" min="0" max="3600" step="0.1" value="${n.offset}"><div class="voice-note ${na.duration+n.offset>project.duration+0.1?"voice-warning":""}">${na.duration+n.offset>project.duration+0.1?"A narração ultrapassa a montagem. Prolongue as cenas para ouvir a fala completa na exportação.":"A narração acompanha a montagem. Ajuste o som original de cada cena para equilibrar a voz."}<br>Áudio: ${precise(na.duration)} · montagem: ${precise(project.duration)}</div>`:'<div class="voice-note">A Elisa continua gravando a própria voz. A narração adicional pode ser adicionada depois.</div>'}`;
+  $("#voice-inspector").innerHTML = `<p class="help">Monte as cenas primeiro. Depois, traga a narração para encontrar o ritmo final.</p><label class="field-label" for="voice-source">Arquivo de narração</label><select id="voice-source"><option value="">Sem narração adicional</option>${audios.map(a=>`<option value="${a.id}" ${a.id===n?.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><button class="button secondary full" id="import-voice" style="margin-top:12px">${icon("upload")}Importar áudio</button>${n?`<label class="field-label" for="voice-volume">Volume da narração</label><div class="range-row"><input id="voice-volume" type="range" min="0" max="100" value="${Math.round(n.volume*100)}"><output id="voice-volume-value">${Math.round(n.volume*100)}%</output></div><label class="field-label" for="voice-offset">Começar após · segundos</label><input id="voice-offset" type="number" min="0" max="3600" step="0.1" value="${n.offset}"><label class="field-label" for="voice-fade_in">Entrada suave · segundos</label><input id="voice-fade_in" type="number" min="0" max="${na.duration}" step="0.1" value="${n.fade_in||0}"><label class="field-label" for="voice-fade_out">Saída suave · segundos</label><input id="voice-fade_out" type="number" min="0" max="${na.duration}" step="0.1" value="${n.fade_out||0}"><p class="help">A saída suave termina no fim do arquivo de narração. Use 0 para desativar.</p><div class="voice-note ${na.duration+n.offset>project.duration+0.1?"voice-warning":""}">${na.duration+n.offset>project.duration+0.1?"A narração ultrapassa a montagem. Prolongue as cenas para ouvir a fala completa na exportação.":"A narração acompanha a montagem. Ajuste o som original de cada cena para equilibrar a voz."}<br>Áudio: ${precise(na.duration)} · montagem: ${precise(project.duration)}</div>`:'<div class="voice-note">A Elisa continua gravando a própria voz. A narração adicional pode ser adicionada depois.</div>'}`;
   $("#voice-source").addEventListener("change",e=>mutate("narration_set",{media_id:e.target.value||null}));
   $("#import-voice").addEventListener("click",()=>$("#file-input").click());
-  if(n){$("#voice-volume").addEventListener("input",e=>{$("#voice-volume-value").value=`${e.target.value}%`;voice.volume=Number(e.target.value)/100;});$("#voice-volume").addEventListener("change",e=>mutate("narration_set",{...n,volume:Number(e.target.value)/100}));$("#voice-offset").addEventListener("change",e=>mutate("narration_set",{...n,offset:Number(e.target.value)}));}
+  if(n){for(const key of ["fade_in","fade_out"]) $("#voice-"+key).addEventListener("change",e=>mutate("narration_set",{...n,[key]:Number(e.target.value)}));$("#voice-volume").addEventListener("input",e=>{$("#voice-volume-value").value=`${e.target.value}%`;voice.volume=voiceGain({...n,volume:Number(e.target.value)/100},cursor-n.offset,na.duration);});$("#voice-volume").addEventListener("change",e=>mutate("narration_set",{...n,volume:Number(e.target.value)/100}));$("#voice-offset").addEventListener("change",e=>mutate("narration_set",{...n,offset:Number(e.target.value)}));}
 }
 function renderRequests(){const pending=project.requests.filter(r=>r.status==="pending").length;$("#request-count").textContent=pending?`(${pending})`:"";$("#requests-list").innerHTML=[...project.requests].reverse().map(r=>`<article class="request-card ${r.status==="done"?"done":""}"><small>${r.status==="done"?"CONCLUÍDO":"AGUARDANDO O CODEX"}</small><p>${esc(r.text)}</p>${r.result?`<p class="help">${esc(r.result)}</p>`:""}</article>`).join("");}
 function setInspector(name){document.querySelectorAll("[data-inspector]").forEach(b=>b.classList.toggle("active",b.dataset.inspector===name));$("#scene-inspector").hidden=name!=="scene";$("#voice-inspector").hidden=name!=="voice";$("#step-visual").classList.toggle("active",name==="scene");$("#step-voice").classList.toggle("active",name==="voice");}
@@ -185,15 +185,22 @@ function updatePlayer(resume=false, time=before()){
   if(narration){
     const a=project.media.find(m=>m.id===narration.media_id), src=assetUrl(a);
     if(voice.getAttribute("src")!==src){voice.src=src;voice.load();}
-    voice.volume=Math.min(1,narration.volume);
+    voice.volume=voiceGain(narration,cursor-narration.offset,a.duration);
   } else if(voice.hasAttribute("src")){voice.removeAttribute("src");voice.load();}
   $("#scene-position").textContent=`Cena ${index()+1} de ${project.timeline.length}`;
   updateTime();
 }
+function voiceGain(n,time,duration){
+  if(time<0||time>=duration) return 0;
+  const envelope=Math.max(0,Math.min(1,n.fade_in?time/n.fade_in:1,n.fade_out?(duration-time)/n.fade_out:1));
+  return Math.min(1,n.volume*envelope);
+}
 function syncVoice(){
   if(!project?.narration||!playing||playerLoading||player.seeking||player.paused){voice.pause();return;}
   const time=cursor-project.narration.offset;
-  if(time<0||time>=voice.duration){voice.pause();return;}
+  const asset=project.media.find(m=>m.id===project.narration.media_id);
+  voice.volume=voiceGain(project.narration,time,asset.duration);
+  if(time<0||time>=asset.duration){voice.pause();return;}
   if(voice.readyState>=1&&Math.abs(voice.currentTime-time)>.12) voice.currentTime=time;
   if(voice.paused) voice.play().catch(()=>{});
 }

@@ -306,8 +306,13 @@ class Store:
                     asset = self.find(p["media"], media_id, "Arquivo")
                     if asset.get("deleted_at") or asset.get("status") != "ready" or not asset.get("has_audio"):
                         raise EditorError("Escolha um arquivo importado que contenha áudio.")
+                    fade_in = number(args.get("fade_in", 0), 0, asset["duration"])
+                    fade_out = number(args.get("fade_out", 0), 0, asset["duration"])
+                    if fade_in + fade_out > asset["duration"]:
+                        raise EditorError("As suavizações juntas não podem ultrapassar a duração da narração.")
                     p["narration"] = {"media_id": media_id, "volume": number(args.get("volume", 1), 0, 2),
-                                      "offset": number(args.get("offset", 0), 0, 3600)}
+                                      "offset": number(args.get("offset", 0), 0, 3600),
+                                      "fade_in": fade_in, "fade_out": fade_out}
             elif operation == "request_add":
                 p["requests"].append({"id": uid(), "text": text(args.get("text", ""), 4000),
                                       "status": "pending", "created_at": now(), "revision": p["revision"], "result": ""})
