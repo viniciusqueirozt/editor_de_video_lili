@@ -90,6 +90,20 @@ class RemoteTests(unittest.TestCase):
         self.assertIn('; Secure',headers['Set-Cookie'])
         self.assertEqual(self.request('/',headers={'Host':'unexpected.example'})[0],403)
 
+    def test_brand_assets_are_public_but_project_data_stays_private(self):
+        self.setup_login()
+        self.cookie=''
+        for path,content_type in (('/favicon.svg?v=ritmo-1','image/svg+xml'),('/icon-192.png?v=ritmo-1','image/png'),('/icon-512.png?v=ritmo-1','image/png')):
+            with self.subTest(path=path):
+                status,headers,body=self.request(path)
+                self.assertEqual(status,200)
+                self.assertIn(content_type,headers['Content-Type'])
+                self.assertNotIn('Set-Cookie',headers)
+                self.assertTrue(body)
+        for path in ('/api/projects','/api/ai/status','/api/projects/'+'a'*32+'/context'):
+            with self.subTest(path=path):self.assertEqual(self.request(path)[0],401)
+        self.assertEqual(self.request('/app.js')[0],303)
+
     def test_rate_limit(self):
         self.setup_login()
         self.cookie=''
