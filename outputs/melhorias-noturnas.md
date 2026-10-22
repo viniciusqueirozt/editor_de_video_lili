@@ -70,3 +70,14 @@ Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver 
 - Ativação pendente do próximo início normal do editor, para preservar possíveis uploads em andamento. Não houve reinício, mudança de gateway/sessões/túnel ou alteração da montagem aprovada. Portal continua aguardando cadastro humano, sem ativação do conector. Safari real e avaliação visual dos novos controles permanecem pendentes.
 - Limites: os fades são apenas da narração adicional. Não são transições entre cenas nem fades individuais dos sons originais. O navegador continua limitado a ganho de 100% na prévia; ganho legado acima de 100% é aplicado pela exportação, como antes.
 - Próximo passo: em rodada separada, controles de velocidade com exportação consistente ou limite/expiração de uploads abandonados. Não ampliar esta entrega.
+
+
+## Rodada de continuidade — 21/10/2026, 22h (Brasília)
+
+- Proteção de espaço livre no protocolo de upload em blocos usado pela interface. Antes de criar um envio, considera o tamanho ainda pendente de todos os projetos e mantém margem de 256 MiB no disco do projeto. Não pré-aloca os vídeos nem apaga arquivos.
+- Antes de gravar cada novo bloco, verifica novamente o espaço disponível. Se insuficiente, retorna 507 sem consumir o bloco, alterar os bytes recebidos ou avançar o progresso; reenvios idênticos já gravados continuam funcionando. Se a consulta de espaço falhar, retorna 503 sem expor o caminho local.
+- Verificação: oito testes focados de upload e seis de integração passaram. Casos novos simulam disco cheio, orçamento compartilhado entre projetos, contagem apenas dos bytes restantes e retomada após liberar espaço. Não foi preenchido nenhum disco real. Sem inferência de IA, pesquisa ou arquivos pessoais nos testes.
+- Limites: é uma checagem preventiva, não reserva exclusiva no sistema operacional. Outro processo ainda pode ocupar disco durante a gravação. A margem não garante espaço para proxies, exportações ou todos os dados do Windows. O endpoint legado de upload direto não recebeu essa proteção nesta rodada. Uploads abandonados continuam contabilizados até concluir ou reiniciar; limpeza/cancelamento permanecem para trabalho separado.
+- Ativação no próximo início normal do editor: nenhum serviço reiniciado para preservar envios em trânsito. Originais, montagem aprovada, credenciais, sessões e link remoto preservados. Safari real permanece pendente.
+- Atualização de contexto: o usuário concluiu e liberou o portal entre as rodadas. O conector foi ativado e verificado no atendimento anterior; ver outputs/portal-acesso.md. Esta rodada não alterou o portal nem o túnel.
+- Próximo passo: cancelamento/expiração segura de envios abandonados ou controles de velocidade consistentes com exportação, em uma rodada separada. Não prolongar a agenda existente.

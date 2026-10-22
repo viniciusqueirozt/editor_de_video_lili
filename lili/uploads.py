@@ -1,6 +1,7 @@
 """Sequential uploads in 8 MiB requests, including through an HTTPS tunnel."""
 
 import threading
+import shutil
 import re
 from pathlib import Path
 
@@ -8,6 +9,7 @@ from .core import EditorError, text, uid
 from .media import ALLOWED
 
 CHUNK_SIZE = 8 * 1024**2
+DISK_HEADROOM = 256 * 1024**2
 
 
 class Uploads:
@@ -31,10 +33,22 @@ class Uploads:
             upload_id = uid()
             folder = self.store.folder(project_id)/"media"
             folder.mkdir(exist_ok=True)
+            # Reserve outstanding bytes across projects, not just this request.
+            remaining = sum(item["size"] - item["received"] for item in self.pending.values())
+            self.require_space(folder, remaining + size)
             path = folder/(upload_id+".upload")
             path.touch(exist_ok=False)
             self.pending[upload_id] = {"project": project_id, "name": name, "size": int(size), "received": 0, "path": path, "suffix": suffix}
             return {"upload_id": upload_id, "chunk_size": CHUNK_SIZE}
+
+    @staticmethod
+    def require_space(folder, incoming):
+        try:
+            free = shutil.disk_usage(folder).free
+        except OSError:
+            raise EditorError("Não foi possível verificar o espaço livre do notebook. Tente novamente.", 503) from None
+        if free < incoming + DISK_HEADROOM:
+            raise EditorError("Espaço insuficiente no notebook. Libere espaço e tente novamente; seus arquivos recebidos foram preservados.", 507)
 
     def find(self, project_id, upload_id):
         item = self.pending.get(upload_id)
@@ -67,6 +81,7 @@ class Uploads:
                 return {"received": item["received"]}
             if offset != item["received"]:
                 raise EditorError("Os blocos precisam chegar na ordem do arquivo.", 409)
+            self.require_space(item["path"].parent, length)
             with item["path"].open("r+b") as out:
                 out.seek(item["received"])
                 try:

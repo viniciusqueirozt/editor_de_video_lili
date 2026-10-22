@@ -2,9 +2,11 @@ import io
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from lili.core import EditorError, Store
-from lili.uploads import Uploads
+from lili.uploads import DISK_HEADROOM, Uploads
 
 
 class Registrar:
@@ -71,4 +73,44 @@ class UploadTests(unittest.TestCase):
         for size in (6.00001,6.0,True,None,'6',0,-1,2*1024**3+1,float('nan')):
             with self.subTest(size=size),self.assertRaises(EditorError):
                 self.uploads.start(self.pid,{'name':'teste.mp4','size':size})
+        self.assertEqual(self.uploads.pending,{})
+
+
+    def test_disk_budget_counts_remaining_bytes_across_projects(self):
+        other = self.uploads.store.create('Outro projeto')['id']
+        with patch('lili.uploads.shutil.disk_usage', return_value=SimpleNamespace(free=DISK_HEADROOM+10)) as disk:
+            uid=self.uploads.start(self.pid,{'name':'teste.mp4','size':6})['upload_id']
+            with self.assertRaises(EditorError) as error:
+                self.uploads.start(other,{'name':'outro.mp4','size':5})
+            self.assertEqual(error.exception.status,507)
+            self.assertEqual(len(self.uploads.pending),1)
+            self.assertEqual(list((self.uploads.store.folder(other)/'media').iterdir()),[])
+            self.uploads.append(self.pid,uid,0,3,io.BytesIO(b'abc'))
+            # Disk now contains 3 bytes, and only 3 remain reserved for that file.
+            disk.return_value=SimpleNamespace(free=DISK_HEADROOM+7)
+            self.uploads.start(other,{'name':'outro.mp4','size':4})
+            self.assertEqual(len(self.uploads.pending),2)
+
+    def test_disk_filling_mid_upload_preserves_progress_and_allows_retry(self):
+        uid=self.uploads.start(self.pid,{'name':'teste.mp4','size':6})['upload_id']
+        self.uploads.append(self.pid,uid,0,3,io.BytesIO(b'abc'))
+        with patch('lili.uploads.shutil.disk_usage',return_value=SimpleNamespace(free=DISK_HEADROOM+2)):
+            # A retry writes no bytes and remains available even with low disk.
+            self.assertEqual(self.uploads.append(self.pid,uid,0,3,io.BytesIO(b'abc')),{'received':3})
+            stream=io.BytesIO(b'def')
+            with self.assertRaises(EditorError) as error:
+                self.uploads.append(self.pid,uid,3,3,stream)
+            self.assertEqual(error.exception.status,507)
+            self.assertEqual(stream.tell(),0)
+            self.assertEqual(self.uploads.pending[uid]['received'],3)
+            self.assertEqual(self.uploads.pending[uid]['path'].read_bytes(),b'abc')
+        self.uploads.append(self.pid,uid,3,3,io.BytesIO(b'def'))
+        self.assertEqual(self.uploads.complete(self.pid,uid)['bytes'],b'abcdef')
+
+    def test_unavailable_disk_check_fails_without_creating_upload(self):
+        with patch('lili.uploads.shutil.disk_usage',side_effect=OSError('private path')):
+            with self.assertRaises(EditorError) as error:
+                self.uploads.start(self.pid,{'name':'teste.mp4','size':6})
+        self.assertEqual(error.exception.status,503)
+        self.assertNotIn('private path',str(error.exception))
         self.assertEqual(self.uploads.pending,{})
