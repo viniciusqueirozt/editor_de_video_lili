@@ -119,9 +119,26 @@ class RemoteTests(unittest.TestCase):
         for path in ('/api/projects','/auth/setup','/app.js','/auth/status'):
             with self.subTest(path=path):
                 self.assertEqual(self.request(path,headers=navigation)[0],403)
-        for change in ({'Sec-Fetch-Mode':'cors'},{'Sec-Fetch-Dest':'iframe'},{'Sec-Fetch-User':''}):
-            with self.subTest(change=change):
-                self.assertEqual(self.request('/',headers={**navigation,**change})[0],403)
+        # Public entry works without optional mobile navigation metadata.
+        for metadata in ({'Sec-Fetch-Site':'cross-site'},
+                         {**navigation,'Sec-Fetch-User':''},
+                         {**navigation,'Sec-Fetch-Mode':'cors'},
+                         {**navigation,'Sec-Fetch-Dest':'iframe'}):
+            with self.subTest(metadata=metadata):
+                self.assertEqual(self.request('/',headers=metadata)[0],303)
+                status,headers,body=self.request('/auth/login',headers=metadata)
+                self.assertEqual(status,200)
+                self.assertIn('Entre no seu estúdio',body.decode())
+                self.assertEqual(headers['X-Frame-Options'],'DENY')
+                self.assertEqual(self.request('/api/projects',headers=metadata)[0],403)
+        # Even with a valid cookie, cross-site entry must not proxy the editor.
+        status,headers,_=self.request('/auth/login','POST',{'username':'elisa','password':self.password})
+        self.assertEqual(status,303)
+        self.cookie=headers['Set-Cookie'].split(';')[0]
+        status,headers,body=self.request('/',headers={'Sec-Fetch-Site':'cross-site'})
+        self.assertEqual(status,303)
+        self.assertEqual(headers['Location'],'/auth/login')
+        self.assertEqual(body,b'')
         self.assertEqual(self.request('/auth/login','POST',{'username':'elisa','password':self.password},navigation)[0],403)
 
 

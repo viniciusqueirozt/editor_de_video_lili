@@ -71,3 +71,11 @@ O acesso externo antigo permanece funcionando enquanto o portal é preparado. N�
 - O gateway bloqueava todo Sec-Fetch-Site: cross-site, incluindo o clique legítimo em Abrir editor no portal. Agora permite apenas GET iniciado pelo usuário (Sec-Fetch-User: ?1), modo navigate e destino document para / e /auth/login. Host continua restrito; APIs, embeds, configuração inicial e alterações externas permanecem bloqueados.
 - Seis testes de gateway passaram, incluindo navegação, rejeição de API/iframe/POST e proteções existentes. Teste desktop real clicou Abrir editor e chegou a /auth/login com Entre no seu estúdio, sem erro de origem. Prova local: outputs/lili-acesso-origem-corrigida.png. Safari real pendente.
 - Reiniciado somente o gateway gerenciado para ativar a correção. Sessões em memória do editor remoto foram encerradas; é necessário entrar novamente. Credenciais, processo do editor, conector e túnel/endereço permaneceram preservados. Nenhuma senha real foi lida ou preenchida.
+
+
+## Compatibilidade da entrada no iPhone — 22/10/2026
+
+- Usuário confirmou que a correção anterior ainda falhava no iPhone. Removida a dependência de Sec-Fetch-Mode/Dest/User para GET externo às duas páginas públicas de entrada. GET / sempre redireciona a /auth/login e GET /auth/login mostra somente o formulário, inclusive se houver cookie válido. Nenhuma dessas entradas externas é encaminhada ao editor autenticado.
+- APIs, configuração inicial, arquivos e POST externos continuam rejeitados. Login segue exigindo origem válida nas alterações. X-Frame-Options DENY e CSP continuam protegendo o formulário contra incorporação.
+- Seis testes passaram, cobrindo metadados ausentes, iframe, cors, cookie válido e bloqueios externos. No endereço real, requisições apenas com Sec-Fetch-Site: cross-site confirmaram / -> 303, /auth/login -> 200 com formulário e /api/projects -> 403.
+- Aplicado com reinício exclusivo do gateway; sessões em memória encerradas, senha preservada. Editor, mídias e túnel mantidos. Não houve captura dos cabeçalhos reais do iPhone: sua ausência era uma hipótese de compatibilidade. Reteste no iPhone necessário; não declarar Safari real validado.
