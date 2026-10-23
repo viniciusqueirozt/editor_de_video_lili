@@ -133,3 +133,19 @@ Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver 
 - Verificação: oito cenários Node executam as funções reais da interface com rede simulada. Cobrem cancelamento durante bloco e criação, arquivos anteriores preservados, erro/repetição, falha de bloco, finalização, resposta perdida/404 e servidor antigo. Dezesseis testes Python focados de upload/permissões passaram, além de sintaxe JavaScript e diff. Sem chamada real de IA ou mídia pessoal.
 - Ativação: o botão depende da capacidade upload_cancel informada por /api/health. Isso mantém a interface compatível com o processo antigo sem forçar reinício. API e capacidade entram no próximo início normal do editor; nenhum serviço real foi reiniciado ou envio real cancelado nesta rodada. Safari real e avaliação visual do botão no iPhone permanecem pendentes.
 - Limites: a página ainda não recupera a lista de uploads após recarregar/fechar; pendências ficam somente em memória no servidor, sem expiração automática. Cancelamento pode aguardar o timeout do bloco atual se a conexão estiver instável. Nuvem e privacidade individual continuam pendentes, conforme esteira e contrato de autenticação.
+
+### Melhoria extra única e encerramento — 23/10/2026, 04h (São Paulo)
+
+- Reforço de segurança nos dois servidores: recusar cabeçalhos duplicados de origem, contexto de navegação, tipo do conteúdo, cookie e autorização, além do Host já protegido. Evita que camadas diferentes escolham valores distintos para autenticação ou validação da origem. Cookie único contendo vários pares normais continua permitido.
+- Vinte testes focados passaram, abrangendo os dois servidores, login atual, transporte assinado e gateway com identidade. Dois testes novos cobrem campos duplicados com variação de maiúsculas/minúsculas e recusa HTTP antes de ler o corpo ou consultar autenticação. Apenas diretórios temporários e dados sintéticos. Estado da melhoria extra registrado somente no controle local ignorado pelo Git.
+- Proteção preparada para os próximos inícios normais do editor/gateway; serviços reais não reiniciados. Nenhuma credencial real lida, sessão alterada ou ampliação de acesso externo. Não foram feitos testes de celular.
+- Concluídas as cinco oportunidades e a única melhoria extra permitida. A automação foi removida no aplicativo; esta agenda não terá continuação durante manhã/tarde nem execução adicional após a madrugada.
+
+### Revisão rápida desta madrugada
+
+1. **Cancelamento de importação:** API/cliente e botão prontos e testados; aguardam próximo início normal do editor. O botão fica oculto enquanto /api/health não anunciar suporte — o processo atual foi consultado e ainda não anuncia. Evita ativar uma interface incompatível ou reiniciar durante envios.
+2. **Contas privadas:** transporte assinado, ponte opcional do gateway e cliente de validação de sessão preparados. Ainda faltam endpoint e ticket no portal, configuração real e associação explícita dos projetos aos proprietários. O editor continua no modo compartilhado atual; não prometer isolamento individual.
+3. **Segurança:** nova recusa de cabeçalhos ambíguos testada. Nenhum serviço, túnel, conector, credencial, sessão, mídia pessoal, logo ou montagem aprovada foi alterado nesta agenda.
+4. **Próxima revisão humana:** quando não houver importações/processamentos, conferir um reinício normal para ativar as melhorias locais e testar Cancelar envio com arquivo descartável. Safari real continua pendente. Depois retomar integração do portal e decisão dos proprietários; nuvem permanece planejada.
+
+Código, testes e documentação sincronizados no GitHub; estado operacional, dados privados e mídias ficaram fora do versionamento.

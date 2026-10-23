@@ -154,3 +154,7 @@ Baixar os arquivos necessários para o notebook, validar os hashes e abrir a mes
 - Legendas locais, perfis de estilo e formatos adicionais de projeto.
 - Inicialização do conector após reinício do Windows.
 - Validação da interface no Safari real, além dos testes no notebook.
+
+## Segurança preparada — madrugada de 23/10/2026
+
+Recusa de cabeçalhos de segurança duplicados nos dois servidores, com testes de regressão do login e da identidade. Entra nos próximos inícios normais dos processos, sem reinício automático nesta agenda. A preparação de contas individuais continua separada da ativação real; ver outputs/base-de-permissoes.md.
