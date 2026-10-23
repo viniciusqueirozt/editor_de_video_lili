@@ -40,6 +40,7 @@ As contas do portal são individuais, mas o editor em produção ainda usa um lo
 - [x] Rotas de projeto, mídia, jobs e operações verificadas em testes com duas identidades; revogação bloqueia requisições seguintes.
 - [x] Sem confiar em cabeçalhos/IDs de usuário enviados livremente pelo navegador; metadados de acesso fora do contexto público; Desfazer não restaura autorizações revogadas.
 - [x] Preparar transporte local assinado, de validade curta e uso único, testado com a política por projeto; ainda sem ativação.
+- [x] Preparar gateway opcional que exige identidade resolvida pelo servidor e assina requisições locais, sem fallback compartilhado; testado com sessões sintéticas, ainda inativo.
 - [ ] Integrar identidade e sessão individual ao portal/gateway, incluindo expiração/revogação e validação da conta.
 - [ ] Associar explicitamente os projetos existentes aos proprietários corretos; nunca atribuir ao primeiro visitante.
 - [ ] Diretório de contas, confirmação de identidade/e-mail e interface de Compartilhar/Compartilhados comigo.

@@ -18,6 +18,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
+from .access import Principal
+from .identity import IdentitySigner
+
 COOKIE = "lili_session"
 HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", "te", "trailer", "transfer-encoding", "upgrade"}
 
@@ -25,7 +28,16 @@ HOP = {"connection", "keep-alive", "proxy-authenticate", "proxy-authorization", 
 class RemoteServer(ThreadingHTTPServer):
     daemon_threads = True
 
-    def __init__(self, address, root, editor_port=8765):
+    def __init__(self, address, root, editor_port=8765, *, identity_resolver=None, identity_signer=None):
+        # Opt-in only: both ends must be wired by trusted startup code. The
+        # resolver must validate the portal session on every request, without
+        # trusting user IDs from the browser or falling back to shared login.
+        if (identity_resolver is None) != (identity_signer is None):
+            raise ValueError("Individual identity requires a resolver and signer together")
+        if identity_resolver is not None and (not callable(identity_resolver) or not isinstance(identity_signer, IdentitySigner)):
+            raise ValueError("Invalid individual identity configuration")
+        self.identity_resolver = identity_resolver
+        self.identity_signer = identity_signer
         self.root = Path(root)
         self.root.mkdir(parents=True, exist_ok=True)
         self.editor_port = editor_port
@@ -174,6 +186,8 @@ class RemoteHandler(BaseHTTPRequestHandler):
             if not origin:
                 return self.send("Endereço não permitido.", 403)
             if self.headers.get("Sec-Fetch-Site") == "cross-site":
+                if self.server.identity_resolver is not None:
+                    return self.send("Origem não permitida.", 403)
                 # Entry pages contain only the public login form. Do not rely
                 # on optional navigation metadata from mobile/embedded browsers,
                 # and never proxy an authenticated cross-site entry request.
@@ -191,6 +205,17 @@ class RemoteHandler(BaseHTTPRequestHandler):
                 metadata_same_origin = self.headers.get("Sec-Fetch-Site") == "same-origin"
                 if request_origin != origin and not (request_origin in (None, "null") and metadata_same_origin):
                     return self.send("Origem não permitida.", 403)
+            self.principal = None
+            if self.server.identity_resolver is not None:
+                principal = self.server.identity_resolver(self)
+                if not isinstance(principal, Principal):
+                    return self.send("Entre pelo portal para acessar o estúdio.", 401)
+                self.principal = principal
+                if self.path == "/auth/status" and self.command == "GET":
+                    return self.send(json.dumps({"authenticated": True}))
+                if urlsplit(self.path).path.startswith("/auth/"):
+                    return self.send("Use sua conta individual no portal.", 404)
+                return self.proxy()
             if self.command in ("GET", "HEAD") and urlsplit(self.path).path in ("/favicon.svg", "/icon-192.png", "/icon-512.png"):
                 # Only public branding assets, never project media or APIs.
                 return self.proxy()
@@ -232,6 +257,14 @@ class RemoteHandler(BaseHTTPRequestHandler):
                     target.putheader(key, self.headers[key])
             if self.command not in ("GET", "HEAD"):
                 target.putheader("Origin", f"http://127.0.0.1:{self.server.editor_port}")
+            if self.server.identity_signer is not None:
+                # The allowlist above discards all browser identity assertions,
+                # cookies and authorization headers. Mint a fresh local proof.
+                signed = self.server.identity_signer.headers(
+                    self.principal, self.command, self.path, length=size,
+                    content_type=self.headers.get("Content-Type", ""))
+                for key, value in signed.items():
+                    target.putheader(key, value)
             target.endheaders()
             remaining = size
             while remaining:
