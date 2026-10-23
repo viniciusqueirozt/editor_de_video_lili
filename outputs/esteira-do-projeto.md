@@ -150,7 +150,7 @@ Baixar os arquivos necessários para o notebook, validar os hashes e abrir a mes
 
 ## Outras pendências
 
-- Cancelamento/expiração de uploads abandonados.
+- Cancelamento explícito de upload pendente preparado e testado na API/cliente local (ativação no próximo início normal); falta botão/listagem de pendências e expiração/recuperação após reinício.
 - Legendas locais, perfis de estilo e formatos adicionais de projeto.
 - Inicialização do conector após reinício do Windows.
 - Validação da interface no Safari real, além dos testes no notebook.

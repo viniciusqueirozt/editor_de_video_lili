@@ -219,6 +219,9 @@ class Handler(BaseHTTPRequestHandler):
                     length = int(self.headers.get("Content-Length", "0"))
                     offset = parse_qs(url.query).get("offset", ["0"])[0]
                     return self.json(self.server.uploads.append(project_id, parts[4], offset, length, self.rfile))
+                if len(parts) == 6 and parts[5] == "cancel" and self.command == "POST":
+                    self.read_json()
+                    return self.json(self.server.uploads.cancel(project_id, parts[4]))
                 if len(parts) == 6 and parts[5] == "complete" and self.command == "POST":
                     self.read_json()
                     return self.json(self.server.uploads.complete(project_id, parts[4]), 202)

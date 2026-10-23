@@ -3,6 +3,7 @@
 import threading
 import shutil
 import re
+import stat
 from pathlib import Path
 
 from .core import EditorError, text, uid
@@ -97,6 +98,30 @@ class Uploads:
                     raise
             item["received"] += length
             return {"received": item["received"]}
+
+    def cancel(self, project_id, upload_id):
+        # Share the append/complete lock: cancellation never unlinks a file
+        # while a block is being written or after successful registration.
+        with self.lock:
+            item = self.find(project_id, upload_id)
+            folder = self.store.folder(project_id)
+            expected = folder / "media" / (upload_id + ".upload")
+            if item["path"] != expected or expected.parent.resolve() != self.store.root / project_id / "media":
+                raise EditorError("Caminho do envio inseguro. Nenhum arquivo foi excluído.", 409)
+            try:
+                info = expected.lstat()
+                if not stat.S_ISREG(info.st_mode) or getattr(info, "st_file_attributes", 0) & getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 0x400):
+                    raise EditorError("O envio contém um link ou arquivo incompatível. Cancelamento bloqueado.", 409)
+                removed = info.st_size
+                expected.unlink()
+            except FileNotFoundError:
+                # A missing temporary can release stale bookkeeping, but the
+                # finalized .mp4/.mov is never a cancellation target.
+                removed = 0
+            except OSError:
+                raise EditorError("Não foi possível cancelar o envio. Tente novamente.", 503) from None
+            del self.pending[upload_id]
+            return {"cancelled": True, "removed_bytes": removed}
 
     def complete(self, project_id, upload_id):
         with self.lock:

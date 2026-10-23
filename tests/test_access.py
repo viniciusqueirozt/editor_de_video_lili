@@ -5,6 +5,7 @@ import threading
 import unittest
 from pathlib import Path
 from lili.access import Principal
+from lili.client import Client
 from lili.core import Store,uid
 from lili.server import EditorServer
 
@@ -106,3 +107,25 @@ class AccessHTTPTests(unittest.TestCase):
         self.assertEqual(self.request(f"/api/projects/{p['id']}/trash",'POST',{'expected_revision':fresh['revision']})[0],200)
         self.identity=Principal(B);self.assertEqual(self.request('/api/projects?trash=1')[1],[])
         self.identity=Principal(A);self.assertEqual(len(self.request('/api/projects?trash=1')[1]),1)
+
+    def test_upload_cancellation_requires_edit_access_and_unblocks_project_trash(self):
+        p = self.create()
+        base = f"/api/projects/{p['id']}"
+        status, upload = self.request(base + "/uploads", "POST", {"name": "partial.mp4", "size": 6})
+        self.assertEqual(status, 201)
+        cancel = base + "/uploads/" + upload["upload_id"] + "/cancel"
+        temporary = self.server.uploads.pending[upload["upload_id"]]["path"]
+        self.assertEqual(self.request(base + "/trash", "POST", {"expected_revision": p["revision"]})[0], 409)
+        self.identity = Principal(B)
+        self.assertEqual(self.request(cancel, "POST", {})[0], 404)
+        self.grant(p, ["view"])
+        self.identity = Principal(B)
+        self.assertEqual(self.request(cancel, "POST", {})[0], 404)
+        self.assertTrue(temporary.exists())
+        self.identity = Principal(A)
+        client = Client(f"http://127.0.0.1:{self.server.server_port}")
+        self.assertEqual(client.cancel_upload(p["id"], upload["upload_id"]), {"cancelled": True, "removed_bytes": 0})
+        self.assertFalse(temporary.exists())
+        self.assertEqual(self.request(cancel, "POST", {})[0], 404)
+        current = self.request(base)[1]
+        self.assertEqual(self.request(base + "/trash", "POST", {"expected_revision": current["revision"]})[0], 200)

@@ -1,4 +1,6 @@
 import io
+import threading
+from concurrent.futures import ThreadPoolExecutor
 import tempfile
 import unittest
 from pathlib import Path
@@ -114,3 +116,63 @@ class UploadTests(unittest.TestCase):
         self.assertEqual(error.exception.status,503)
         self.assertNotIn('private path',str(error.exception))
         self.assertEqual(self.uploads.pending,{})
+
+    def test_cancel_releases_partial_file_capacity_and_protects_completed_media(self):
+        upload_id = self.uploads.start(self.pid, {"name": "teste.mp4", "size": 6})["upload_id"]
+        self.uploads.append(self.pid, upload_id, 0, 3, io.BytesIO(b"abc"))
+        path = self.uploads.pending[upload_id]["path"]
+        with self.assertRaises(EditorError):
+            self.uploads.cancel("0" * 32, upload_id)
+        self.assertTrue(path.exists())
+        with patch("lili.uploads.shutil.disk_usage", return_value=SimpleNamespace(free=DISK_HEADROOM + 6)):
+            self.assertEqual(self.uploads.cancel(self.pid, upload_id), {"cancelled": True, "removed_bytes": 3})
+            self.assertFalse(path.exists())
+            other = self.uploads.start(self.pid, {"name": "outro.mp4", "size": 6})["upload_id"]
+        for action in (lambda: self.uploads.cancel(self.pid, upload_id),
+                       lambda: self.uploads.append(self.pid, upload_id, 3, 3, io.BytesIO(b"def")),
+                       lambda: self.uploads.complete(self.pid, upload_id)):
+            with self.assertRaises(EditorError): action()
+        self.uploads.append(self.pid, other, 0, 6, io.BytesIO(b"abcdef"))
+        self.uploads.complete(self.pid, other)
+        final = self.uploads.store.folder(self.pid) / "media" / (other + ".mp4")
+        with self.assertRaises(EditorError): self.uploads.cancel(self.pid, other)
+        self.assertEqual(final.read_bytes(), b"abcdef")
+
+    def test_cancel_failure_keeps_pending_and_refuses_unexpected_paths(self):
+        upload_id = self.uploads.start(self.pid, {"name": "teste.mov", "size": 6})["upload_id"]
+        item = self.uploads.pending[upload_id]
+        path = item["path"]
+        with patch.object(Path, "unlink", side_effect=PermissionError("private path")):
+            with self.assertRaises(EditorError) as error: self.uploads.cancel(self.pid, upload_id)
+        self.assertEqual(error.exception.status, 503)
+        self.assertIn(upload_id, self.uploads.pending)
+        self.assertTrue(path.exists())
+        item["path"] = path.with_suffix(".mov")
+        with self.assertRaises(EditorError): self.uploads.cancel(self.pid, upload_id)
+        self.assertTrue(path.exists())
+        item["path"] = path
+        path.unlink()
+        self.assertEqual(self.uploads.cancel(self.pid, upload_id), {"cancelled": True, "removed_bytes": 0})
+
+    def test_cancel_waits_for_current_block_before_removing_temporary(self):
+        upload_id = self.uploads.start(self.pid, {"name": "teste.mp4", "size": 6})["upload_id"]
+        entered, release, cancelling = threading.Event(), threading.Event(), threading.Event()
+        class BlockingStream(io.BytesIO):
+            def read(self, size):
+                entered.set()
+                if not release.wait(3): raise RuntimeError("test timeout")
+                return super().read(size)
+        def cancel():
+            cancelling.set()
+            return self.uploads.cancel(self.pid, upload_id)
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            append = pool.submit(self.uploads.append, self.pid, upload_id, 0, 3, BlockingStream(b"abc"))
+            try:
+                self.assertTrue(entered.wait(3))
+                cancelled = pool.submit(cancel)
+                self.assertTrue(cancelling.wait(3))
+            finally:
+                release.set()
+            self.assertEqual(append.result(timeout=3), {"received": 3})
+            self.assertEqual(cancelled.result(timeout=3), {"cancelled": True, "removed_bytes": 3})
+        self.assertNotIn(upload_id, self.uploads.pending)

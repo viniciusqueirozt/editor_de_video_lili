@@ -30,6 +30,9 @@ class Client:
                 message = str(exc)
             raise ValueError(message) from None
 
+    def cancel_upload(self, project_id, upload_id):
+        return self.call("POST", f"/api/projects/{quote(project_id, safe='')}/uploads/{quote(upload_id, safe='')}/cancel", {})
+
     def upload(self, project_id, filename):
         file = Path(filename).resolve()
         connection = http.client.HTTPConnection(self.parsed.hostname, self.parsed.port or 80, timeout=300)
