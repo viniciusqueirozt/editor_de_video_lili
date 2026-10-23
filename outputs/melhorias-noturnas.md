@@ -91,3 +91,12 @@ Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver 
 - Limites: checagem preventiva, sem reserva exclusiva de disco. O envio direto não participa do orçamento compartilhado em memória dos envios em blocos. Outros processos podem ocupar espaço entre checagem e escrita. Não garante espaço para proxies/exportações nem implementa cancelamento/expiração de pendências.
 - Código preparado para o próximo início normal do editor. Nenhum servidor, gateway, conector ou túnel foi reiniciado. Originais, montagem aprovada, credenciais, sessões e endereço remoto preservados. Safari real continua pendente.
 - A agenda de cinco execuções encerra aqui, sem novas automações. Próximos trabalhos registrados para retomada pelo usuário: cancelamento/expiração segura de uploads, velocidade com prévia/exportação consistentes, inicialização do conector após reiniciar Windows e teste real de Safari. Não são entregas desta rodada.
+
+
+## Nova agenda — 23/10/2026, 00h (São Paulo)
+
+- Uma melhoria completa de base: transporte de identidade assinado para a futura ponte gateway → editor. HMAC vincula usuário, método, URL/query, metadados do corpo, instante, nonce e audiência da instância; validade de 30 segundos por padrão, tolerância futura limitada e memória de replay com limite e recusa segura.
+- Cinco testes focados passaram: adulteração, instância diferente, campos duplicados, expiração/futuro, replay, cache cheio/expiração, replay concorrente e integração HTTP real com a autorização de projetos. Uma identidade B não lista o projeto de A. Sem inferência real de IA.
+- Apenas preparado em código: não autentica sessão do portal nem liga o modo privado real. Nenhum serviço foi reiniciado, conta migrada, proprietário atribuído, credencial lida ou projeto real alterado. Sessões, túnel, conector e mídia preservados. Safari real não foi testado.
+- Limites e coordenação futura de chave/audiência descritos em outputs/base-de-permissoes.md. O conteúdo inteiro de upload não é assinado, somente seus metadados; cache de replay não persiste em disco. Não apresentar esta peça isolada como isolamento de usuários já ativo.
+- Próximo passo: autenticação individual comprovada do portal ao gateway, sem alterar a publicação/acesso externo nesta rodada; depois proposta explícita de associação dos projetos existentes aos donos corretos. Nenhuma melhoria extra nesta execução.

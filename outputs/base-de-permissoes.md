@@ -27,3 +27,14 @@ A suíte completa passou com 71 testes, sem chamadas reais de IA. Os servidores 
 Implementar a ligação segura portal → gateway → servidor: identidade comprovada no servidor, sessão expirada/revogada recusada e nenhuma confiança em IDs enviados pelo navegador. Definir associação dos projetos atuais por decisão explícita do proprietário. Conferir a identidade das contas convidadas e seu estado no diretório antes da interface de compartilhamento. A checagem de permissões ocorre no início de cada requisição; já ter iniciado uma transferência não permite prometer apagar bytes recebidos ou interromper instantaneamente toda tarefa em voo.
 
 As rotas novas são uma base de integração, não uma promessa de isolamento no modo compartilhado atual. Não habilitar um resolvedor que simplesmente copie um header do cliente. Acesso local de manutenção e clientes CLI/MCP precisarão da mesma estratégia de identidade antes de anunciar privacidade completa.
+
+
+## Transporte preparado — madrugada de 23/10/2026
+
+lili/identity.py acrescenta assinador/verificador HMAC-SHA256 para futuras requisições do gateway ao editor. A identidade é vinculada a método, caminho/query, tamanho declarado, tipo de conteúdo, validade curta, nonce de uso único e audiência da instância. Campos duplicados, assinatura inválida, replay, tempo expirado/futuro e cache cheio são recusados. A audiência precisa ser nova por instância na futura ativação e a chave precisa ser compartilhada somente pelos processos confiáveis; o construtor não aceita chave curta nem texto livre no lugar de bytes.
+
+Cinco testes focados passaram, incluindo um servidor HTTP real com o verificador ligado à política por projeto e replay concorrente com somente um vencedor. Não foram acessadas credenciais reais nem modificados serviços/projetos.
+
+Este transporte **não autentica a conta do portal**, não foi ligado ao gateway real e não está ativo no servidor de produção. O próximo passo continua sendo provar a sessão individual no portal, entregá-la com segurança ao gateway e definir a migração dos proprietários. O assinador só pode receber uma Principal previamente autenticada, nunca um ID livre fornecido pelo cliente; cabeçalhos do navegador devem ser descartados antes de assinar.
+
+Limites: cache de nonces em memória, com capacidade finita e recusa quando cheio. Audiência nova por instância e coordenação/rotação segura da chave serão necessárias na ativação. O conteúdo integral de uploads em streaming não é assinado: são vinculados apenas seus metadados. Essa peça assume o canal local entre processos gerenciados, não substitui HTTPS externo nem configura transporte remoto seguro por si só.
