@@ -46,3 +46,20 @@ RemoteServer agora pode receber identity_resolver e IdentitySigner juntos, por c
 Três testes novos com gateway e editor HTTP reais verificam criação atribuída à conta autenticada, separação de duas contas, cabeçalhos falsos, sessão ausente/revogada, retorno inválido/erro do resolvedor e divergência de chave. Dezesseis testes existentes de login remoto, identidade e permissões também passaram. O resolvedor nos testes usa somente sessões sintéticas mantidas pelo servidor; não implementa a autenticação real do portal.
 
 **Preparado, sem ativação:** main() continua construindo o gateway no modo compartilhado atual. Falta a troca segura de sessão/ticket com o portal, consulta de expiração/revogação da conta e configuração coordenada do verificador no editor. O gateway opcional recusa entradas cross-site até existir um fluxo específico de entrada do portal; suas rotas legadas de login/setup/logout ficam indisponíveis nesse modo. Nenhuma dessas configurações foi aplicada aos serviços reais. Não há isolamento real anunciado nem migração automática de proprietários. Uma sessão que já iniciou uma transferência não é revalidada durante cada bloco.
+
+## Validação de sessão pelo portal preparada — 23/10/2026, 01h55
+
+lili/portal_identity.py implementa PortalSessionResolver, compatível com o gateway opcional. Recebe apenas um cookie opaco próprio do editor, __Host-lili_editor, com 48 caracteres hexadecimais. Recusa cookie ausente, duplicado, muito grande ou inválido antes de consultar o portal. Não aceita um ID de conta como autenticação. Cookie e chave de dispositivo nunca entram na URL; a chave permanece no servidor.
+
+A consulta tem destino HTTPS configurado no servidor, caminho fixo, timeout de três segundos, limite de resposta de 4 KiB e redirecionamentos desativados. Exige HTTP 200, JSON, active booleano verdadeiro, identidade válida, expiração futura de no máximo 24 horas e hash correspondente ao token consultado. Não guarda autorização em cache: revogação, expiração, resposta inválida ou indisponibilidade impedem a próxima requisição nesse modo. Não há fallback para o login compartilhado.
+
+### Contrato pendente no portal
+
+- POST /api/device/session/validate: autenticação pela chave de dispositivo já configurada, corpo {"session":"TOKEN_OPACO"}. Esta rota ainda **não existe no portal publicado**.
+- Se ativa: {"active":true,"subject":"ID_ESTAVEL","expires_at":UNIX_SEGUNDOS,"session_hash":"SHA256_HEX_DO_TOKEN"}. Se inválida/revogada: {"active":false}, sem dados de conta.
+- O portal deverá armazenar somente o hash dessa sessão própria do editor; validar usuário habilitado, prazo da sessão do editor e validade/revogação da sessão original do portal. Não basta confirmar que o usuário existe. Revogar/logout no portal deverá invalidar a sessão vinculada conforme política definida.
+- Falta criar o fluxo de ticket de uso único, com validade curta e origem/instância vinculadas, que entrega essa sessão ao gateway e emite cookie Secure, HttpOnly, SameSite e Path=/ adequados. Este módulo não emite cookie nem reutiliza o cookie de login do portal. A entrada cross-site do gateway continua sem ativação.
+
+Verificação: quatro testes unitários novos e um teste HTTP integrado ao gateway/editor com portal simulado; conjunto focado de 13 testes passou, incluindo o conector existente. Cobertura de duas contas, atribuição correta, falsificação recusada, revogação/expiração, erro de rede/redirecionamento, cookie ambíguo e respostas inválidas. Nenhuma consulta real ao portal, credencial real ou serviço modificado.
+
+Estado: cliente preparado, endpoint pendente, modo individual inativo. Consultar o portal a cada requisição acrescentará latência e carga, inclusive para mídia; isso deverá ser medido antes de ativar, preservando a semântica de revogação. Não foi testado Safari real.

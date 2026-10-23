@@ -1,9 +1,13 @@
+import hashlib
 import http.client
 import json
 import tempfile
 import threading
 import unittest
 from pathlib import Path
+from email.message import Message
+from unittest.mock import Mock
+from lili.portal_identity import COOKIE, PortalSessionResolver
 
 from lili.access import Principal
 from lili.core import Store
@@ -106,3 +110,33 @@ class GatewayIdentityTests(unittest.TestCase):
             with self.assertRaises(ValueError):
                 RemoteServer(("127.0.0.1", 0), self.root / "unused", **config)
         self.assertFalse((self.root / "unused").exists())
+
+    def test_portal_backchannel_resolver_reaches_permissions_and_rechecks_revocation(self):
+        accounts = {"a" * 48: self.a, "b" * 48: self.b}
+        def backchannel(request, timeout):
+            token = json.loads(request.data)["session"]
+            principal = accounts.get(token)
+            result = {"active": False} if principal is None else {
+                "active": True, "subject": principal.subject, "expires_at": 1060,
+                "session_hash": hashlib.sha256(token.encode()).hexdigest()}
+            response = Mock(status=200)
+            response.headers = Message()
+            response.headers["Content-Type"] = "application/json"
+            response.read.return_value = json.dumps(result).encode()
+            response.__enter__ = Mock(return_value=response)
+            response.__exit__ = Mock(return_value=False)
+            return response
+        opener = Mock()
+        opener.open.side_effect = backchannel
+        self.gateway.identity_resolver = PortalSessionResolver(
+            "https://portal.owner.chatgpt.site", "f" * 64, opener=opener, clock=lambda: 1000)
+        a_cookie, b_cookie = f"{COOKIE}=" + "a" * 48, f"{COOKIE}=" + "b" * 48
+        status, body = self.request(cookie=a_cookie, method="POST", body={"name": "Portal A"})
+        self.assertEqual(status, 201)
+        project_id = json.loads(body)["id"]
+        self.assertEqual(self.store._read(project_id)["access"]["owner_id"], self.a.subject)
+        self.assertEqual(self.request(f"/api/projects/{project_id}", cookie=b_cookie,
+                                      headers={"X-Lili-Identity": self.a.subject})[0], 404)
+        accounts.pop("a" * 48)
+        self.assertEqual(self.request(cookie=a_cookie)[0], 401)
+        self.assertEqual(opener.open.call_count, 3)

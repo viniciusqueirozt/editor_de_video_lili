@@ -108,3 +108,11 @@ Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver 
 - Estado: apenas preparado. O portal ainda não fornece a sessão individual ao gateway real; modo privado permanece inativo. Não houve reinício, alteração de credenciais/sessões reais, atribuição de proprietários ou mudança do túnel/conector. Safari real não testado.
 - Limites: resolvedor sintético nos testes; a entrada cross-site é recusada nesse modo até implementar o fluxo específico de ticket. Revogação é conferida no início da requisição, sem promessa de interromper bytes em trânsito. main() permanece com a configuração atual.
 - Próximo passo: troca de ticket de uso único e sessão verificada entre portal e gateway, com revogação e expiração comprovadas; depois proposta explícita dos donos dos projetos existentes. Nenhuma melhoria extra nesta execução.
+
+## Continuidade — 23/10/2026, 01h55 (São Paulo)
+
+- Uma melhoria de integração: resolvedor de sessão opaca do editor que consulta o portal por HTTPS em rota fixa. Recusa cookies ambíguos, exige resposta vinculada ao token, prazo válido e identidade comprovada; não reutiliza IDs livres nem guarda autorização em cache. Falha de rede ou revogação impede novas requisições no modo opcional.
+- Verificação: 13 testes focados aprovados. Quatro testes unitários novos e um novo teste HTTP ligam o resolvedor ao gateway, assinatura local e autorização do editor com duas contas e revogação; portal inteiramente simulado. Inclui regressão do conector. Sem chamadas reais de IA ou ao portal.
+- Estado: preparado, não ativado. O endpoint de validação ainda precisa ser implementado no portal publicado e o ticket de entrada/cookie ainda precisa ser criado. Contrato documentado em outputs/base-de-permissoes.md para a próxima etapa. Não há isolamento real anunciado nem associação de projetos existentes.
+- Nenhum serviço reiniciado, acesso externo ampliado, sessão real alterada ou mídia pessoal usada. Link, conector, contas e projetos preservados. Limites: consulta por requisição pode acrescentar carga/latência; revogação não interrompe bytes já em trânsito. Safari real pendente.
+- Próximo passo: implementar no portal a sessão do editor vinculada à sessão original e o endpoint do contrato, com testes de expiração/revogação; depois troca de ticket de uso único. Nenhuma melhoria extra nesta execução.
