@@ -109,6 +109,7 @@ class AccessHTTPTests(unittest.TestCase):
         self.identity=Principal(A);self.assertEqual(len(self.request('/api/projects?trash=1')[1]),1)
 
     def test_upload_cancellation_requires_edit_access_and_unblocks_project_trash(self):
+        self.assertTrue(self.request("/api/health")[1]["features"]["upload_cancel"])
         p = self.create()
         base = f"/api/projects/{p['id']}"
         status, upload = self.request(base + "/uploads", "POST", {"name": "partial.mp4", "size": 6})

@@ -7,6 +7,7 @@ const precise = seconds => `${Number(seconds).toFixed(1).replace(".",",")} s`;
 const player = $("#player"), voice = $("#voice-player");
 let project = null, selected = null, projects = [], queue = Promise.resolve(), toastTimer, uploadRunning = false, playing = false, seekBusy = false, loadedSource = "", dragId = null;
 let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
+const uploadState = {pending:null, cancel:false, completing:false, available:false};
 let importBatch = null, pendingRemoval = null, aiAvailable = null, aiStarting = false, aiJobsKey = "";
 const aiNotified = new Set();
 let selectingMedia=false;
@@ -253,14 +254,21 @@ $("#seek").addEventListener("pointercancel",()=>{seekBusy=false;updateTime();});
 
 async function uploadFiles(files){
   if(uploadRunning){toast("Aguarde o envio atual terminar.");return;}if(!project||!files.length)return;
+  if(uploadState.pending){toast("Cancele o envio pendente antes de importar outros arquivos.",true);return;}
+  uploadState.cancel=false;uploadState.completing=false;
   uploadRunning=true;$("#upload-progress").hidden=false;$("#dismiss-upload").hidden=true;
   const projectId=project.id;
   importBatch={projectId,total:files.length,mediaIds:[],error:""};setImportControls();
   try{
+    try{uploadState.available=(await api("/api/health")).features?.upload_cancel===true;}catch{uploadState.available=false;}
+    syncUploadCancelControl();
     for(const [index,file] of files.entries()){
+      if(uploadState.cancel)throw new Error("Cancelamento solicitado.");
       $("#upload-label").textContent=`Enviando ${index+1} de ${files.length}: ${file.name}`;$("#upload-meter").value=0;
       const upload=await api(`/api/projects/${projectId}/uploads`,{method:"POST",body:JSON.stringify({name:file.name,size:file.size})});
+      uploadState.pending=uploadState.available?{projectId, id:upload.upload_id}:null;
       for(let offset=0;offset<file.size;offset+=upload.chunk_size){
+        if(uploadState.cancel)throw new Error("Cancelamento solicitado.");
         const end=Math.min(file.size,offset+upload.chunk_size);
         const sendBlock=()=>new Promise((resolve,reject)=>{
           const xhr=new XMLHttpRequest();
@@ -277,18 +285,58 @@ async function uploadFiles(files){
           xhr.send(file.slice(offset,end));
         });
         // A repeat of the same block is acknowledged without appending it twice.
-        try{await sendBlock();}catch(first){await sendBlock();}
+        try{await sendBlock();}catch(first){if(uploadState.cancel)throw first;await sendBlock();}
       }
+      if(uploadState.cancel)throw new Error("Cancelamento solicitado.");
+      uploadState.completing=true;syncUploadCancelControl();
       const imported=await api(`/api/projects/${projectId}/uploads/${upload.upload_id}/complete`,{method:"POST",body:"{}"});
+      uploadState.pending=null;uploadState.completing=false;syncUploadCancelControl();
       importBatch.mediaIds.push(imported.media_id);
     }
     toast("Arquivos recebidos. As prévias estão sendo preparadas.");
     if(project.id===projectId){project=await api(`/api/projects/${projectId}`);render();}
   }
-  catch(e){importBatch.error=e.message;toast(e.message,true);}finally{uploadRunning=false;setImportControls();updateImportStatus(project);$("#file-input").value="";}
+  catch(e){
+    let message=e.message;
+    if(uploadState.cancel){try{message=await cancelPendingUpload();}catch(cancelError){message=cancelError.message;}}
+    importBatch.error=message;toast(message,Boolean(uploadState.pending)||!uploadState.cancel);
+  }finally{
+    uploadRunning=false;uploadState.cancel=false;uploadState.completing=false;
+    setImportControls();updateImportStatus(project);$("#file-input").value="";
+  }
+}
+function syncUploadCancelControl(){
+  const button=$("#cancel-upload");
+  button.hidden=!uploadState.available||(!uploadRunning&&!uploadState.pending);
+  button.disabled=uploadState.cancel||uploadState.completing;
+  button.textContent=uploadState.cancel?"Cancelando…":"Cancelar envio";
+}
+async function cancelPendingUpload(){
+  const pending=uploadState.pending;
+  if(pending){
+    try{
+      const result=await api(`/api/projects/${pending.projectId}/uploads/${pending.id}/cancel`,{method:"POST",body:"{}"});
+      if(result.cancelled!==true)throw new Error("O cancelamento não foi confirmado. Tente novamente.");
+    }catch(e){
+      if(e.status!==404)throw new Error("Não foi possível confirmar o cancelamento. Verifique a conexão e tente Cancelar envio novamente.");
+      uploadState.pending=null;
+      return "O envio não está mais pendente. Confira os arquivos já recebidos.";
+    }
+  }
+  uploadState.pending=null;
+  return "Envio cancelado. Os arquivos já recebidos foram preservados.";
+}
+async function requestUploadCancel(){
+  if(!uploadState.available||uploadState.cancel||uploadState.completing||(!uploadRunning&&!uploadState.pending))return;
+  uploadState.cancel=true;syncUploadCancelControl();
+  if(uploadRunning){$("#upload-label").textContent="Cancelamento solicitado. Aguardando o bloco atual…";return;}
+  try{importBatch.error=await cancelPendingUpload();toast(importBatch.error);}
+  catch(e){importBatch.error=e.message;toast(e.message,true);}
+  finally{uploadState.cancel=false;setImportControls();updateImportStatus(project);}
 }
 function setImportControls(){
-  ["#project-select","#new-project","#import-main","#import-mobile","#import-top","#import-zone"].forEach(selector=>$(selector).disabled=uploadRunning||!project);
+  ["#project-select","#new-project","#import-main","#import-mobile","#import-top","#import-zone"].forEach(selector=>$(selector).disabled=uploadRunning||Boolean(uploadState.pending)||!project);
+  syncUploadCancelControl();
 }
 async function openAIEditor(){
   if(!project)return;
@@ -345,7 +393,7 @@ function updateImportStatus(snapshot){
   if(!importBatch||snapshot?.id!==importBatch.projectId){status.hidden=true;return;}
   status.hidden=false;
   if(uploadRunning)return;
-  $("#dismiss-upload").hidden=false;
+  $("#dismiss-upload").hidden=Boolean(uploadState.pending);
   const assets=importBatch.mediaIds.map(id=>[...snapshot.media,...(snapshot.trash||[])].find(m=>m.id===id));
   const ready=assets.filter(m=>m?.status==="ready").length,failed=assets.filter(m=>m?.status==="error").length;
   if(importBatch.error){$("#upload-label").textContent=`Envio interrompido: ${importBatch.error}`;$("#upload-meter").value=0;}
@@ -411,6 +459,7 @@ $("#file-input").addEventListener("change",e=>uploadFiles([...e.target.files]));
 ["#import-top","#import-zone","#import-main","#import-mobile"].forEach(s=>$(s).addEventListener("click",openFilePicker));
 $("#codex-main").addEventListener("click",()=>openLibraryTab("requests",true));
 $("#view-uploaded").addEventListener("click",()=>openLibraryTab("media"));
+$("#cancel-upload").addEventListener("click",requestUploadCancel);
 $("#dismiss-upload").addEventListener("click",()=>{importBatch=null;$("#upload-progress").hidden=true;});
 document.querySelectorAll("[data-mobile-panel]").forEach(button=>button.addEventListener("click",()=>{
   const name=button.dataset.mobilePanel;

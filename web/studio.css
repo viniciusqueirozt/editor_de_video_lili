@@ -7,3 +7,8 @@ body{background:var(--bg);color:var(--ink)}.app-header{background:#f5f5f0;border
 @media(max-height:650px) and (max-width:740px){.timeline-panel{height:206px}.timeline-heading{min-height:48px}.mobile-toolbar{min-height:calc(58px + env(safe-area-inset-bottom))}.mobile-toolbar button{min-height:48px}.playback{height:44px;min-height:44px}}
 
 .app-header .brand{display:inline-flex;flex-shrink:0;align-items:center;line-height:1}.app-header .brand svg{stroke:none;overflow:visible}.app-header .brand .brand-lockup{display:block;width:44px;height:44px}@media(max-width:740px){.app-header .brand .brand-lockup{width:36px;height:40px}}
+
+/* A full touch target keeps cancellation usable beside the upload status. */
+#cancel-upload{min-height:44px;padding:10px 12px;touch-action:manipulation;user-select:none;-webkit-user-select:none;border:1px solid currentColor;border-radius:8px;margin:8px 10px 0 0;font:inherit}
+#cancel-upload:disabled{opacity:.6;cursor:wait}#cancel-upload:active:not(:disabled){background:#dce7cd}
+.upload-status-heading>span{min-width:0;overflow-wrap:anywhere}
