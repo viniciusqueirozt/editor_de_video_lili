@@ -106,8 +106,11 @@ function renderInspector() {
   if(!c) $("#scene-inspector").innerHTML = '<div class="empty-note">Selecione uma cena da sequência.<br>Os detalhes aparecem aqui.</div>';
   else {
     const m=assetFor(c), i=index();
-    $("#scene-inspector").innerHTML = `<span class="scene-chip">${icon("film")} CENA ${String(i+1).padStart(2,"0")}</span><label class="field-label" for="scene-source">Tomada</label><select id="scene-source" ${c.locked?"disabled":""}>${project.media.filter(m=>m.kind==="video"&&m.status==="ready").map(a=>`<option value="${a.id}" ${a.id===c.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><label class="field-label" for="scene-label">Nome da cena</label><input id="scene-label" maxlength="160" value="${esc(c.label)}" ${c.locked?"disabled":""}><div class="trim-fields"><div><label class="field-label" for="clip-start">Entrada · segundos</label><input id="clip-start" type="number" inputmode="decimal" min="0" max="${m.duration}" step="0.1" value="${c.start}" ${c.locked?"disabled":""}></div><div><label class="field-label" for="clip-end">Saída · segundos</label><input id="clip-end" type="number" inputmode="decimal" min="0.1" max="${m.duration}" step="0.1" value="${c.end}" ${c.locked?"disabled":""}></div></div><p class="selected-duration">Duração da cena: ${precise(c.end-c.start)}</p>${editorFeatures.visual_fades?`<fieldset class="effect-fields"><legend>Entrada e saída para preto</legend><div class="trim-fields">${["in","out"].map((side)=>`<div><label class="field-label" for="scene-fade-${side}">${side==="in"?"Entrada":"Saída"} · segundos</label><input id="scene-fade-${side}" type="number" min="0" max="${c.end-c.start}" step="0.1" value="${c["fade_"+side]||0}" ${c.locked?"disabled":""}></div>`).join("")}</div><p class="help">0 desativa. Mantém a duração e o sincronismo da montagem.</p></fieldset>`:""}<label class="field-label" for="scene-title">Texto sobre a cena</label><textarea id="scene-title" rows="2" maxlength="160" placeholder="Um título breve, se fizer sentido." ${c.locked?"disabled":""}>${esc(c.title)}</textarea>${editorFeatures.caption_styles?`<div class="caption-controls">${[["font","Fonte",[["sans","Simples · Arial"],["serif","Editorial · Georgia"],["mono","Monoespaçada · Consolas"]],"sans"],["size","Tamanho",[["small","Pequeno"],["medium","Médio"],["large","Grande"]],"medium"],["position","Posição",[["legacy","Clássica"],["top","Parte superior"],["center","Centro"],["bottom","Parte inferior"]],"legacy"]].map(([key,label,options,defaultValue])=>`<label class="field-label" for="title-${key}">${label}</label><select id="title-${key}" ${c.locked?"disabled":""}>${options.map(([value,name])=>`<option value="${value}" ${(c["title_"+key]||defaultValue)===value?"selected":""}>${name}</option>`).join("")}</select>`).join("")}<p class="help">Texto manual por cena. Fontes locais, sem download ou assinatura.</p></div>`:""}<label class="field-label" for="clip-volume">Som original</label><div class="range-row"><input id="clip-volume" type="range" min="0" max="100" value="${Math.round(c.volume*100)}" ${c.locked?"disabled":""}><output id="clip-volume-value">${Math.round(c.volume*100)}%</output></div><hr class="divider"><button class="lock-control ${c.locked?"locked":""}" id="lock-clip" aria-pressed="${c.locked}">${icon("lock")}<span><strong>${c.locked?"Cena protegida":"Proteger esta escolha"}</strong><small>Preserva a tomada e seus ajustes.</small></span></button><div class="reorder-buttons"><button class="button secondary" id="move-left" ${i===0?"disabled":""}>${icon("left")}Antes</button><button class="button secondary" id="move-right" ${i===project.timeline.length-1?"disabled":""}>Depois${icon("right")}</button></div><button class="danger-button" id="remove-clip" ${c.locked?"disabled":""}>${icon("trash")}Remover da sequência</button>`;
+    $("#scene-inspector").innerHTML = `<span class="scene-chip">${icon("film")} CENA ${String(i+1).padStart(2,"0")}</span><label class="field-label" for="scene-source">Tomada</label><select id="scene-source" ${c.locked?"disabled":""}>${project.media.filter(m=>m.kind==="video"&&m.status==="ready").map(a=>`<option value="${a.id}" ${a.id===c.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><label class="field-label" for="scene-label">Nome da cena</label><input id="scene-label" maxlength="160" value="${esc(c.label)}" ${c.locked?"disabled":""}><div class="trim-fields"><div><label class="field-label" for="clip-start">Entrada · segundos</label><input id="clip-start" type="number" inputmode="decimal" min="0" max="${m.duration}" step="0.1" value="${c.start}" ${c.locked?"disabled":""}></div><div><label class="field-label" for="clip-end">Saída · segundos</label><input id="clip-end" type="number" inputmode="decimal" min="0.1" max="${m.duration}" step="0.1" value="${c.end}" ${c.locked?"disabled":""}></div></div>${editorFeatures.framing_watermark?`<fieldset class="effect-fields"><legend>Enquadramento</legend><label class="field-label" for="scene-framing">Ajuste à tela</label><select id="scene-framing" ${c.locked?"disabled":""}><option value="contain" ${(c.framing||"contain")==="contain"?"selected":""}>Mostrar vídeo inteiro</option><option value="cover" ${c.framing==="cover"?"selected":""}>Preencher tela · recorta bordas</option></select>${["x","y"].map(axis=>`<label class="field-label" for="scene-pan-${axis}">Posição ${axis==="x"?"horizontal":"vertical"}</label><input id="scene-pan-${axis}" type="range" min="0" max="100" value="${Math.round((c["pan_"+axis]??.5)*100)}" ${c.locked?"disabled":""}>`).join("")}<label class="mirror-control"><input id="scene-mirror" type="checkbox" ${c.mirror?"checked":""} ${c.locked?"disabled":""}> Espelhar horizontalmente</label></fieldset>`:""}<p class="selected-duration">Duração da cena: ${precise(c.end-c.start)}</p>${editorFeatures.visual_fades?`<fieldset class="effect-fields"><legend>Entrada e saída para preto</legend><div class="trim-fields">${["in","out"].map((side)=>`<div><label class="field-label" for="scene-fade-${side}">${side==="in"?"Entrada":"Saída"} · segundos</label><input id="scene-fade-${side}" type="number" min="0" max="${c.end-c.start}" step="0.1" value="${c["fade_"+side]||0}" ${c.locked?"disabled":""}></div>`).join("")}</div><p class="help">0 desativa. Mantém a duração e o sincronismo da montagem.</p></fieldset>`:""}<label class="field-label" for="scene-title">Texto sobre a cena</label><textarea id="scene-title" rows="2" maxlength="160" placeholder="Um título breve, se fizer sentido." ${c.locked?"disabled":""}>${esc(c.title)}</textarea>${editorFeatures.caption_styles?`<div class="caption-controls">${[["font","Fonte",[["sans","Simples · Arial"],["serif","Editorial · Georgia"],["mono","Monoespaçada · Consolas"]],"sans"],["size","Tamanho",[["small","Pequeno"],["medium","Médio"],["large","Grande"]],"medium"],["position","Posição",[["legacy","Clássica"],["top","Parte superior"],["center","Centro"],["bottom","Parte inferior"]],"legacy"]].map(([key,label,options,defaultValue])=>`<label class="field-label" for="title-${key}">${label}</label><select id="title-${key}" ${c.locked?"disabled":""}>${options.map(([value,name])=>`<option value="${value}" ${(c["title_"+key]||defaultValue)===value?"selected":""}>${name}</option>`).join("")}</select>`).join("")}<p class="help">Texto manual por cena. Fontes locais, sem download ou assinatura.</p></div>`:""}<label class="field-label" for="clip-volume">Som original</label><div class="range-row"><input id="clip-volume" type="range" min="0" max="100" value="${Math.round(c.volume*100)}" ${c.locked?"disabled":""}><output id="clip-volume-value">${Math.round(c.volume*100)}%</output></div><hr class="divider"><button class="lock-control ${c.locked?"locked":""}" id="lock-clip" aria-pressed="${c.locked}">${icon("lock")}<span><strong>${c.locked?"Cena protegida":"Proteger esta escolha"}</strong><small>Preserva a tomada e seus ajustes.</small></span></button><div class="reorder-buttons"><button class="button secondary" id="move-left" ${i===0?"disabled":""}>${icon("left")}Antes</button><button class="button secondary" id="move-right" ${i===project.timeline.length-1?"disabled":""}>Depois${icon("right")}</button></div><button class="danger-button" id="remove-clip" ${c.locked?"disabled":""}>${icon("trash")}Remover da sequência</button>`;
     const update=changes=>mutate("clip_update",{clip_id:c.id,...changes});
+    $("#scene-framing")?.addEventListener("change",e=>update({framing:e.target.value}));
+    $("#scene-mirror")?.addEventListener("change",e=>update({mirror:e.target.checked}));
+    for(const axis of ["x","y"])$("#scene-pan-"+axis)?.addEventListener("change",e=>update({["pan_"+axis]:Number(e.target.value)/100}));
     $("#clip-start").addEventListener("change",e=>update({start:Number(e.target.value)}));
     $("#clip-end").addEventListener("change",e=>update({end:Number(e.target.value)}));
     $("#scene-label").addEventListener("change",e=>update({label:e.target.value}));
@@ -179,7 +182,7 @@ function seekTo(time){
 function updatePlayer(resume=false, time=before()){
   const c=currentClip(), m=c&&assetFor(c);
   $("#preview-empty").hidden=!!c; player.hidden=!c;
-  renderPreviewCaption(c);
+  renderPreviewCaption(c);renderPreviewFraming(c);
   cursor=Math.max(0,Math.min(project.duration,time));
   if(!c){player.removeAttribute("src");voice.pause();loadedSource="";cursor=0;$("#scene-position").textContent="Nenhuma cena";updateTime();return;}
   const source=assetUrl(m), clipId=c.id;
@@ -217,6 +220,19 @@ function syncVoice(){
   if(time<0||time>=asset.duration){voice.pause();return;}
   if(voice.readyState>=1&&Math.abs(voice.currentTime-time)>.12) voice.currentTime=time;
   if(voice.paused) voice.play().catch(()=>{});
+}
+function renderPreviewFraming(clip){
+  player.style.objectFit=clip?.framing||"contain";
+  player.style.objectPosition=`${(clip?.pan_x??.5)*100}% ${(clip?.pan_y??.5)*100}%`;
+  player.style.transform=clip?.mirror?"scaleX(-1)":"none";
+  const node=$("#preview-watermark"),mark=project?.settings?.watermark;
+  node.textContent=mark?.text||"";node.hidden=!clip||!mark;
+  if(mark){
+    const right=mark.position.endsWith("right"),bottom=mark.position.startsWith("bottom");
+    node.style.right=right?"4%":"auto";node.style.left=right?"auto":"4%";
+    node.style.bottom=bottom?"4%":"auto";node.style.top=bottom?"auto":"4%";
+    node.style.opacity=mark.opacity;
+  }
 }
 function captionLines(clip){
   const limit={small:38,medium:30,large:22}[clip?.title_size||"medium"];
@@ -522,6 +538,10 @@ function exportProfile(settings,quality){
   return {width:Math.max(2,Math.round(settings.width*scale/2)*2),height:Math.max(2,Math.round(settings.height*scale/2)*2)};
 }
 function configureExportControls(){
+  $("#watermark-controls").hidden=!editorFeatures.framing_watermark;
+  const mark=project.settings.watermark;
+  $("#watermark-text").value=mark?.text||"";$("#watermark-position").value=mark?.position||"bottom_right";
+  $("#watermark-opacity").value=Math.round((mark?.opacity??.6)*100);
   $("#format-controls").hidden=!editorFeatures.export_profiles;
   if(!editorFeatures.export_profiles)return;
   const quality=$("#export-quality"),selectedQuality=quality.value;
@@ -533,6 +553,7 @@ function updateExportSummary(){
   if(!project)return;const size=exportProfile(project.settings,$("#export-quality").value);
   $("#export-summary").textContent=`${project.timeline.length} cenas · ${precise(project.duration)} · ${size.width} × ${size.height} · MP4 / H.264 · versão ${project.revision}. Tamanho final depende do conteúdo.`;
 }
+$("#apply-watermark").addEventListener("click",()=>mutate("watermark_set",{text:$("#watermark-text").value,position:$("#watermark-position").value,opacity:Number($("#watermark-opacity").value)/100},"Marca d'água atualizada. Confira a prévia."));
 $("#project-format").addEventListener("change",e=>mutate("settings_update",{format:e.target.value},"Formato da montagem atualizado."));
 $("#export-quality").addEventListener("change",updateExportSummary);
 async function showExports(){pause();$("#export-dialog").showModal();await refreshJobs();}

@@ -270,6 +270,11 @@ class Store:
             raise EditorError("Identificador de cena inválido.")
         if not isinstance(data.get("locked", False), bool):
             raise EditorError("A proteção de cena deve ser verdadeira ou falsa.")
+        framing = data.get("framing", "contain")
+        if framing not in ("contain", "cover") or not isinstance(data.get("mirror", False), bool):
+            raise EditorError("Enquadramento inválido.")
+        pan_x = number(data.get("pan_x", .5), 0, 1)
+        pan_y = number(data.get("pan_y", .5), 0, 1)
         title_style = {}
         for key, choices, default in (("title_font", ("sans", "serif", "mono"), "sans"),
                                        ("title_size", ("small", "medium", "large"), "medium"),
@@ -283,6 +288,7 @@ class Store:
             raise EditorError("As entradas e saídas suaves não podem ultrapassar a duração da cena.")
         return {"id": clip_id, "media_id": asset["id"], "start": start, "end": end,
                 "fade_in": fade_in, "fade_out": fade_out, **title_style,
+                "framing": framing, "mirror": data.get("mirror", False), "pan_x": pan_x, "pan_y": pan_y,
                 "label": text(data.get("label", asset["name"]), 160), "title": text(data.get("title", ""), 160),
                 "volume": number(data.get("volume", 1), 0, 2), "locked": data.get("locked", False),
                 "block_id": text(data.get("block_id", ""), 80)}
@@ -308,6 +314,16 @@ class Store:
                 if not isinstance(selected_format, str) or selected_format not in FORMATS:
                     raise EditorError("Escolha um formato de vídeo válido.")
                 p["settings"].update(zip(("width", "height"), FORMATS[selected_format]))
+            elif operation == "watermark_set":
+                value = args.get("text", "")
+                if not isinstance(value, str) or len(value) > 40:
+                    raise EditorError("Use até 40 caracteres na marca d'água.")
+                position = args.get("position", "bottom_right")
+                if position not in ("top_left", "top_right", "bottom_left", "bottom_right"):
+                    raise EditorError("Posição da marca d'água inválida.")
+                opacity = number(args.get("opacity", .6), .1, 1)
+                value = " ".join(value.split())
+                p["settings"]["watermark"] = {"text": value, "position": position, "opacity": opacity} if value else None
             elif operation == "media_annotate":
                 asset = self.find(p["media"], args.get("media_id"), "Arquivo")
                 if asset.get("deleted_at"):

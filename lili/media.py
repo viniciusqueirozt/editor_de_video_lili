@@ -257,14 +257,24 @@ class MediaService:
             profile = render_profile(project["settings"], quality)
             width, height = profile["width"], profile["height"]
             font = Path(os.environ.get("LILI_FONT", "C:/Windows/Fonts/arial.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
+            escape_path = lambda p: p.resolve().as_posix().replace(":", "\\:").replace("'", "'\\''")
+            watermark = project["settings"].get("watermark")
+            if watermark:
+                watermark_file = folder / "watermark.txt"
+                watermark_file.write_text(watermark["text"], encoding="utf-8")
             for index, clip in enumerate(project["timeline"]):
                 asset = self.store.find(project["media"], clip["media_id"], "Arquivo")
                 args = ["-ss", clip["start"], "-i", self.source(project_id, asset)]
                 if not asset["has_audio"]:
                     args += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
-                filters = f"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30"
+                pan_x, pan_y = clip.get("pan_x", .5), clip.get("pan_y", .5)
+                if clip.get("framing", "contain") == "cover":
+                    filters = f"scale={width}:{height}:force_original_aspect_ratio=increase:force_divisible_by=2,crop={width}:{height}:(iw-ow)*{pan_x}:(ih-oh)*{pan_y}"
+                else:
+                    filters = f"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad={width}:{height}:(ow-iw)*{pan_x}:(oh-ih)*{pan_y}"
+                filters += ",setsar=1,fps=30"
+                if clip.get("mirror", False): filters += ",hflip"
                 if clip["title"]:
-                    escape_path = lambda p: p.resolve().as_posix().replace(":", "\\:").replace("'", "'\\''")
                     size = clip.get("title_size", "medium")
                     ratio, _ = SIZES[size]
                     lines = caption_lines(clip["title"], size)
@@ -283,6 +293,12 @@ class MediaService:
                     filters += f",fade=t=in:st=0:d={clip['fade_in']}"
                 if clip.get("fade_out", 0):
                     filters += f",fade=t=out:st={clip['end']-clip['start']-clip['fade_out']}:d={clip['fade_out']}"
+                if watermark:
+                    right = watermark["position"].endswith("right")
+                    bottom = watermark["position"].startswith("bottom")
+                    mark_x = "w-text_w-w*0.04" if right else "w*0.04"
+                    mark_y = "h-text_h-h*0.04" if bottom else "h*0.04"
+                    filters += f",drawtext=fontfile='{escape_path(font)}':textfile='{escape_path(watermark_file)}':expansion=none:fontsize={max(8, round(width*.025))}:fontcolor=white@{watermark['opacity']}:shadowcolor=black@0.5:shadowx=1:shadowy=1:x={mark_x}:y={mark_y}"
                 args += ["-t", clip["end"] - clip["start"], "-map", "0:v:0", "-map", "0:a:0" if asset["has_audio"] else "1:a:0",
                          "-vf", filters, "-af", f"volume={clip['volume']},apad", "-c:v", "libx264", "-preset", "veryfast", "-crf", str(profile["crf"]),
                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "160k", "-video_track_timescale", "90000", folder / f"{index:04d}.mp4"]

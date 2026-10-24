@@ -295,6 +295,23 @@ class IntegrationTests(unittest.TestCase):
             output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
             self.assertEqual((probe(output)["width"],probe(output)["height"]),dimensions)
 
+    def test_crop_position_and_watermark_render_on_synthetic_pattern(self):
+        source=self.root/"red-blue-pattern.mp4"
+        run(["-f","lavfi","-i","color=c=red:s=160x90:r=30:d=0.4,drawbox=x=80:y=0:w=80:h=90:color=blue:t=fill","-c:v","libx264","-pix_fmt","yuv420p",source])
+        p=self.client.call("POST","/api/projects",{"name":"Framing synthetic"})
+        imported=self.client.upload(p["id"],source);self.wait_job(imported["job"]["id"]);p=self.store.get(p["id"])
+        p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_add","args":{"media_id":imported["media_id"],"start":0,"end":.3,"framing":"cover","pan_x":0},"expected_revision":p["revision"]})
+        clip=p["timeline"][0]
+        for pan in (0,1):
+            p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_update","args":{"clip_id":clip["id"],"pan_x":pan},"expected_revision":p["revision"]})
+            p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"watermark_set","args":{"text":"LILI","position":"top_left","opacity":1},"expected_revision":p["revision"]})
+            job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"preview"});self.wait_job(job["id"])
+            output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+            rgb=subprocess.run([executable(),"-v","error","-i",str(output),"-frames:v","1","-vf","crop=2:2:(iw-2)/2:(ih-2)/2,format=rgb24","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
+            self.assertGreater(rgb[0 if pan==0 else 2],180)
+            raw=subprocess.run([executable(),"-v","error","-i",str(output),"-frames:v","1","-vf","crop=160:120:0:0,format=gray","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
+            self.assertGreater(sum(v>200 for v in raw),10)
+
 
 if __name__ == "__main__":
     unittest.main()

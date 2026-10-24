@@ -23,3 +23,10 @@ Execução direta autorizada pelo usuário: quatro rodadas de edição, uma de s
 - Texto grande ajusta seu tamanho máximo à altura disponível para formatos mais baixos. A fonte continua local.
 - Verificação: 17 testes de estado e dois de perfis passaram; Node conferiu dimensões anunciadas. Exportações reais confirmaram 540×540, 1280×720 e 1080×1920, codec H.264, parâmetros dos perfis e tamanho do arquivo. MP4 continua sendo o formato de arquivo disponível; não foram adicionados MOV/WebM ou 4K.
 - Preparado para próximo início normal do editor, com capacidade export_profiles. Safari real pendente.
+
+## Rodada 4 — Enquadramento e marca d'água
+
+- Cada cena pode mostrar o vídeo inteiro ou preencher a tela recortando bordas. Controles horizontal/vertical escolhem a região visível; espelhamento horizontal opcional. Os ajustes não alteram o arquivo original.
+- Marca d'água de texto própria do projeto, até 40 caracteres, quatro cantos e opacidade configurável; vazia remove, Desfazer recupera. Mostrada na prévia e exportada, sem cobrança. Não é importação de logotipo em imagem. Permanece visível durante fades, como identificação da entrega.
+- Verificação: 18 testes de estado passaram; Node conferiu estilos de prévia. Exportação real de padrão vermelho/azul confirmou o lado escolhido no recorte e os pixels da marca d'água no canto solicitado. Fonte sintética teve seu parâmetro de duração corrigido antes de concluir o teste.
+- Preparado para próximo início normal do editor, com capacidade framing_watermark. Safari real pendente. O ajuste é estático por cena, sem rastreamento automático ou keyframes nesta entrega.

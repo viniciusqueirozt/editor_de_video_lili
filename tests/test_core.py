@@ -228,6 +228,19 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual((self.p["settings"]["width"],self.p["settings"]["height"]),(1080,1080))
         self.apply("undo",{});self.assertEqual(self.p["settings"],original)
 
+    def test_framing_watermark_validation_and_undo(self):
+        clip=self.add()
+        for changes in ({"framing":"bad"},{"mirror":1},{"pan_x":-1},{"pan_y":True}):
+            with self.assertRaises(EditorError):self.apply("clip_update",{"clip_id":clip["id"],**changes})
+        self.apply("clip_update",{"clip_id":clip["id"],"framing":"cover","pan_x":1,"mirror":True})
+        self.assertTrue(self.p["timeline"][0]["mirror"])
+        for args in ({"text":"x"*41},{"text":[]},{"text":"ok","opacity":True},{"text":"ok","position":"bad"}):
+            with self.assertRaises(EditorError):self.apply("watermark_set",args)
+        self.apply("watermark_set",{"text":"  @Lili  ","opacity":.5,"position":"top_left"})
+        self.assertEqual(self.p["settings"]["watermark"]["text"],"@Lili")
+        self.apply("watermark_set",{"text":""});self.assertIsNone(self.p["settings"]["watermark"])
+        self.apply("undo",{});self.assertEqual(self.p["settings"]["watermark"]["text"],"@Lili")
+
 
 if __name__ == "__main__":
     unittest.main()

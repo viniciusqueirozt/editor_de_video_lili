@@ -125,7 +125,7 @@ class Handler(BaseHTTPRequestHandler):
         store, media = self.server.store, self.server.media
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
-                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True}})
+                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True}})
             if path == "/auth/status":
                 return self.json({"authenticated": self.server.identity_resolver is not None})
             if path == "/api/projects":
