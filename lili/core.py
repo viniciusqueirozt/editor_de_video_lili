@@ -270,7 +270,12 @@ class Store:
             raise EditorError("Identificador de cena inválido.")
         if not isinstance(data.get("locked", False), bool):
             raise EditorError("A proteção de cena deve ser verdadeira ou falsa.")
+        fade_in = number(data.get("fade_in", 0), 0, end-start)
+        fade_out = number(data.get("fade_out", 0), 0, end-start)
+        if fade_in + fade_out > end-start + 0.00001:
+            raise EditorError("As entradas e saídas suaves não podem ultrapassar a duração da cena.")
         return {"id": clip_id, "media_id": asset["id"], "start": start, "end": end,
+                "fade_in": fade_in, "fade_out": fade_out,
                 "label": text(data.get("label", asset["name"]), 160), "title": text(data.get("title", ""), 160),
                 "volume": number(data.get("volume", 1), 0, 2), "locked": data.get("locked", False),
                 "block_id": text(data.get("block_id", ""), 80)}
@@ -348,8 +353,9 @@ class Store:
                 at = number(args.get("at"), clip["start"], clip["end"])
                 if min(round(at - clip["start"], 4), round(clip["end"] - at, 4)) < 0.1:
                     raise EditorError("Deixe pelo menos 0,1 segundo de cada lado do corte.")
-                right = self.validate_clip(p, {**clip, "id": uid(), "start": at})
-                clip["end"] = at
+                left = self.validate_clip(p, {**clip, "end": at, "fade_out": 0})
+                right = self.validate_clip(p, {**clip, "id": uid(), "start": at, "fade_in": 0})
+                clip.update(left)
                 p["timeline"].insert(p["timeline"].index(clip) + 1, right)
             elif operation == "clip_remove":
                 clip = self.find(p["timeline"], args.get("clip_id"))
@@ -368,7 +374,7 @@ class Store:
                 if len({c["id"] for c in proposed}) != len(proposed):
                     raise EditorError("Cada cena precisa ter um identificador diferente.")
                 for old in p["timeline"]:
-                    if old["locked"] and old not in proposed:
+                    if old["locked"] and self.validate_clip(p, old) not in proposed:
                         raise EditorError("A nova montagem precisa preservar as cenas protegidas, incluindo seus identificadores.", 409)
                 p["timeline"] = proposed
             elif operation == "narration_set":

@@ -253,6 +253,21 @@ class IntegrationTests(unittest.TestCase):
             urlopen(Request(self.base + "/api/projects", data=b"[]", headers={"Content-Type": "application/json"}))
         self.assertEqual(error.exception.code, 400)
 
+    def test_visual_fades_render_black_edges_and_keep_duration(self):
+        p = self.client.call("POST", "/api/projects", {"name": "Visual fades synthetic"})
+        imported = self.client.upload(p["id"], self.source)
+        self.wait_job(imported["job"]["id"])
+        p = self.store.get(p["id"])
+        p = self.client.call("POST", f"/api/projects/{p['id']}/commands", {"operation": "clip_add", "args": {"media_id": imported["media_id"], "start": .2, "end": 1.4, "fade_in": .3, "fade_out": .3}, "expected_revision": p["revision"]})
+        job = self.client.call("POST", f"/api/projects/{p['id']}/exports", {"expected_revision": p["revision"], "quality": "preview"})
+        self.wait_job(job["id"])
+        output = self.store.folder(p["id"]) / "exports" / job["id"] / "video.mp4"
+        raw = subprocess.run([executable(), "-v", "error", "-i", str(output), "-vf", "crop=20:20:(iw-20)/2:(ih-20)/2,scale=1:1,format=gray", "-f", "rawvideo", "pipe:1"], capture_output=True, check=True).stdout
+        self.assertLess(raw[0], 5)
+        self.assertGreater(raw[len(raw)//2], 30)
+        self.assertLess(raw[-1], raw[len(raw)//2] * .3)
+        self.assertAlmostEqual(probe(output)["duration"], 1.2, delta=.12)
+
 
 if __name__ == "__main__":
     unittest.main()

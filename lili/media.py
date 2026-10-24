@@ -270,6 +270,10 @@ class MediaService:
                         title_file = folder / f"title-{index:04d}-{line_index:02d}.txt"
                         title_file.write_text(line, encoding="utf-8")
                         filters += f",drawtext=fontfile='{escape_path(font)}':textfile='{escape_path(title_file)}':expansion=none:fontsize={font_size}:fontcolor=white:borderw=1:bordercolor=black@0.7:shadowcolor=black@0.5:shadowx=1:shadowy=1:x=(w-text_w)/2:y=h*0.32+{line_index*font_size*1.2}"
+                if clip.get("fade_in", 0):
+                    filters += f",fade=t=in:st=0:d={clip['fade_in']}"
+                if clip.get("fade_out", 0):
+                    filters += f",fade=t=out:st={clip['end']-clip['start']-clip['fade_out']}:d={clip['fade_out']}"
                 args += ["-t", clip["end"] - clip["start"], "-map", "0:v:0", "-map", "0:a:0" if asset["has_audio"] else "1:a:0",
                          "-vf", filters, "-af", f"volume={clip['volume']},apad", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "160k", "-video_track_timescale", "90000", folder / f"{index:04d}.mp4"]

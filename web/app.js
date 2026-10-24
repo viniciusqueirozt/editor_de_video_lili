@@ -7,6 +7,7 @@ const precise = seconds => `${Number(seconds).toFixed(1).replace(".",",")} s`;
 const player = $("#player"), voice = $("#voice-player");
 let project = null, selected = null, projects = [], queue = Promise.resolve(), toastTimer, uploadRunning = false, playing = false, seekBusy = false, loadedSource = "", dragId = null;
 let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
+let editorFeatures = {};
 const uploadState = {pending:null, cancel:false, completing:false, available:false};
 let importBatch = null, pendingRemoval = null, aiAvailable = null, aiStarting = false, aiJobsKey = "";
 const aiNotified = new Set();
@@ -102,11 +103,12 @@ function renderInspector() {
   if(!c) $("#scene-inspector").innerHTML = '<div class="empty-note">Selecione uma cena da sequência.<br>Os detalhes aparecem aqui.</div>';
   else {
     const m=assetFor(c), i=index();
-    $("#scene-inspector").innerHTML = `<span class="scene-chip">${icon("film")} CENA ${String(i+1).padStart(2,"0")}</span><label class="field-label" for="scene-source">Tomada</label><select id="scene-source" ${c.locked?"disabled":""}>${project.media.filter(m=>m.kind==="video"&&m.status==="ready").map(a=>`<option value="${a.id}" ${a.id===c.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><label class="field-label" for="scene-label">Nome da cena</label><input id="scene-label" maxlength="160" value="${esc(c.label)}" ${c.locked?"disabled":""}><div class="trim-fields"><div><label class="field-label" for="clip-start">Entrada · segundos</label><input id="clip-start" type="number" inputmode="decimal" min="0" max="${m.duration}" step="0.1" value="${c.start}" ${c.locked?"disabled":""}></div><div><label class="field-label" for="clip-end">Saída · segundos</label><input id="clip-end" type="number" inputmode="decimal" min="0.1" max="${m.duration}" step="0.1" value="${c.end}" ${c.locked?"disabled":""}></div></div><p class="selected-duration">Duração da cena: ${precise(c.end-c.start)}</p><label class="field-label" for="scene-title">Texto sobre a cena</label><textarea id="scene-title" rows="2" maxlength="160" placeholder="Um título breve, se fizer sentido." ${c.locked?"disabled":""}>${esc(c.title)}</textarea><label class="field-label" for="clip-volume">Som original</label><div class="range-row"><input id="clip-volume" type="range" min="0" max="100" value="${Math.round(c.volume*100)}" ${c.locked?"disabled":""}><output id="clip-volume-value">${Math.round(c.volume*100)}%</output></div><hr class="divider"><button class="lock-control ${c.locked?"locked":""}" id="lock-clip" aria-pressed="${c.locked}">${icon("lock")}<span><strong>${c.locked?"Cena protegida":"Proteger esta escolha"}</strong><small>Preserva a tomada e seus ajustes.</small></span></button><div class="reorder-buttons"><button class="button secondary" id="move-left" ${i===0?"disabled":""}>${icon("left")}Antes</button><button class="button secondary" id="move-right" ${i===project.timeline.length-1?"disabled":""}>Depois${icon("right")}</button></div><button class="danger-button" id="remove-clip" ${c.locked?"disabled":""}>${icon("trash")}Remover da sequência</button>`;
+    $("#scene-inspector").innerHTML = `<span class="scene-chip">${icon("film")} CENA ${String(i+1).padStart(2,"0")}</span><label class="field-label" for="scene-source">Tomada</label><select id="scene-source" ${c.locked?"disabled":""}>${project.media.filter(m=>m.kind==="video"&&m.status==="ready").map(a=>`<option value="${a.id}" ${a.id===c.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><label class="field-label" for="scene-label">Nome da cena</label><input id="scene-label" maxlength="160" value="${esc(c.label)}" ${c.locked?"disabled":""}><div class="trim-fields"><div><label class="field-label" for="clip-start">Entrada · segundos</label><input id="clip-start" type="number" inputmode="decimal" min="0" max="${m.duration}" step="0.1" value="${c.start}" ${c.locked?"disabled":""}></div><div><label class="field-label" for="clip-end">Saída · segundos</label><input id="clip-end" type="number" inputmode="decimal" min="0.1" max="${m.duration}" step="0.1" value="${c.end}" ${c.locked?"disabled":""}></div></div><p class="selected-duration">Duração da cena: ${precise(c.end-c.start)}</p>${editorFeatures.visual_fades?`<fieldset class="effect-fields"><legend>Entrada e saída para preto</legend><div class="trim-fields">${["in","out"].map((side)=>`<div><label class="field-label" for="scene-fade-${side}">${side==="in"?"Entrada":"Saída"} · segundos</label><input id="scene-fade-${side}" type="number" min="0" max="${c.end-c.start}" step="0.1" value="${c["fade_"+side]||0}" ${c.locked?"disabled":""}></div>`).join("")}</div><p class="help">0 desativa. Mantém a duração e o sincronismo da montagem.</p></fieldset>`:""}<label class="field-label" for="scene-title">Texto sobre a cena</label><textarea id="scene-title" rows="2" maxlength="160" placeholder="Um título breve, se fizer sentido." ${c.locked?"disabled":""}>${esc(c.title)}</textarea><label class="field-label" for="clip-volume">Som original</label><div class="range-row"><input id="clip-volume" type="range" min="0" max="100" value="${Math.round(c.volume*100)}" ${c.locked?"disabled":""}><output id="clip-volume-value">${Math.round(c.volume*100)}%</output></div><hr class="divider"><button class="lock-control ${c.locked?"locked":""}" id="lock-clip" aria-pressed="${c.locked}">${icon("lock")}<span><strong>${c.locked?"Cena protegida":"Proteger esta escolha"}</strong><small>Preserva a tomada e seus ajustes.</small></span></button><div class="reorder-buttons"><button class="button secondary" id="move-left" ${i===0?"disabled":""}>${icon("left")}Antes</button><button class="button secondary" id="move-right" ${i===project.timeline.length-1?"disabled":""}>Depois${icon("right")}</button></div><button class="danger-button" id="remove-clip" ${c.locked?"disabled":""}>${icon("trash")}Remover da sequência</button>`;
     const update=changes=>mutate("clip_update",{clip_id:c.id,...changes});
     $("#clip-start").addEventListener("change",e=>update({start:Number(e.target.value)}));
     $("#clip-end").addEventListener("change",e=>update({end:Number(e.target.value)}));
     $("#scene-label").addEventListener("change",e=>update({label:e.target.value}));
+    for(const side of ["in","out"])$("#scene-fade-"+side)?.addEventListener("change",e=>update({["fade_"+side]:Number(e.target.value)}));
     $("#scene-title").addEventListener("change",e=>update({title:e.target.value}));
     $("#scene-source").addEventListener("change",e=>{const a=project.media.find(m=>m.id===e.target.value);update({media_id:a.id,start:0,end:Math.min(c.end-c.start,a.duration)});});
     $("#clip-volume").addEventListener("input",e=>{$("#clip-volume-value").value=`${e.target.value}%`;player.volume=Number(e.target.value)/100;});
@@ -212,6 +214,15 @@ function syncVoice(){
   if(voice.readyState>=1&&Math.abs(voice.currentTime-time)>.12) voice.currentTime=time;
   if(voice.paused) voice.play().catch(()=>{});
 }
+function sceneFadeGain(clip,time){
+  const length=clip.end-clip.start;
+  return Math.max(0,Math.min(1,clip.fade_in?time/clip.fade_in:1,clip.fade_out?(length-time)/clip.fade_out:1));
+}
+function updateSceneFade(){
+  const clip=currentClip(),gain=clip?sceneFadeGain(clip,cursor-before()):1;
+  player.style.filter=`brightness(${gain})`;
+  $("#preview-title").style.opacity=gain;
+}
 function updateTime(){
   if(!project) return;
   const time=Math.max(0,Math.min(project.duration,cursor));
@@ -219,7 +230,7 @@ function updateTime(){
   $("#timecode").innerHTML=`${stamp(time)} <span>/ ${stamp(project.duration)}</span>`;
   $("#seek").max=project.duration||1;
   if(!seekBusy) $("#seek").value=time;
-  updatePlayhead(time);
+  updatePlayhead(time);updateSceneFade();
 }
 function advance(){
   if(!playing) return;
@@ -486,7 +497,7 @@ async function refreshJobs(){if(!project)return;const jobs=await api(`/api/proje
 $("#context-button").addEventListener("click",async()=>{try{const context=await api(`/api/projects/${project.id}/context`),blob=new Blob([JSON.stringify(context,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="lili-contexto.json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast("Contexto salvo. O Codex também pode acessar o projeto pela CLI ou pelo MCP.");}catch(e){toast(e.message,true);}});
 document.addEventListener("keydown",e=>{if(e.code==="Space"&&!/INPUT|TEXTAREA|SELECT|BUTTON/.test(document.activeElement.tagName)&&!document.querySelector("dialog[open]")){e.preventDefault();playing?pause():play();}});
 setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
-(async()=>{try{await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
+(async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 $("#phone-help").addEventListener("click",()=>{

@@ -196,6 +196,20 @@ class ProjectTests(unittest.TestCase):
         self.apply("request_complete", {"request_id": request["id"], "result": "Abertura atualizada"})
         self.assertEqual(self.p["requests"][0]["status"], "done")
 
+    def test_visual_fades_are_atomic_undoable_and_preserve_split_edges(self):
+        clip = self.add()
+        for changes in ({"fade_in": True}, {"fade_out": -1}, {"fade_in": 2, "fade_out": 2}):
+            rev = self.p["revision"]
+            with self.assertRaises(EditorError): self.apply("clip_update", {"clip_id": clip["id"], **changes})
+            self.refresh(); self.assertEqual(self.p["revision"], rev)
+        self.apply("clip_update", {"clip_id": clip["id"], "fade_in": .4, "fade_out": .5})
+        self.apply("clip_split", {"clip_id": clip["id"], "at": 2.5})
+        left, right = self.p["timeline"]
+        self.assertEqual((left["fade_in"], left["fade_out"], right["fade_in"], right["fade_out"]), (.4, 0, 0, .5))
+        self.apply("undo", {})
+        self.assertEqual(len(self.p["timeline"]), 1)
+        self.assertEqual(self.p["timeline"][0]["fade_out"], .5)
+
 
 if __name__ == "__main__":
     unittest.main()
