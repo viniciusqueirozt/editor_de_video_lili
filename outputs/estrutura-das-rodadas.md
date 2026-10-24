@@ -44,3 +44,7 @@ Demonstração atual: cinco rodadas sequenciais e extra logo depois, havendo lim
 O usuário pediu pacotes mais completos por rodada, sem obrigação de mudanças pequenas. Planejar o conjunto para aproveitar aproximadamente 70% a 85% do uso total da janela de cinco horas, preservando margem antes de 90% para terminar, testar e registrar o pacote em curso. O consumo é compartilhado e não previsível com exatidão; a faixa é referência, sem garantia de atingir um número. Não gastar por gastar, repetir testes sem motivo, inflar respostas ou iniciar trabalho que possa ficar incompleto por limite.
 
 Selecionar várias melhorias relacionadas e úteis por rodada e reavaliar o saldo entre elas. Reservar a revisão de segurança e a extra ao distribuir o orçamento, consultar reset real e semanal. Se os limites já estiverem altos por outros chats, reduzir o escopo e priorizar concluir as entregas iniciadas. Rotina noturna encerra antes das 5h, mesmo havendo saldo; nenhuma continuação automática durante o dia.
+
+## Publicação e reaplicação
+
+O usuário pediu publicar as melhorias ao final da extra. Incorporar revisão, testes, sincronização e checagem da ativação ao orçamento do ciclo, preservando serviços em uso. Processo genérico em elaboração em outputs/processo-reutilizavel-de-rodadas.md, para futuro relatório de transferência quando solicitado.

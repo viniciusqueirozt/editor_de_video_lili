@@ -57,8 +57,12 @@ def script_blocks(script):
             for i, part in enumerate(re.split(r"\n\s*\n", script.strip())) if part.strip()]
 
 
+def clip_duration(clip):
+    return (clip["end"] - clip["start"]) / clip.get("speed", 1)
+
+
 def duration(project):
-    return round(sum(c["end"] - c["start"] for c in project["timeline"]), 4)
+    return round(sum(clip_duration(c) for c in project["timeline"]), 4)
 
 
 class Store:
@@ -263,7 +267,9 @@ class Store:
             raise EditorError("Escolha um vídeo que já terminou de importar.")
         start = number(data.get("start", 0), 0, asset["duration"])
         end = number(data.get("end", asset["duration"]), 0, asset["duration"])
-        if round(end - start, 4) < 0.1:
+        speed = number(data.get("speed", 1), .25, 4)
+        length = (end-start) / speed
+        if round(length, 4) < 0.1:
             raise EditorError("A cena precisa ter pelo menos 0,1 segundo.")
         clip_id = data.get("id", uid())
         if not isinstance(clip_id, str) or not re.fullmatch(r"[a-f0-9]{32}", clip_id):
@@ -282,12 +288,12 @@ class Store:
             value = data.get(key, default)
             if value not in choices: raise EditorError("Estilo de texto inválido.")
             title_style[key] = value
-        fade_in = number(data.get("fade_in", 0), 0, end-start)
-        fade_out = number(data.get("fade_out", 0), 0, end-start)
-        if fade_in + fade_out > end-start + 0.00001:
+        fade_in = number(data.get("fade_in", 0), 0, length)
+        fade_out = number(data.get("fade_out", 0), 0, length)
+        if fade_in + fade_out > length + 0.00001:
             raise EditorError("As entradas e saídas suaves não podem ultrapassar a duração da cena.")
         return {"id": clip_id, "media_id": asset["id"], "start": start, "end": end,
-                "fade_in": fade_in, "fade_out": fade_out, **title_style,
+                "fade_in": fade_in, "fade_out": fade_out, "speed": speed, **title_style,
                 "framing": framing, "mirror": data.get("mirror", False), "pan_x": pan_x, "pan_y": pan_y,
                 "brightness": number(data.get("brightness", 1), .5, 1.5),
                 "contrast": number(data.get("contrast", 1), .5, 1.5),
@@ -383,7 +389,7 @@ class Store:
                 if clip["locked"]:
                     raise EditorError("Desproteja esta cena antes de dividir.", 409)
                 at = number(args.get("at"), clip["start"], clip["end"])
-                if min(round(at - clip["start"], 4), round(clip["end"] - at, 4)) < 0.1:
+                if min(round((at - clip["start"])/clip.get("speed",1), 4), round((clip["end"] - at)/clip.get("speed",1), 4)) < 0.1:
                     raise EditorError("Deixe pelo menos 0,1 segundo de cada lado do corte.")
                 left = self.validate_clip(p, {**clip, "end": at, "fade_out": 0})
                 right = self.validate_clip(p, {**clip, "id": uid(), "start": at, "fade_in": 0})

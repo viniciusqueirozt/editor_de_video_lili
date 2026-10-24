@@ -53,3 +53,9 @@ O usuário pediu entregas de escopo normal e maior aproveitamento da janela de c
 ### Pacote visual ampliado
 
 Brilho, contraste e saturação por cena, prévia ao ajustar e botão de restaurar a cor original. Prévia SVG e exportação usam os mesmos coeficientes RGB; a exportação real confirmou dessaturação e nível válido. São 19 testes de estado passando, teste Node dos coeficientes e teste FFmpeg focado. HDR, balanço de branco e correção seletiva continuam pendentes.
+
+### Ritmo e velocidade no pacote visual
+
+Velocidade constante de 0,25× a 4×, com duração da montagem, cursor, largura dos clipes, busca e aparo convertidos entre tempo da fonte e da montagem. Som original usa mudança de tempo com preservação de tom. A narração independente continua no tempo da montagem, com o aviso de duração existente. Fades são medidos em segundos da montagem; alterações incompatíveis são recusadas sem apagar os ajustes.
+
+Verificação: 20 testes de estado passaram; Node conferiu durações/offsets e curva de fade. Três exportações reais a 0,5×, 2× e 4× confirmaram duração e tom próximo de 440 Hz. Não inclui speed ramp nem interpolação por IA.

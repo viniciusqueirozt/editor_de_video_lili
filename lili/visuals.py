@@ -9,3 +9,13 @@ def color_filter(clip):
     matrix = [[luma[j]*(1-saturation)+(saturation if i==j else 0) for j in range(3)] for i in range(3)]
     coefficients = ":".join(f"{a}{b}={matrix[i][j]}" for i,a in enumerate("rgb") for j,b in enumerate("rgb"))
     return f"format=gbrp,lutrgb=r='{channel}':g='{channel}':b='{channel}',colorchannelmixer={coefficients}"
+
+
+def tempo_filters(speed):
+    factors = []
+    while speed < .5:
+        factors.append(.5); speed /= .5
+    while speed > 2:
+        factors.append(2); speed /= 2
+    if speed != 1: factors.append(speed)
+    return [f"atempo={factor}" for factor in factors]

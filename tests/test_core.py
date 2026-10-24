@@ -249,6 +249,17 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(self.p["timeline"][0]["saturation"],0)
         self.apply("undo",{});self.assertEqual(self.p["timeline"][0]["saturation"],1)
 
+    def test_speed_changes_montage_duration_split_and_undo(self):
+        clip=self.add()
+        for value in (0,5,True,float("nan")):
+            with self.assertRaises(EditorError):self.apply("clip_update",{"clip_id":clip["id"],"speed":value})
+        self.apply("clip_update",{"clip_id":clip["id"],"speed":2})
+        self.assertEqual(self.p["duration"],1.5)
+        self.apply("clip_split",{"clip_id":clip["id"],"at":2.5})
+        self.assertEqual(self.p["duration"],1.5)
+        self.apply("undo",{});self.apply("undo",{})
+        self.assertEqual(self.p["duration"],3)
+
 
 if __name__ == "__main__":
     unittest.main()

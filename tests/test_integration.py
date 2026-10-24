@@ -322,6 +322,23 @@ class IntegrationTests(unittest.TestCase):
         self.assertLess(max(rgb[:3])-min(rgb[:3]),5)
         self.assertGreater(rgb[0],5)
 
+    def test_speed_export_duration_and_audio_pitch(self):
+        import array
+        source=self.root/"speed-tone.mp4"
+        run(["-f","lavfi","-i","color=c=green:s=160x90:r=30:d=1.6","-f","lavfi","-i","sine=frequency=440:duration=1.6","-shortest","-c:v","libx264","-c:a","aac",source])
+        p=self.client.call("POST","/api/projects",{"name":"Speed synthetic"})
+        imported=self.client.upload(p["id"],source);self.wait_job(imported["job"]["id"]);p=self.store.get(p["id"])
+        p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_add","args":{"media_id":imported["media_id"],"start":.2,"end":1.4},"expected_revision":p["revision"]})
+        for speed,length in ((.5,2.4),(2,.6),(4,.3)):
+            p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_update","args":{"clip_id":p["timeline"][0]["id"],"speed":speed},"expected_revision":p["revision"]})
+            job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"preview"});self.wait_job(job["id"])
+            output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+            self.assertAlmostEqual(probe(output)["duration"],length,delta=.12)
+            raw=subprocess.run([executable(),"-v","error","-i",str(output),"-vn","-ar","16000","-ac","1","-f","f32le","pipe:1"],capture_output=True,check=True).stdout
+            samples=array.array('f');samples.frombytes(raw);samples=samples[int(.05*16000):int((length-.05)*16000)]
+            crossings=sum(1 for a,b in zip(samples,samples[1:]) if (a<0<=b) or (b<0<=a))
+            self.assertAlmostEqual(crossings/(2*len(samples)/16000),440,delta=15)
+
 
 if __name__ == "__main__":
     unittest.main()

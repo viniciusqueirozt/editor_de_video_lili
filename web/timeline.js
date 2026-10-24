@@ -27,11 +27,11 @@ function renderTimeline(){
   $("#time-ruler").innerHTML=ticks.join("");
   let offset=0;
   $("#video-track").innerHTML=clips.map((c,i)=>{
-    const length=c.end-c.start, left=offset*timelineScale, width=length*timelineScale;
+    const length=clipDuration(c), left=offset*timelineScale, width=length*timelineScale;
     offset+=length;
     const frames=Math.max(1,Math.min(3,Math.ceil(width/75)));
     const strip=Array.from({length:frames},(_,j)=>{
-      const at=roundTime(c.start+(length-.04)*j/Math.max(1,frames-1));
+      const at=roundTime(c.start+(c.end-c.start-.04)*j/Math.max(1,frames-1));
       return `<img draggable="false" alt="" loading="lazy" src="${assetUrl(assetFor(c),"frame.jpg")}?at=${Math.max(0,at)}">`;
     }).join("");
     const trimHandle=edge=>`<button class="trim-handle trim-${edge}" data-edge="${edge}" aria-label="${edge==="start"?"Aparar início":"Aparar fim"} da cena ${i+1}" title="Arraste para aparar" ${c.locked?"disabled":""}></button>`;
@@ -46,7 +46,7 @@ function renderTimeline(){
       if(suppressClipClick){suppressClipClick=false;return;}
       const c=project.timeline.find(c=>c.id===node.dataset.clip);
       const i=project.timeline.indexOf(c), rect=node.getBoundingClientRect();
-      const local=e.detail===0?0:clamp((e.clientX-rect.left)/timelineScale,0,c.end-c.start-.001);
+      const local=e.detail===0?0:clamp((e.clientX-rect.left)/timelineScale,0,clipDuration(c)-.001);
       seekTo(before(i)+local);setInspector("scene");
     });
     body.addEventListener("dragstart",e=>{dragId=node.dataset.clip;e.dataTransfer.effectAllowed="move";e.dataTransfer.setData("text/plain",dragId);node.classList.add("dragging");});
@@ -96,7 +96,7 @@ function updatePlayhead(time){
   head.setAttribute("aria-valuenow",roundTime(time));
   head.setAttribute("aria-valuetext",`${precise(time)} de ${precise(project?.duration||0)}`);
   const c=currentClip(), local=c?time-before():0;
-  $("#split-button").disabled=!c||c.locked||local<.1-.00001||c.end-c.start-local<.1-.00001||project.timeline.length>=100;
+  $("#split-button").disabled=!c||c.locked||local<.1-.00001||clipDuration(c)-local<.1-.00001||project.timeline.length>=100;
   $("#delete-button").disabled=!c||c.locked;
   $("#duplicate-button").disabled=!c||project.timeline.length>=100;
   if(playing){
@@ -133,16 +133,17 @@ function beginTrim(e){
 function moveTrim(e){
   const gesture=timelineGesture;
   if(gesture?.type!=="trim"||gesture.pointerId!==e.pointerId)return;
-  const c=gesture.clip, edge=gesture.edge, delta=(e.clientX-gesture.x)/timelineScale;
-  const asset=assetFor(c), value=roundTime(edge==="start"?clamp(c.start+delta,0,c.end-.1):clamp(c.end+delta,c.start+.1,asset.duration));
+  const c=gesture.clip, edge=gesture.edge, speed=c.speed||1, delta=(e.clientX-gesture.x)/timelineScale*speed;
+  const minimum=Math.max(.1,(c.fade_in||0)+(c.fade_out||0))*speed;
+  const asset=assetFor(c), value=roundTime(edge==="start"?clamp(c.start+delta,0,c.end-minimum):clamp(c.end+delta,c.start+minimum,asset.duration));
   gesture.changed={[edge]:value};
   const start=edge==="start"?value:c.start, end=edge==="end"?value:c.end;
-  const width=(end-start)*timelineScale;
+  const width=(end-start)/speed*timelineScale;
   gesture.node.style.width=`${width}px`;
   // In trim preview, reveal the moving source edge; ripple settles on save.
-  gesture.node.style.left=`${(before()+(edge==="start"?start-c.start:0))*timelineScale}px`;
+  gesture.node.style.left=`${(before()+(edge==="start"?(start-c.start)/speed:0))*timelineScale}px`;
   $("#clip-start").value=start;$("#clip-end").value=end;
-  $("#timeline-hint").textContent=`Entrada ${precise(start)} → saída ${precise(end)} · duração ${precise(end-start)}`;
+  $("#timeline-hint").textContent=`Entrada ${precise(start)} → saída ${precise(end)} · duração ${precise((end-start)/speed)}`;
   if(player.readyState>=1&&loadedSource===assetUrl(asset))player.currentTime=edge==="start"?start:Math.max(start,end-.033);
 }
 function clearTrim(handle){
@@ -169,7 +170,7 @@ $("#zoom-out").addEventListener("click",()=>setTimelineZoom(timelineZoom-.5));
 $("#fit-timeline").addEventListener("click",()=>{setTimelineZoom(1);trackScroll.scrollLeft=0;});
 $("#split-button").addEventListener("click",()=>{
   const c=currentClip();if(!c||$("#split-button").disabled)return;
-  mutate("clip_split",{clip_id:c.id,at:roundTime(c.start+cursor-before())},"Clipe dividido no cursor. Você pode desfazer.");
+  mutate("clip_split",{clip_id:c.id,at:roundTime(c.start+(cursor-before())*(c.speed||1))},"Clipe dividido no cursor. Você pode desfazer.");
 });
 $("#delete-button").addEventListener("click",()=>{const c=currentClip();if(c&&!c.locked)mutate("clip_remove",{clip_id:c.id},"Cena removida. Você pode desfazer.");});
 $("#duplicate-button").addEventListener("click",()=>{const c=currentClip();if(c&&!$("#duplicate-button").disabled)mutate("clip_duplicate",{clip_id:c.id},"Cena duplicada. A cópia pode ser ajustada livremente.");});
