@@ -125,7 +125,7 @@ class Handler(BaseHTTPRequestHandler):
         store, media = self.server.store, self.server.media
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
-                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True}})
+                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True}})
             if path == "/auth/status":
                 return self.json({"authenticated": self.server.identity_resolver is not None})
             if path == "/api/projects":
@@ -241,7 +241,7 @@ class Handler(BaseHTTPRequestHandler):
                 name = text(parse_qs(url.query).get("name", ["arquivo"])[0], 240)
                 suffix = Path(name).suffix.lower()
                 if suffix not in ALLOWED:
-                    raise EditorError("Envie um vídeo ou áudio compatível (MOV, MP4, WAV, MP3, M4A...).", 415)
+                    raise EditorError("Envie um vídeo, áudio ou foto compatível (MOV, MP4, WAV, JPG, PNG, WebP...).", 415)
                 length = int(self.headers.get("Content-Length", "0"))
                 if not 0 < length <= 2 * 1024 ** 3:
                     raise EditorError("Envie um arquivo de até 2 GB por vez.", 413)

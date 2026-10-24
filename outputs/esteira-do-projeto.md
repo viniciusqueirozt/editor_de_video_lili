@@ -18,7 +18,7 @@ O usuário definiu quatro rodadas de recursos de edição, uma revisão dedicada
 
 A divisão interna dos quatro temas é flexível conforme os problemas mais úteis de resolver. Contas individuais e permissões podem avançar na rodada de segurança, conforme esclarecimento do usuário. Compartilhamento e nuvem seguem planejados nas seções abaixo, sem ocupar por padrão as quatro rodadas de edição. Nuvem depende de identidade/permissões, escolha do destino e autorização antes de enviar arquivos.
 
-Regras de execução e relatório: outputs/estrutura-das-rodadas.md. Consultar os limites depois dos testes e informar os percentuais restantes ao usuário ao final de cada rodada. A agenda anterior continua encerrada; este planejamento não cria uma nova automação.
+Regras de execução e relatório: outputs/estrutura-das-rodadas.md. Consultar os limites depois dos testes e informar os percentuais restantes ao usuário ao final de cada rodada. A agenda anterior foi substituída por duas janelas da mesma rotina recorrente neste chat: 23h55 e 00h55–03h55, com extra após a última rodada e publicação ao final. Excluída sexta à noite para sábado; trabalho encerra antes das 5h.
 
 ## Projetos privados e compartilhamento
 
@@ -162,3 +162,10 @@ Recusa de cabeçalhos de segurança duplicados nos dois servidores, com testes d
 ## Base de edição e mercado — 24/10/2026
 
 Avaliação detalhada e próximos blocos em outputs/mercado-e-basico-da-lili.md. Priorizar cor/luz e fontes do iPhone, trilha musical/áudio, velocidade e dissolução sincronizada, legendas temporizadas/SRT e composição com fotos/logotipos/keyframes. As quatro rodadas deste ciclo prepararam fades, estilos de texto, formatos/perfis e enquadramento/marca de texto; detalhes de testes e ativação em outputs/relatorio-ciclo-24-10-2026.md.
+
+
+## Ciclo manual ampliado de 24/10/2026
+
+Código e verificações detalhados em outputs/relatorio-ciclo-24-10-2026.md. Recursos implementados: fades visuais, luz/cor, velocidade constante, enquadramento/espelhamento, marca de texto, estilos de títulos, legendas independentes com SRT, formatos e perfis MP4, música independente com redução durante narração e limitador da mistura, fotos estáticas e Refazer. A ativação e publicação efetivas são registradas no relatório ao fim da revisão.
+
+Próximas lacunas: dissolução entre cenas com prévia coerente, keyframes, fotos/logotipos em camadas, HDR/SDR, transcrição local e biblioteca de efeitos sonoros licenciados. Contas individuais integradas e nuvem não foram ativadas por este ciclo.

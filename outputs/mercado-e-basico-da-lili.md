@@ -59,3 +59,6 @@ Hipótese para validar futuramente: manter o núcleo local gratuito e oferecer s
 5. Fotos/logotipos em camadas e keyframes básicos; depois os efeitos mais elaborados.
 
 A segurança/contas conserva sua rodada própria. Cada implementação deve mostrar no relatório o que funciona e o que está apenas planejado.
+
+
+Atualização do ciclo: cor básica, velocidade constante, música independente/redução sob narração/limitador da mistura, legendas temporizadas/SRT e fotos estáticas foram implementadas e verificadas. Restam HDR, dissolução real, camadas e keyframes. A pesquisa orienta prioridades; não mede estatisticamente a frequência de uso dos efeitos.

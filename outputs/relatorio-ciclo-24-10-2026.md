@@ -73,3 +73,14 @@ Verificação: parser/roundtrip SRT e validações, edição atômica/Desfazer, 
 Faixa independente de música, com seleção de arquivo importado, entrada/saída na fonte, início na montagem, volume e fades. Redução opcional para 25% do volume escolhido durante a narração adicional, na prévia e na exportação. A mistura exportada recebe limitador de picos; não é normalização por loudness nem detecção automática de fala no som original. Música que ultrapassa a montagem termina com o vídeo, com aviso no painel.
 
 Atualizações parciais preservam os outros ajustes; Desfazer inclui música e exclusão de mídia avisa/remove/restaura seu uso. Verificação: 22 testes de estado, teste Node de envelope e intervalos e duas exportações sintéticas. Análise de frequência do arquivo exportado confirmou início, fim, corte da fonte e redução real da música durante a voz. Safari real pendente.
+
+
+### Importação de fotos e recuperação do histórico
+
+JPG, JPEG, PNG e WebP estáticos podem virar cenas, com até 30 segundos disponíveis na fonte para aparar na linha do tempo. Miniatura, prévia, quadros e exportação usam uma cópia preparada localmente. Orientação EXIF respeitada; transparência composta sobre preto. Original preservado byte a byte, sem envio externo. Fotos acima de 50 megapixels, lado acima de 16384 pixels, imagens animadas e arquivos ilegíveis são recusados; a cópia de trabalho é limitada a 4096 pixels por lado. HEIC, camadas de logotipo e animação da foto continuam pendentes.
+
+Teste de preservação detectou colisão entre nome da miniatura e JPG importado durante o desenvolvimento; corrigida usando sufixo próprio de miniatura antes da publicação. Verificação inclui orientação, transparência, arquivo inválido/animado/grande, download do original, quadros e exportação real com duração e cor esperadas.
+
+Refazer complementa Desfazer com até 30 passos, botão próprio e Ctrl+Shift+Z/Ctrl+Y fora de campos de texto. Histórico persiste no projeto, incluindo música, legendas, formato e restauração/remoção de mídia. Uma edição nova após desfazer abre outro caminho e limpa os passos de refazer. Testes cobrem sequência, reabertura do armazenamento, visibilidade da mídia e proteção contra revisão desatualizada.
+
+A revisão desktop encontrou e corrigiu a última faixa escondida pela altura da linha do tempo e a rolagem vertical indevida nas abas. Vídeo, narração, música e legendas agora aparecem em faixas próprias. A biblioteca oferece Usar como música. Validação humana no Safari permanece pendente.

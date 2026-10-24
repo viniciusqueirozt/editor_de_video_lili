@@ -16,9 +16,10 @@ from pathlib import Path
 from .text_render import text_filters, escape_path
 from .profiles import render_profile
 from .visuals import color_filter, tempo_filters
+from .stills import IMAGE_SUFFIXES, prepare_still
 from .core import EditorError, clip_duration, duration, now, number, uid
 
-ALLOWED = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".wav", ".mp3", ".m4a", ".aac"}
+ALLOWED = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".wav", ".mp3", ".m4a", ".aac"} | IMAGE_SUFFIXES
 
 
 def executable():
@@ -137,18 +138,27 @@ class MediaService:
     def source(self, project_id, asset):
         return self.store.folder(project_id) / "media" / asset["filename"]
 
+    def visual_source(self, project_id, asset):
+        if asset.get("is_still"):
+            return self.store.folder(project_id) / "media" / asset["still"]
+        return self.source(project_id, asset)
+
     def _prepare(self, job_id, project_id, media_id):
         asset = self.store.media(project_id, media_id)
         source = self.source(project_id, asset)
         folder = source.parent
         try:
-            details = probe(source)
+            details = (prepare_still(source, folder / f"{media_id}.still.png")
+                       if source.suffix.lower() in IMAGE_SUFFIXES else probe(source))
             if details["kind"] == "video":
-                thumb = f"{media_id}.jpg"
+                thumb = f"{media_id}.thumb.jpg"
                 proxy = f"{media_id}.proxy.mp4"
-                run(["-i", source, "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "3", folder / thumb])
+                visual_source = folder / details["still"] if details.get("is_still") else source
+                run(["-i", visual_source, "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "3", folder / thumb])
                 self.job_update(job_id, progress=15)
-                run(["-i", source, "-map", "0:v:0", "-map", "0:a:0?", "-vf", "scale=540:960:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1",
+                still_args = ["-loop", "1", "-framerate", "30"] if details.get("is_still") else []
+                duration_args = ["-t", details["duration"]] if still_args else []
+                run([*still_args, "-i", visual_source, *duration_args, "-map", "0:v:0", "-map", "0:a:0?", "-vf", "scale=540:960:force_original_aspect_ratio=decrease:force_divisible_by=2,setsar=1",
                      "-c:v", "libx264", "-preset", "veryfast", "-crf", "25", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "128k", "-movflags", "+faststart", folder / proxy])
                 details.update(thumbnail=thumb, proxy=proxy)
             else:
@@ -165,7 +175,7 @@ class MediaService:
         """Importação do próprio processo (CLI), nunca aceita caminhos enviados pela página."""
         source = Path(source).resolve()
         if source.suffix.lower() not in ALLOWED or not source.is_file():
-            raise EditorError("Escolha um arquivo local de vídeo ou áudio compatível.")
+            raise EditorError("Escolha um vídeo, áudio ou foto JPG/PNG/WebP compatível.")
         self.store.get(project_id)
         media_id = uid()
         folder = self.store.folder(project_id) / "media"
@@ -184,7 +194,8 @@ class MediaService:
         with self.lock:
             if not output.exists():
                 step = max(0.1, asset["duration"] / 12)
-                run(["-i", self.source(project_id, asset), "-vf", f"fps=1/{step},scale=180:320:force_original_aspect_ratio=decrease,pad=180:320:(ow-iw)/2:(oh-ih)/2,tile=4x3", "-frames:v", "1", output])
+                source = folder / asset["proxy"] if asset.get("is_still") else self.source(project_id, asset)
+                run(["-i", source, "-vf", f"fps=1/{step},scale=180:320:force_original_aspect_ratio=decrease,pad=180:320:(ow-iw)/2:(oh-ih)/2,tile=4x3", "-frames:v", "1", output])
                 with Image.open(output) as im:
                     canvas = im.convert("RGB")
                 draw = ImageDraw.Draw(canvas)
@@ -204,7 +215,8 @@ class MediaService:
         output = self.store.folder(project_id) / "media" / f"{media_id}.frame-{round(at*1000)}.jpg"
         with self.lock:
             if not output.exists():
-                run(["-ss", at, "-i", self.source(project_id, asset), "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "3", output])
+                seek_args = [] if asset.get("is_still") else ["-ss", at]
+                run([*seek_args, "-i", self.visual_source(project_id, asset), "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "3", output])
         return output
 
     def waveform(self, project_id, media_id):
@@ -265,7 +277,8 @@ class MediaService:
             timeline_offset = 0
             for index, clip in enumerate(project["timeline"]):
                 asset = self.store.find(project["media"], clip["media_id"], "Arquivo")
-                args = ["-ss", clip["start"], "-i", self.source(project_id, asset)]
+                args = (["-loop", "1", "-framerate", "30", "-i", self.visual_source(project_id, asset)]
+                        if asset.get("is_still") else ["-ss", clip["start"], "-i", self.source(project_id, asset)])
                 if not asset["has_audio"]:
                     args += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
                 speed = clip.get("speed", 1)

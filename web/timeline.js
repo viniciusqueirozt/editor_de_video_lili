@@ -198,7 +198,7 @@ trackScroll.addEventListener("keydown",e=>{
 document.addEventListener("keydown",e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)||document.querySelector("dialog[open]"))return;
   if(e.key.toLowerCase()==="s"&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("#split-button").click();}
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();if(project?.undo_available)mutate("undo",{},"Última alteração desfeita.");}
+  if((e.ctrlKey||e.metaKey)&&["z","y"].includes(e.key.toLowerCase())){e.preventDefault();const redo=e.shiftKey||e.key.toLowerCase()==="y";if(redo?project?.redo_available:project?.undo_available)mutate(redo?"redo":"undo",{},redo?"Alteração refeita.":"Última alteração desfeita.");}
 });
 let resizeFrame=0;
 new ResizeObserver(()=>{cancelAnimationFrame(resizeFrame);resizeFrame=requestAnimationFrame(()=>{if(project&&!timelineGesture)renderTimeline();});}).observe(trackScroll);

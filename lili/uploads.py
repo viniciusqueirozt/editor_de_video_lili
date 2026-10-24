@@ -24,7 +24,7 @@ class Uploads:
         name = text(data.get("name", ""), 240)
         suffix = Path(name).suffix.lower()
         if suffix not in ALLOWED:
-            raise EditorError("Envie um vídeo ou áudio compatível.", 415)
+            raise EditorError("Envie um vídeo, áudio ou foto JPG/PNG/WebP compatível.", 415)
         size = data.get("size")
         if isinstance(size, bool) or not isinstance(size, int) or not 1 <= size <= 2*1024**3:
             raise EditorError("Informe o tamanho do arquivo como um número inteiro de bytes, até 2 GB.")

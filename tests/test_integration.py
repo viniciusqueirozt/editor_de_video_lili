@@ -53,6 +53,29 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.08)
         self.fail("Tempo excedido no processamento")
 
+    def test_still_photo_upload_preview_and_export_preserve_original(self):
+        from PIL import Image
+        source=self.root/'foto.jpg'
+        exif=Image.Exif();exif[274]=6
+        Image.new('RGB',(120,80),'red').save(source,exif=exif)
+        original=source.read_bytes()
+        p=self.client.call('POST','/api/projects',{'name':'Foto sintética'})
+        upload=self.client.upload(p['id'],source);self.wait_job(upload['job']['id'])
+        p=self.client.call('GET','/api/projects/'+p['id'])
+        asset=p['media'][0]
+        self.assertTrue(asset['is_still']);self.assertFalse(asset['has_audio'])
+        self.assertEqual((asset['width'],asset['height']),(80,120))
+        self.assertEqual(self.client.call('GET',f"/api/projects/{p['id']}/media/{asset['id']}/original",binary=True),original)
+        self.assertTrue(self.client.call('GET',f"/api/projects/{p['id']}/media/{asset['id']}/frame.jpg?at=20",binary=True).startswith(b'\xff\xd8'))
+        self.assertTrue(self.client.call('GET',f"/api/projects/{p['id']}/media/{asset['id']}/sheet.jpg",binary=True).startswith(b'\xff\xd8'))
+        p=self.client.call('POST',f"/api/projects/{p['id']}/commands",{'operation':'clip_add','args':{'media_id':asset['id'],'start':10,'end':10.6},'expected_revision':p['revision']})
+        job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+        output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+        self.assertAlmostEqual(probe(output)['duration'],.6,delta=.1)
+        decoded=subprocess.run([executable(),'-v','error','-ss','0.2','-i',str(output),'-frames:v','1','-vf','scale=1:1','-f','rawvideo','-pix_fmt','rgb24','pipe:1'],capture_output=True,check=True).stdout
+        self.assertGreater(decoded[0],150);self.assertLess(decoded[1],40)
+        self.assertEqual(source.read_bytes(),original)
+
     def test_music_trim_offset_duck_and_mix_in_export(self):
         import array
         import math

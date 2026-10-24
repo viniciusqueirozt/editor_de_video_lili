@@ -28,6 +28,41 @@ class ProjectTests(unittest.TestCase):
         self.apply("clip_add", {"media_id": self.asset["id"], "start": 1, "end": 4})
         return self.p["timeline"][-1]
 
+    def test_redo_multiple_edits_media_visibility_and_branch(self):
+        self.assertFalse(self.p['redo_available'])
+        clip=self.add()
+        self.apply('clip_update',{'clip_id':clip['id'],'speed':2})
+        self.apply('undo',{})
+        self.assertTrue(self.p['redo_available'])
+        self.assertEqual(self.p['timeline'][0]['speed'],1)
+        self.apply('redo',{})
+        self.assertEqual(self.p['timeline'][0]['speed'],2)
+        self.assertFalse(self.p['redo_available'])
+        self.apply('media_remove',{'media_id':self.asset['id'],'remove_usage':True})
+        self.apply('undo',{})
+        self.assertEqual(len(self.p['media']),1)
+        self.apply('redo',{})
+        self.assertEqual(len(self.p['media']),0)
+        self.assertEqual(len(self.p['timeline']),0)
+        self.apply('undo',{})
+        self.apply('clip_update',{'clip_id':clip['id'],'volume':.3})
+        self.assertFalse(self.p['redo_available'])
+        with self.assertRaises(EditorError):self.apply('redo',{})
+
+    def test_redo_restores_music_captions_and_settings_after_reload(self):
+        self.add()
+        self.apply('music_set',{'media_id':self.asset['id']})
+        self.apply('captions_import',{'srt':'1\n00:00:00,000 --> 00:00:01,000\nTeste\n'})
+        self.apply('settings_update',{'format':'square'})
+        expected={k:self.p[k] for k in ('music','captions','settings')}
+        for _ in range(3):self.apply('undo',{})
+        self.store=Store(self.temp.name)
+        for _ in range(3):self.apply('redo',{})
+        self.assertEqual({k:self.p[k] for k in expected},expected)
+        raw=self.store._read(self.p['id'])
+        self.assertNotIn('future',self.p)
+        self.assertIn('future',raw)
+
     def test_music_partial_updates_validation_removal_and_undo(self):
         self.apply("music_set", {"media_id": self.asset["id"], "start": 1, "end": 8, "offset": 2, "fade_in": 1})
         self.apply("music_set", {"volume": .4})

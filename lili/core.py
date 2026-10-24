@@ -139,6 +139,7 @@ class Store:
         result.setdefault("music", None)
         result.pop("access", None)  # Sharing metadata has a separate owner-only API.
         result["undo_available"] = bool(result.pop("history", []))
+        result["redo_available"] = bool(result.pop("future", []))
         result["duration"] = duration(result)
         result["blocks"] = script_blocks(result["script"])
         result["trash"] = [m for m in result["media"] if m.get("deleted_at")]
@@ -315,6 +316,7 @@ class Store:
                 raise EditorError("O projeto mudou. Atualize a página ou leia a revisão atual antes de editar.", 409)
             p.setdefault("captions", [])
             p.setdefault("music", None)
+            p.setdefault("future", [])
             snapshot = {k: copy.deepcopy(p[k]) for k in self.SNAPSHOT_FIELDS}
             snapshot["media_visibility"] = {m["id"]: m.get("deleted_at") for m in p["media"]}
             if operation == "script_update":
@@ -483,10 +485,14 @@ class Store:
             elif operation == "request_complete":
                 request = self.find(p["requests"], args.get("request_id"), "Pedido")
                 request.update(status="done", result=text(args.get("result", ""), 4000))
-            elif operation == "undo":
-                if not p["history"]:
-                    raise EditorError("Ainda não há alterações para desfazer.")
-                previous = p["history"].pop()
+            elif operation in ("undo", "redo"):
+                source = p["history"] if operation == "undo" else p["future"]
+                target = p["future"] if operation == "undo" else p["history"]
+                if not source:
+                    raise EditorError("Ainda não há alterações para desfazer." if operation == "undo" else "Não há alterações para refazer.")
+                previous = source.pop()
+                target.append(snapshot)
+                del target[:-30]
                 visibility = previous.pop("media_visibility", {})
                 for asset in p["media"]:
                     if asset["id"] in visibility:
@@ -497,8 +503,9 @@ class Store:
                 p.update(previous)
             else:
                 raise EditorError("Operação desconhecida.")
-            if operation not in ("undo", "media_annotate", "request_add", "request_complete"):
+            if operation not in ("undo", "redo", "media_annotate", "request_add", "request_complete"):
                 p["history"] = (p["history"] + [snapshot])[-30:]
+                p["future"] = []
             if len(p["timeline"]) > 100 or duration(p) > 1800:
                 raise EditorError("O piloto aceita até 100 cenas e 30 minutos por montagem.")
             self._touch(p, text(actor, 160), operation)

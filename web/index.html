@@ -56,7 +56,7 @@
       <div class="panel-heading"><div><span class="eyebrow">BIBLIOTECA</span><h1>Mídia do projeto<span class="small-count" id="media-count">0</span></h1></div><button class="icon-button sheet-close" data-close-sheet aria-label="Fechar biblioteca"><svg><use href="#i-close"/></svg></button><button class="icon-button" id="import-top" aria-label="Importar arquivos" title="Importar arquivos"><svg><use href="#i-plus"/></svg></button></div>
       <nav class="tabs" aria-label="Biblioteca do projeto"><button class="tab active" data-tab="media">Arquivos</button><button class="tab" data-tab="script">Roteiro</button><button class="tab" data-tab="requests">Codex <span id="request-count"></span></button><button class="tab" data-tab="trash">Lixeira <span id="trash-count"></span></button></nav>
       <section id="tab-media" class="library-content">
-        <button class="upload-zone" id="import-zone"><span class="upload-icon"><svg><use href="#i-upload"/></svg></span><strong>Traga suas gravações</strong><span>Vídeos, áudios e a sua próxima história.</span><small>MOV, MP4, M4A e outros · até 2 GB por arquivo</small></button>
+        <button class="upload-zone" id="import-zone"><span class="upload-icon"><svg><use href="#i-upload"/></svg></span><strong>Traga suas gravações</strong><span>Vídeos, fotos e áudios para sua história.</span><small>MOV, MP4, áudio, JPG, PNG, WebP · até 2 GB por arquivo</small></button>
         <div class="section-caption"><span>ARQUIVOS DO PROJETO</span><span id="ready-count"></span></div>
         <div class="media-selection"><button class="button secondary" id="select-media">Selecionar</button><button class="button quiet" id="select-all-media" hidden>Selecionar todos</button><button class="button destructive" id="remove-selected-media" hidden>Excluir selecionados</button><span id="selection-count" role="status"></span></div><div id="media-list" class="media-list"></div>
       </section>
@@ -82,7 +82,7 @@
         <div class="timeline-actions">
           <button class="icon-button" id="undo-button" aria-label="Desfazer última alteração" title="Desfazer · Ctrl+Z"><svg><use href="#i-back"/></svg></button>
           <span class="tool-divider"></span>
-          <button class="button timeline-tool" id="split-button" title="Dividir no cursor · S"><svg><use href="#i-scissors"/></svg>Dividir</button>
+          <button class="icon-button" id="redo-button" aria-label="Refazer última alteração" title="Refazer · Ctrl+Shift+Z" hidden><svg style="transform:scaleX(-1)"><use href="#i-back"/></svg></button><button class="button timeline-tool" id="split-button" title="Dividir no cursor · S"><svg><use href="#i-scissors"/></svg>Dividir</button>
           <button class="button timeline-tool" id="duplicate-button" title="Duplicar a cena selecionada">Duplicar</button>
           <button class="icon-button" id="delete-button" aria-label="Remover cena selecionada" title="Remover cena"><svg><use href="#i-trash"/></svg></button>
           <span class="tool-divider"></span>
