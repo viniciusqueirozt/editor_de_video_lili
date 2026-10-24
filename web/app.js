@@ -103,12 +103,13 @@ function renderInspector() {
   if(!c) $("#scene-inspector").innerHTML = '<div class="empty-note">Selecione uma cena da sequência.<br>Os detalhes aparecem aqui.</div>';
   else {
     const m=assetFor(c), i=index();
-    $("#scene-inspector").innerHTML = `<span class="scene-chip">${icon("film")} CENA ${String(i+1).padStart(2,"0")}</span><label class="field-label" for="scene-source">Tomada</label><select id="scene-source" ${c.locked?"disabled":""}>${project.media.filter(m=>m.kind==="video"&&m.status==="ready").map(a=>`<option value="${a.id}" ${a.id===c.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><label class="field-label" for="scene-label">Nome da cena</label><input id="scene-label" maxlength="160" value="${esc(c.label)}" ${c.locked?"disabled":""}><div class="trim-fields"><div><label class="field-label" for="clip-start">Entrada · segundos</label><input id="clip-start" type="number" inputmode="decimal" min="0" max="${m.duration}" step="0.1" value="${c.start}" ${c.locked?"disabled":""}></div><div><label class="field-label" for="clip-end">Saída · segundos</label><input id="clip-end" type="number" inputmode="decimal" min="0.1" max="${m.duration}" step="0.1" value="${c.end}" ${c.locked?"disabled":""}></div></div><p class="selected-duration">Duração da cena: ${precise(c.end-c.start)}</p>${editorFeatures.visual_fades?`<fieldset class="effect-fields"><legend>Entrada e saída para preto</legend><div class="trim-fields">${["in","out"].map((side)=>`<div><label class="field-label" for="scene-fade-${side}">${side==="in"?"Entrada":"Saída"} · segundos</label><input id="scene-fade-${side}" type="number" min="0" max="${c.end-c.start}" step="0.1" value="${c["fade_"+side]||0}" ${c.locked?"disabled":""}></div>`).join("")}</div><p class="help">0 desativa. Mantém a duração e o sincronismo da montagem.</p></fieldset>`:""}<label class="field-label" for="scene-title">Texto sobre a cena</label><textarea id="scene-title" rows="2" maxlength="160" placeholder="Um título breve, se fizer sentido." ${c.locked?"disabled":""}>${esc(c.title)}</textarea><label class="field-label" for="clip-volume">Som original</label><div class="range-row"><input id="clip-volume" type="range" min="0" max="100" value="${Math.round(c.volume*100)}" ${c.locked?"disabled":""}><output id="clip-volume-value">${Math.round(c.volume*100)}%</output></div><hr class="divider"><button class="lock-control ${c.locked?"locked":""}" id="lock-clip" aria-pressed="${c.locked}">${icon("lock")}<span><strong>${c.locked?"Cena protegida":"Proteger esta escolha"}</strong><small>Preserva a tomada e seus ajustes.</small></span></button><div class="reorder-buttons"><button class="button secondary" id="move-left" ${i===0?"disabled":""}>${icon("left")}Antes</button><button class="button secondary" id="move-right" ${i===project.timeline.length-1?"disabled":""}>Depois${icon("right")}</button></div><button class="danger-button" id="remove-clip" ${c.locked?"disabled":""}>${icon("trash")}Remover da sequência</button>`;
+    $("#scene-inspector").innerHTML = `<span class="scene-chip">${icon("film")} CENA ${String(i+1).padStart(2,"0")}</span><label class="field-label" for="scene-source">Tomada</label><select id="scene-source" ${c.locked?"disabled":""}>${project.media.filter(m=>m.kind==="video"&&m.status==="ready").map(a=>`<option value="${a.id}" ${a.id===c.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><label class="field-label" for="scene-label">Nome da cena</label><input id="scene-label" maxlength="160" value="${esc(c.label)}" ${c.locked?"disabled":""}><div class="trim-fields"><div><label class="field-label" for="clip-start">Entrada · segundos</label><input id="clip-start" type="number" inputmode="decimal" min="0" max="${m.duration}" step="0.1" value="${c.start}" ${c.locked?"disabled":""}></div><div><label class="field-label" for="clip-end">Saída · segundos</label><input id="clip-end" type="number" inputmode="decimal" min="0.1" max="${m.duration}" step="0.1" value="${c.end}" ${c.locked?"disabled":""}></div></div><p class="selected-duration">Duração da cena: ${precise(c.end-c.start)}</p>${editorFeatures.visual_fades?`<fieldset class="effect-fields"><legend>Entrada e saída para preto</legend><div class="trim-fields">${["in","out"].map((side)=>`<div><label class="field-label" for="scene-fade-${side}">${side==="in"?"Entrada":"Saída"} · segundos</label><input id="scene-fade-${side}" type="number" min="0" max="${c.end-c.start}" step="0.1" value="${c["fade_"+side]||0}" ${c.locked?"disabled":""}></div>`).join("")}</div><p class="help">0 desativa. Mantém a duração e o sincronismo da montagem.</p></fieldset>`:""}<label class="field-label" for="scene-title">Texto sobre a cena</label><textarea id="scene-title" rows="2" maxlength="160" placeholder="Um título breve, se fizer sentido." ${c.locked?"disabled":""}>${esc(c.title)}</textarea>${editorFeatures.caption_styles?`<div class="caption-controls">${[["font","Fonte",[["sans","Simples · Arial"],["serif","Editorial · Georgia"],["mono","Monoespaçada · Consolas"]],"sans"],["size","Tamanho",[["small","Pequeno"],["medium","Médio"],["large","Grande"]],"medium"],["position","Posição",[["legacy","Clássica"],["top","Parte superior"],["center","Centro"],["bottom","Parte inferior"]],"legacy"]].map(([key,label,options,defaultValue])=>`<label class="field-label" for="title-${key}">${label}</label><select id="title-${key}" ${c.locked?"disabled":""}>${options.map(([value,name])=>`<option value="${value}" ${(c["title_"+key]||defaultValue)===value?"selected":""}>${name}</option>`).join("")}</select>`).join("")}<p class="help">Texto manual por cena. Fontes locais, sem download ou assinatura.</p></div>`:""}<label class="field-label" for="clip-volume">Som original</label><div class="range-row"><input id="clip-volume" type="range" min="0" max="100" value="${Math.round(c.volume*100)}" ${c.locked?"disabled":""}><output id="clip-volume-value">${Math.round(c.volume*100)}%</output></div><hr class="divider"><button class="lock-control ${c.locked?"locked":""}" id="lock-clip" aria-pressed="${c.locked}">${icon("lock")}<span><strong>${c.locked?"Cena protegida":"Proteger esta escolha"}</strong><small>Preserva a tomada e seus ajustes.</small></span></button><div class="reorder-buttons"><button class="button secondary" id="move-left" ${i===0?"disabled":""}>${icon("left")}Antes</button><button class="button secondary" id="move-right" ${i===project.timeline.length-1?"disabled":""}>Depois${icon("right")}</button></div><button class="danger-button" id="remove-clip" ${c.locked?"disabled":""}>${icon("trash")}Remover da sequência</button>`;
     const update=changes=>mutate("clip_update",{clip_id:c.id,...changes});
     $("#clip-start").addEventListener("change",e=>update({start:Number(e.target.value)}));
     $("#clip-end").addEventListener("change",e=>update({end:Number(e.target.value)}));
     $("#scene-label").addEventListener("change",e=>update({label:e.target.value}));
     for(const side of ["in","out"])$("#scene-fade-"+side)?.addEventListener("change",e=>update({["fade_"+side]:Number(e.target.value)}));
+    for(const key of ["font","size","position"])$("#title-"+key)?.addEventListener("change",e=>update({["title_"+key]:e.target.value}));
     $("#scene-title").addEventListener("change",e=>update({title:e.target.value}));
     $("#scene-source").addEventListener("change",e=>{const a=project.media.find(m=>m.id===e.target.value);update({media_id:a.id,start:0,end:Math.min(c.end-c.start,a.duration)});});
     $("#clip-volume").addEventListener("input",e=>{$("#clip-volume-value").value=`${e.target.value}%`;player.volume=Number(e.target.value)/100;});
@@ -175,7 +176,7 @@ function seekTo(time){
 function updatePlayer(resume=false, time=before()){
   const c=currentClip(), m=c&&assetFor(c);
   $("#preview-empty").hidden=!!c; player.hidden=!c;
-  $("#preview-title").textContent=c?.title || "";
+  renderPreviewCaption(c);
   cursor=Math.max(0,Math.min(project.duration,time));
   if(!c){player.removeAttribute("src");voice.pause();loadedSource="";cursor=0;$("#scene-position").textContent="Nenhuma cena";updateTime();return;}
   const source=assetUrl(m), clipId=c.id;
@@ -213,6 +214,27 @@ function syncVoice(){
   if(time<0||time>=asset.duration){voice.pause();return;}
   if(voice.readyState>=1&&Math.abs(voice.currentTime-time)>.12) voice.currentTime=time;
   if(voice.paused) voice.play().catch(()=>{});
+}
+function captionLines(clip){
+  const limit={small:38,medium:30,large:22}[clip?.title_size||"medium"];
+  return (clip?.title||"").split("\n").flatMap(paragraph=>{
+    const words=paragraph.trim().split(/\s+/).filter(Boolean),lines=[];let line="";
+    for(const word of words){let chars=Array.from(word);
+      if(line&&Array.from(line).length+1+chars.length<=limit){line+=" "+word;continue;}
+      if(line){lines.push(line);line="";}
+      while(chars.length>limit){lines.push(chars.slice(0,limit).join(""));chars=chars.slice(limit);}
+      line=chars.join("");
+    }
+    if(line||!lines.length)lines.push(line);return lines;
+  });
+}
+function renderPreviewCaption(clip){
+  const title=$("#preview-title"),position=clip?.title_position||"legacy";
+  title.textContent=captionLines(clip).join("\n");
+  title.style.fontFamily={sans:"Arial, sans-serif",serif:"Georgia, serif",mono:"Consolas, monospace"}[clip?.title_font||"sans"];
+  title.style.fontSize=({small:3.5,medium:4.4,large:6}[clip?.title_size||"medium"])+"cqw";
+  title.style.top={legacy:"32%",top:"10%",center:"50%",bottom:"82%"}[position];
+  title.style.transform=position==="bottom"?"translateY(-100%)":position==="center"?"translateY(-50%)":"none";
 }
 function sceneFadeGain(clip,time){
   const length=clip.end-clip.start;

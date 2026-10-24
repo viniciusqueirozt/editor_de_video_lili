@@ -268,6 +268,20 @@ class IntegrationTests(unittest.TestCase):
         self.assertLess(raw[-1], raw[len(raw)//2] * .3)
         self.assertAlmostEqual(probe(output)["duration"], 1.2, delta=.12)
 
+    def test_caption_export_uses_style_font_and_lower_position(self):
+        p=self.client.call("POST","/api/projects",{"name":"Caption synthetic"})
+        imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"])
+        p=self.store.get(p["id"])
+        p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_add","args":{"media_id":imported["media_id"],"start":0,"end":.5,"title":"Legenda de teste","title_position":"bottom","title_font":"serif","title_size":"large"},"expected_revision":p["revision"]})
+        job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"preview"});self.wait_job(job["id"])
+        output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+        data=subprocess.run([executable(),"-v","error","-i",str(output),"-frames:v","1","-vf","format=gray","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
+        w,h=540,960
+        bright=[(i//w) for i,v in enumerate(data) if v>200]
+        self.assertGreater(len(bright),50)
+        self.assertGreater(min(bright),h*.68)
+        self.assertLess(max(bright),h*.84)
+
 
 if __name__ == "__main__":
     unittest.main()

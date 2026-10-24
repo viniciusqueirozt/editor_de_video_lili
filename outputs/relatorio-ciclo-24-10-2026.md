@@ -8,3 +8,10 @@ Execução direta autorizada pelo usuário: quatro rodadas de edição, uma de s
 - Validação impede valores inválidos ou efeitos cuja soma ultrapasse a cena. Cenas protegidas respeitadas; Desfazer recupera ajustes. Dividir preserva a entrada na metade esquerda e a saída na direita, recusando cortes incompatíveis com a duração do efeito.
 - Verificação: 15 testes de estado passaram; um teste HTTP/FFmpeg real mediu os quadros escuros nas bordas e a duração preservada; curva da prévia conferida em Node. Dados sintéticos, sem IA real.
 - Preparado para o próximo início normal do editor. Controles dependem de capacidade anunciada pelo servidor, preservando compatibilidade com o processo antigo. Não é dissolução entre duas cenas nem cria sobreposição temporal.
+
+## Rodada 2 — Tipografia e posicionamento do texto
+
+- Texto manual por cena com três fontes locais (Arial, Georgia e Consolas), três tamanhos e quatro posições: clássica, superior, central e inferior. Mantém a aparência clássica dos projetos antigos; cenas protegidas e Desfazer respeitados.
+- Quebra de linhas determinística na prévia e na exportação, incluindo palavras longas e linhas vazias. Nenhuma fonte enviada a serviço externo. Se uma fonte opcional não existir no sistema, a exportação usa a fonte padrão local.
+- Verificação: 16 testes de estado passaram; testes Python/Node de quebra e estilo e uma exportação FFmpeg real confirmaram texto claro na região inferior solicitada. Não é transcrição automática nem legenda palavra por palavra.
+- Preparado para próximo início normal do editor, anunciado pela capacidade caption_styles. Safari real pendente.

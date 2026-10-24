@@ -210,6 +210,17 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(len(self.p["timeline"]), 1)
         self.assertEqual(self.p["timeline"][0]["fade_out"], .5)
 
+    def test_caption_styles_validate_preserve_on_duplicate_and_undo(self):
+        clip=self.add()
+        for key in ("title_font", "title_size", "title_position"):
+            with self.assertRaises(EditorError):self.apply("clip_update", {"clip_id":clip["id"],key:"invalid"})
+        self.apply("clip_update", {"clip_id":clip["id"],"title":"Legenda manual","title_font":"serif","title_size":"large","title_position":"bottom"})
+        self.apply("clip_duplicate", {"clip_id":clip["id"]})
+        self.assertEqual(self.p["timeline"][1]["title_font"],"serif")
+        self.assertEqual(self.p["timeline"][1]["title_position"],"bottom")
+        self.apply("undo",{});self.apply("undo",{})
+        self.assertEqual(self.p["timeline"][0]["title"],"")
+
 
 if __name__ == "__main__":
     unittest.main()

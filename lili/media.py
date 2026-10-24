@@ -13,6 +13,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+from .captions import SIZES, caption_lines
 from .core import EditorError, duration, now, number, uid
 
 ALLOWED = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".wav", ".mp3", ".m4a", ".aac"}
@@ -262,14 +263,21 @@ class MediaService:
                     args += ["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo"]
                 filters = f"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30"
                 if clip["title"]:
-                    import textwrap
                     escape_path = lambda p: p.resolve().as_posix().replace(":", "\\:").replace("'", "'\\''")
-                    lines = [line for paragraph in clip["title"].splitlines() for line in (textwrap.wrap(paragraph, 30) or [""])]
-                    font_size = round(width * .044)
+                    size = clip.get("title_size", "medium")
+                    ratio, _ = SIZES[size]
+                    lines = caption_lines(clip["title"], size)
+                    font_size = round(width * ratio)
+                    font_name = clip.get("title_font", "sans")
+                    font_candidate = ({"serif": Path("C:/Windows/Fonts/georgia.ttf"), "mono": Path("C:/Windows/Fonts/consola.ttf")} if os.name == "nt" else {"serif": Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"), "mono": Path("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")}).get(font_name, font)
+                    selected_font = font_candidate if font_candidate.is_file() else font
+                    line_height = font_size * 1.2
+                    block_height = len(lines) * line_height
+                    y_base = {"legacy": height*.32, "top": height*.1, "center": height*.5-block_height/2, "bottom": height*.82-block_height}[clip.get("title_position", "legacy")]
                     for line_index, line in enumerate(lines):
                         title_file = folder / f"title-{index:04d}-{line_index:02d}.txt"
                         title_file.write_text(line, encoding="utf-8")
-                        filters += f",drawtext=fontfile='{escape_path(font)}':textfile='{escape_path(title_file)}':expansion=none:fontsize={font_size}:fontcolor=white:borderw=1:bordercolor=black@0.7:shadowcolor=black@0.5:shadowx=1:shadowy=1:x=(w-text_w)/2:y=h*0.32+{line_index*font_size*1.2}"
+                        filters += f",drawtext=fontfile='{escape_path(selected_font)}':textfile='{escape_path(title_file)}':expansion=none:fontsize={font_size}:fontcolor=white:borderw=1:bordercolor=black@0.7:shadowcolor=black@0.5:shadowx=1:shadowy=1:x=(w-text_w)/2:y={y_base+line_index*line_height}"
                 if clip.get("fade_in", 0):
                     filters += f",fade=t=in:st=0:d={clip['fade_in']}"
                 if clip.get("fade_out", 0):

@@ -270,12 +270,19 @@ class Store:
             raise EditorError("Identificador de cena inválido.")
         if not isinstance(data.get("locked", False), bool):
             raise EditorError("A proteção de cena deve ser verdadeira ou falsa.")
+        title_style = {}
+        for key, choices, default in (("title_font", ("sans", "serif", "mono"), "sans"),
+                                       ("title_size", ("small", "medium", "large"), "medium"),
+                                       ("title_position", ("legacy", "top", "center", "bottom"), "legacy")):
+            value = data.get(key, default)
+            if value not in choices: raise EditorError("Estilo de texto inválido.")
+            title_style[key] = value
         fade_in = number(data.get("fade_in", 0), 0, end-start)
         fade_out = number(data.get("fade_out", 0), 0, end-start)
         if fade_in + fade_out > end-start + 0.00001:
             raise EditorError("As entradas e saídas suaves não podem ultrapassar a duração da cena.")
         return {"id": clip_id, "media_id": asset["id"], "start": start, "end": end,
-                "fade_in": fade_in, "fade_out": fade_out,
+                "fade_in": fade_in, "fade_out": fade_out, **title_style,
                 "label": text(data.get("label", asset["name"]), 160), "title": text(data.get("title", ""), 160),
                 "volume": number(data.get("volume", 1), 0, 2), "locked": data.get("locked", False),
                 "block_id": text(data.get("block_id", ""), 80)}
