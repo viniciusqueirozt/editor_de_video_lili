@@ -11,7 +11,7 @@ Diretriz do usuário de 24/10/2026. Substitui a prioridade anterior de usar as r
 | 3 | Áudio e exportação | Volume, fades, trilhas/efeitos sonoros, sincronismo, resolução, qualidade e formatos compatíveis. |
 | 4 | Fluxo de trabalho e recursos de edição | Importação, exclusão, recuperação e outros obstáculos concretos para editar e entregar. |
 | 5 | Segurança, contas e acesso | Investigar/corrigir falhas e melhorar login, convites, recuperação de acesso, sessões, identidade e permissões dos projetos. |
-| Extra | Visual e pesquisa de mercado | Uma melhoria visual pequena, acompanhada de pesquisa objetiva sobre concorrentes e formas de monetização. Somente se houver margem de uso e tempo. |
+| Extra | Visual e pesquisa de mercado | Melhoria visual, acompanhada de pesquisa objetiva sobre concorrentes e formas de monetização. Somente se houver margem de uso e tempo. |
 
 A distribuição dos temas nas quatro primeiras rodadas é orientativa: escolher os problemas mais úteis e viáveis do editor, sem obrigação de implementar um exemplo de cada linha. As quatro rodadas devem resultar em avanços de edição ou de seu fluxo, com comportamento concreto e testes. Não contabilizar apenas documentação ou infraestrutura de contas como recurso de edição entregue.
 
@@ -23,7 +23,7 @@ Contas individuais, compartilhamento e nuvem permanecem na esteira. A preparaç�
 
 Consultar fontes primárias atuais, como páginas oficiais de recursos, preços e licenças. Verificar modelos observáveis de receita, por exemplo assinatura, recursos premium, créditos ou serviços de edição, sem apresentar preços de venda como prova de lucro ou receita de um concorrente. Registrar links, data, diferenças relevantes e uma hipótese prática para a Lili. Pesquisa pública na internet não deve ser descrita como entrevista com clientes ou validação de demanda.
 
-A pesquisa deve orientar uma melhoria visual pequena. Não instalar serviços pagos, contratar APIs, iniciar cobranças, mudar preços ou enviar mídias pessoais a concorrentes. A logo permanece na ramificação própria. Manter funções gratuitas locais como prioridade do editor.
+A pesquisa deve orientar uma melhoria visual útil. O usuário esclareceu que as entregas devem ter escopo normal e completo, sem limite artificial de dez minutos ou obrigação de serem pequenas. Não instalar serviços pagos, contratar APIs, iniciar cobranças, mudar preços ou enviar mídias pessoais a concorrentes. A logo permanece na ramificação própria. Manter funções gratuitas locais como prioridade do editor.
 
 ## Limites, horários e relatório
 
@@ -34,3 +34,13 @@ A pesquisa deve orientar uma melhoria visual pequena. Não instalar serviços pa
 - Relatório simples ao final: o que mudou, recursos novos, erros corrigidos, testes, o que está ativo, o que aguarda ativação, pendências e percentuais restantes consultados após o trabalho. Ao encerrar o conjunto, consolidar as entregas sem somar testes repetidos como novos.
 - Sincronizar somente código, testes e documentação no GitHub autorizado. Percentuais/dados da conta, segredos, mídias e estado operacional privado ficam fora dos documentos versionados.
 - Preservar projetos reais, originais e montagem aprovada. Usar dados sintéticos e simular respostas de IA nos testes. Não reiniciar serviços com possíveis envios/processamentos em andamento. Não anunciar Safari real validado sem teste humano.
+
+## Cadência esclarecida em 24/10/2026
+
+Demonstração atual: cinco rodadas sequenciais e extra logo depois, havendo limite. Rotina recorrente autorizada: todas as noites, exceto a noite de sexta-feira para sábado; uma rodada por hora, extra imediatamente após a quinta. A exclusão cobre sexta à noite e as primeiras horas de sábado, mantendo sábado à noite para domingo. A configuração e os horários da agenda devem respeitar São Paulo e encerrar antes da manhã.
+
+## Aproveitamento de limite e escopo — ajuste de 24/10/2026
+
+O usuário pediu pacotes mais completos por rodada, sem obrigação de mudanças pequenas. Planejar o conjunto para aproveitar aproximadamente 70% a 85% do uso total da janela de cinco horas, preservando margem antes de 90% para terminar, testar e registrar o pacote em curso. O consumo é compartilhado e não previsível com exatidão; a faixa é referência, sem garantia de atingir um número. Não gastar por gastar, repetir testes sem motivo, inflar respostas ou iniciar trabalho que possa ficar incompleto por limite.
+
+Selecionar várias melhorias relacionadas e úteis por rodada e reavaliar o saldo entre elas. Reservar a revisão de segurança e a extra ao distribuir o orçamento, consultar reset real e semanal. Se os limites já estiverem altos por outros chats, reduzir o escopo e priorizar concluir as entregas iniciadas. Rotina noturna encerra antes das 5h, mesmo havendo saldo; nenhuma continuação automática durante o dia.

@@ -289,6 +289,9 @@ class Store:
         return {"id": clip_id, "media_id": asset["id"], "start": start, "end": end,
                 "fade_in": fade_in, "fade_out": fade_out, **title_style,
                 "framing": framing, "mirror": data.get("mirror", False), "pan_x": pan_x, "pan_y": pan_y,
+                "brightness": number(data.get("brightness", 1), .5, 1.5),
+                "contrast": number(data.get("contrast", 1), .5, 1.5),
+                "saturation": number(data.get("saturation", 1), 0, 2),
                 "label": text(data.get("label", asset["name"]), 160), "title": text(data.get("title", ""), 160),
                 "volume": number(data.get("volume", 1), 0, 2), "locked": data.get("locked", False),
                 "block_id": text(data.get("block_id", ""), 80)}

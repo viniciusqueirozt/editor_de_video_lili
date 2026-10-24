@@ -312,6 +312,16 @@ class IntegrationTests(unittest.TestCase):
             raw=subprocess.run([executable(),"-v","error","-i",str(output),"-frames:v","1","-vf","crop=160:120:0:0,format=gray","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
             self.assertGreater(sum(v>200 for v in raw),10)
 
+    def test_color_adjustment_exports_desaturated_pixels(self):
+        p=self.client.call("POST","/api/projects",{"name":"Color synthetic"})
+        imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"]);p=self.store.get(p["id"])
+        p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_add","args":{"media_id":imported["media_id"],"start":0,"end":.3,"framing":"cover","saturation":0,"brightness":.8,"contrast":1.1},"expected_revision":p["revision"]})
+        job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"preview"});self.wait_job(job["id"])
+        output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+        rgb=subprocess.run([executable(),"-v","error","-i",str(output),"-frames:v","1","-vf","crop=2:2:(iw-2)/2:(ih-2)/2,format=rgb24","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
+        self.assertLess(max(rgb[:3])-min(rgb[:3]),5)
+        self.assertGreater(rgb[0],5)
+
 
 if __name__ == "__main__":
     unittest.main()

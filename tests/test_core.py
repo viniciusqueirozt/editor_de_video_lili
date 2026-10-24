@@ -241,6 +241,14 @@ class ProjectTests(unittest.TestCase):
         self.apply("watermark_set",{"text":""});self.assertIsNone(self.p["settings"]["watermark"])
         self.apply("undo",{});self.assertEqual(self.p["settings"]["watermark"]["text"],"@Lili")
 
+    def test_color_grading_ranges_and_undo(self):
+        clip=self.add()
+        for changes in ({"brightness":0},{"contrast":True},{"saturation":3},{"saturation":float("nan")}):
+            with self.assertRaises(EditorError):self.apply("clip_update",{"clip_id":clip["id"],**changes})
+        self.apply("clip_update",{"clip_id":clip["id"],"brightness":.8,"contrast":1.2,"saturation":0})
+        self.assertEqual(self.p["timeline"][0]["saturation"],0)
+        self.apply("undo",{});self.assertEqual(self.p["timeline"][0]["saturation"],1)
+
 
 if __name__ == "__main__":
     unittest.main()

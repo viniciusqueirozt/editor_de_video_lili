@@ -15,6 +15,7 @@ from pathlib import Path
 
 from .captions import SIZES, caption_lines
 from .profiles import render_profile
+from .visuals import color_filter
 from .core import EditorError, duration, now, number, uid
 
 ALLOWED = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".wav", ".mp3", ".m4a", ".aac"}
@@ -274,6 +275,8 @@ class MediaService:
                     filters = f"scale={width}:{height}:force_original_aspect_ratio=decrease:force_divisible_by=2,pad={width}:{height}:(ow-iw)*{pan_x}:(oh-ih)*{pan_y}"
                 filters += ",setsar=1,fps=30"
                 if clip.get("mirror", False): filters += ",hflip"
+                grading = color_filter(clip)
+                if grading: filters += "," + grading
                 if clip["title"]:
                     size = clip.get("title_size", "medium")
                     ratio, _ = SIZES[size]

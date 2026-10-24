@@ -1,0 +1,12 @@
+const assert=require("node:assert/strict"),fs=require("node:fs"),vm=require("node:vm");
+const source=fs.readFileSync("web/app.js","utf8"),root={querySelector:()=>({open:true})};
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const ctx=vm.createContext({project:{id:"a".repeat(32),revision:10},$:()=>root,esc,precise:t=>t+" s",icon:()=>"↓"});
+vm.runInContext(source.slice(source.indexOf("function exportJobCard("),source.indexOf("async function refreshJobs(")),ctx);
+const done={id:"b".repeat(32),status:"done",result:{revision:10,width:1080,height:1920,duration:2,quality:"high",bytes:1048576,url:"javascript:bad"}};
+let html=ctx.exportJobCard(done);assert.match(html,/Versão atual/);assert.match(html,/Alta qualidade/);assert.match(html,/1.0 MB/);assert.doesNotMatch(html,/javascript:/);
+html=ctx.exportJobCard({...done,result:{...done.result,revision:9}});assert.match(html,/Versão anterior/);
+html=ctx.exportJobCard({id:"x",status:"error",error:"<script>"});assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);
+html=ctx.exportJobCard({id:"x",status:"running",progress:200});assert.match(html,/value="100"/);
+ctx.renderExportJobs([done,done]);assert.match(root.innerHTML,/details class="export-history" open/);
+ctx.renderExportJobs([]);assert.match(root.innerHTML,/Seu vídeo final/);console.log("Export cards, safe links, history and status passed");

@@ -158,3 +158,7 @@ Baixar os arquivos necessários para o notebook, validar os hashes e abrir a mes
 ## Segurança preparada — madrugada de 23/10/2026
 
 Recusa de cabeçalhos de segurança duplicados nos dois servidores, com testes de regressão do login e da identidade. Entra nos próximos inícios normais dos processos, sem reinício automático nesta agenda. A preparação de contas individuais continua separada da ativação real; ver outputs/base-de-permissoes.md.
+
+## Base de edição e mercado — 24/10/2026
+
+Avaliação detalhada e próximos blocos em outputs/mercado-e-basico-da-lili.md. Priorizar cor/luz e fontes do iPhone, trilha musical/áudio, velocidade e dissolução sincronizada, legendas temporizadas/SRT e composição com fotos/logotipos/keyframes. As quatro rodadas deste ciclo prepararam fades, estilos de texto, formatos/perfis e enquadramento/marca de texto; detalhes de testes e ativação em outputs/relatorio-ciclo-24-10-2026.md.
