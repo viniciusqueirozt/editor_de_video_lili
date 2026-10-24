@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from .captions import SIZES, caption_lines
+from .profiles import render_profile
 from .core import EditorError, duration, now, number, uid
 
 ALLOWED = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".wav", ".mp3", ".m4a", ".aac"}
@@ -242,8 +243,7 @@ class MediaService:
             raise EditorError("O projeto mudou. Atualize antes de exportar.", 409)
         if not project["timeline"]:
             raise EditorError("Adicione cenas à montagem antes de exportar.")
-        if quality not in ("full", "preview"):
-            raise EditorError("Qualidade inválida.")
+        render_profile(project["settings"], quality)
         with self.lock:
             if any(j["kind"] == "export" and j["status"] in ("queued", "running") for j in self.jobs.values()):
                 raise EditorError("Já existe uma exportação em andamento.", 409)
@@ -254,7 +254,8 @@ class MediaService:
             project_id = project["id"]
             folder = self.store.folder(project_id) / "exports" / job_id
             folder.mkdir(parents=True, exist_ok=True)
-            width, height = (540, 960) if quality == "preview" else (project["settings"]["width"], project["settings"]["height"])
+            profile = render_profile(project["settings"], quality)
+            width, height = profile["width"], profile["height"]
             font = Path(os.environ.get("LILI_FONT", "C:/Windows/Fonts/arial.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
             for index, clip in enumerate(project["timeline"]):
                 asset = self.store.find(project["media"], clip["media_id"], "Arquivo")
@@ -267,7 +268,7 @@ class MediaService:
                     size = clip.get("title_size", "medium")
                     ratio, _ = SIZES[size]
                     lines = caption_lines(clip["title"], size)
-                    font_size = round(width * ratio)
+                    font_size = max(1, min(round(width * ratio), int(height*.6/(len(lines)*1.2))))
                     font_name = clip.get("title_font", "sans")
                     font_candidate = ({"serif": Path("C:/Windows/Fonts/georgia.ttf"), "mono": Path("C:/Windows/Fonts/consola.ttf")} if os.name == "nt" else {"serif": Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"), "mono": Path("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")}).get(font_name, font)
                     selected_font = font_candidate if font_candidate.is_file() else font
@@ -283,7 +284,7 @@ class MediaService:
                 if clip.get("fade_out", 0):
                     filters += f",fade=t=out:st={clip['end']-clip['start']-clip['fade_out']}:d={clip['fade_out']}"
                 args += ["-t", clip["end"] - clip["start"], "-map", "0:v:0", "-map", "0:a:0" if asset["has_audio"] else "1:a:0",
-                         "-vf", filters, "-af", f"volume={clip['volume']},apad", "-c:v", "libx264", "-preset", "veryfast", "-crf", "21",
+                         "-vf", filters, "-af", f"volume={clip['volume']},apad", "-c:v", "libx264", "-preset", "veryfast", "-crf", str(profile["crf"]),
                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "160k", "-video_track_timescale", "90000", folder / f"{index:04d}.mp4"]
                 run(args)
                 self.job_update(job_id, progress=round((index + 1) / len(project["timeline"]) * 85))
@@ -310,4 +311,5 @@ class MediaService:
                 base.replace(output)
             details = probe(output)
             return {"revision": project["revision"], "duration": details["duration"], "width": width, "height": height,
+                    "quality": quality, "crf": profile["crf"], "bytes": output.stat().st_size, "container": "mp4", "codec": details["codec"],
                     "url": f"/api/projects/{project_id}/exports/{job_id}/video.mp4", "filename": "video.mp4"}

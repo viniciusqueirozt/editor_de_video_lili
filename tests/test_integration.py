@@ -282,6 +282,19 @@ class IntegrationTests(unittest.TestCase):
         self.assertGreater(min(bright),h*.68)
         self.assertLess(max(bright),h*.84)
 
+    def test_export_presets_render_square_landscape_and_balanced(self):
+        p=self.client.call("POST","/api/projects",{"name":"Formats synthetic"})
+        imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"]);p=self.store.get(p["id"])
+        p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_add","args":{"media_id":imported["media_id"],"start":0,"end":.2},"expected_revision":p["revision"]})
+        for canvas,quality,dimensions,crf in (("square","preview",(540,540),25),("landscape","balanced",(1280,720),23),("vertical","high",(1080,1920),18)):
+            p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"settings_update","args":{"format":canvas},"expected_revision":p["revision"]})
+            job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":quality});done=self.wait_job(job["id"])
+            details=done["result"];self.assertEqual((details["width"],details["height"]),dimensions)
+            self.assertEqual(details["crf"],crf);self.assertGreater(details["bytes"],0)
+            self.assertEqual(details["codec"],"h264")
+            output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+            self.assertEqual((probe(output)["width"],probe(output)["height"]),dimensions)
+
 
 if __name__ == "__main__":
     unittest.main()

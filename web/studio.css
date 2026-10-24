@@ -14,3 +14,6 @@ body{background:var(--bg);color:var(--ink)}.app-header{background:#f5f5f0;border
 .upload-status-heading>span{min-width:0;overflow-wrap:anywhere}
 
 .effect-fields{border:1px solid #d5dfc7;border-radius:10px;padding:12px;margin:14px 0}.effect-fields legend{font-size:12px;color:#526747;padding:0 5px}.effect-fields .field-label{margin-top:5px}
+
+/* Keep the canvas ratio truthful in both wide and tall workspaces. */
+#preview-stage{container-type:size}#video-frame{width:min(100cqw,calc(100cqh * var(--canvas-ratio,.5625)));height:min(100cqh,calc(100cqw / var(--canvas-ratio,.5625)));max-width:100%;max-height:100%}

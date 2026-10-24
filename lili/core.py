@@ -302,6 +302,12 @@ class Store:
                 p["script"] = text(args.get("script", p["script"]))
                 p["name"] = text(args.get("name", p["name"]), 120) or p["name"]
                 p["description"] = text(args.get("description", p["description"]), 1000)
+            elif operation == "settings_update":
+                from .profiles import FORMATS
+                selected_format = args.get("format")
+                if not isinstance(selected_format, str) or selected_format not in FORMATS:
+                    raise EditorError("Escolha um formato de vídeo válido.")
+                p["settings"].update(zip(("width", "height"), FORMATS[selected_format]))
             elif operation == "media_annotate":
                 asset = self.find(p["media"], args.get("media_id"), "Arquivo")
                 if asset.get("deleted_at"):

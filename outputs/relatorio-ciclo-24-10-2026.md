@@ -15,3 +15,11 @@ Execução direta autorizada pelo usuário: quatro rodadas de edição, uma de s
 - Quebra de linhas determinística na prévia e na exportação, incluindo palavras longas e linhas vazias. Nenhuma fonte enviada a serviço externo. Se uma fonte opcional não existir no sistema, a exportação usa a fonte padrão local.
 - Verificação: 16 testes de estado passaram; testes Python/Node de quebra e estilo e uma exportação FFmpeg real confirmaram texto claro na região inferior solicitada. Não é transcrição automática nem legenda palavra por palavra.
 - Preparado para próximo início normal do editor, anunciado pela capacidade caption_styles. Safari real pendente.
+
+## Rodada 3 — Formatos e exportação
+
+- Montagem vertical 9:16, quadrada 1:1 ou horizontal 16:9, com prévia que respeita a proporção e Desfazer para a troca de formato. Mantém o vídeo inteiro com barras quando necessário.
+- Quatro perfis MP4/H.264: prévia, equilibrado, entrega final e alta qualidade. Resoluções acompanham o formato; a janela mostra dimensões antes de gerar e tamanho real em MB ao concluir. Alta qualidade usa compressão menor, sem prometer recuperar detalhes ausentes no original.
+- Texto grande ajusta seu tamanho máximo à altura disponível para formatos mais baixos. A fonte continua local.
+- Verificação: 17 testes de estado e dois de perfis passaram; Node conferiu dimensões anunciadas. Exportações reais confirmaram 540×540, 1280×720 e 1080×1920, codec H.264, parâmetros dos perfis e tamanho do arquivo. MP4 continua sendo o formato de arquivo disponível; não foram adicionados MOV/WebM ou 4K.
+- Preparado para próximo início normal do editor, com capacidade export_profiles. Safari real pendente.

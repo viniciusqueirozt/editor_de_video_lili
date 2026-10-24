@@ -95,7 +95,10 @@ function render() {
   $("#undo-button").disabled = !project.undo_available;
   $("#draft-button").disabled = !project.script.trim() || !project.media.some(m=>m.kind==="video" && m.status==="ready");
   $("#export-button").disabled = !project.timeline.length;
-  $("#export-summary").textContent = `${project.timeline.length} cenas · ${precise(project.duration)} · versão ${project.revision}`;
+  configureExportControls();updateExportSummary();
+  const width=project.settings.width,height=project.settings.height;
+  $("#video-frame").style.setProperty("--canvas-ratio",`${width/height}`);
+  $("#video-frame").style.aspectRatio=`${width}/${height}`;
   setImportControls();updateImportStatus(project);
 }
 function renderInspector() {
@@ -232,7 +235,9 @@ function renderPreviewCaption(clip){
   const title=$("#preview-title"),position=clip?.title_position||"legacy";
   title.textContent=captionLines(clip).join("\n");
   title.style.fontFamily={sans:"Arial, sans-serif",serif:"Georgia, serif",mono:"Consolas, monospace"}[clip?.title_font||"sans"];
-  title.style.fontSize=({small:3.5,medium:4.4,large:6}[clip?.title_size||"medium"])+"cqw";
+  const ratio=({small:.035,medium:.044,large:.06}[clip?.title_size||"medium"]),lines=captionLines(clip).length;
+  const frameRatio=project?.settings?project.settings.height/project.settings.width:16/9;
+  title.style.fontSize=(Math.min(ratio,.6*frameRatio/(lines*1.2))*100)+"cqw";
   title.style.top={legacy:"32%",top:"10%",center:"50%",bottom:"82%"}[position];
   title.style.transform=position==="bottom"?"translateY(-100%)":position==="center"?"translateY(-50%)":"none";
 }
@@ -401,7 +406,7 @@ function renderAIJobs(jobs){
   const jobsKey=JSON.stringify([project.id,edits.slice(0,1)]);
   if(jobsKey!==aiJobsKey){
     aiJobsKey=jobsKey;
-    $("#ai-jobs").innerHTML=edits.slice(0,1).map(j=>`<article class="ai-job ${j.status}"><strong>${j.status==="done"?"Montagem aplicada à linha do tempo":j.status==="error"?"A montagem não foi aplicada":esc(j.stage||"Aguardando análise do Codex")}</strong>${j.status==="done"?`<p>${esc(j.result.summary)}</p><small>${j.result.clip_count} cenas · ${precise(j.result.duration)} · versão ${j.result.revision}</small><button class="button secondary full" data-ai-review>Revisar na linha do tempo</button><details><summary>Observações da montagem</summary>${j.result.warnings.map(w=>`<p class="ai-warning">${esc(w)}</p>`).join("")}</details>`:j.status==="error"?`<p>${esc(j.error)}</p>`:'<p>Você pode fechar esta janela e acompanhar pelo botão Editar com IA.</p><progress aria-label="Edição com IA em andamento"></progress>'}</article>`).join("");
+    $("#ai-jobs").innerHTML=edits.slice(0,1).map(j=>`<article class="ai-job ${j.status}"><strong>${j.status==="done"?"Montagem aplicada à linha do tempo":j.status==="error"?"A montagem não foi aplicada":esc(j.stage||"Aguardando análise do Codex")}</strong>${j.status==="done"?`<p>${esc(j.result.summary)}</p><small>${j.result.clip_count} cenas · ${precise(j.result.duration)} · versão ${j.result.revision}${j.result.bytes?` · ${(j.result.bytes/1024/1024).toFixed(1)} MB`:""}</small><button class="button secondary full" data-ai-review>Revisar na linha do tempo</button><details><summary>Observações da montagem</summary>${j.result.warnings.map(w=>`<p class="ai-warning">${esc(w)}</p>`).join("")}</details>`:j.status==="error"?`<p>${esc(j.error)}</p>`:'<p>Você pode fechar esta janela e acompanhar pelo botão Editar com IA.</p><progress aria-label="Edição com IA em andamento"></progress>'}</article>`).join("");
     $("#ai-jobs").querySelectorAll("[data-ai-review]").forEach(b=>b.addEventListener("click",async()=>{try{await queue;project=await api(`/api/projects/${project.id}`);selected=project.timeline[0]?.id||null;cursor=0;render();$("#ai-dialog").close();closeSheet();}catch(error){toast(error.message,true);}}));
   }
   for(const j of edits){
@@ -512,6 +517,24 @@ $("#project-select").addEventListener("change",e=>openProject(e.target.value).ca
 $("#new-project").addEventListener("click",()=>$("#new-dialog").showModal());
 $("#new-form").addEventListener("submit",async e=>{e.preventDefault();try{const p=await api("/api/projects",{method:"POST",body:JSON.stringify({name:$("#new-name").value,script:$("#new-script").value})});$("#new-dialog").close();$("#new-form").reset();await listProjects();await openProject(p.id);}catch(e){toast(e.message,true);}});
 document.querySelectorAll(".close-dialog").forEach(b=>b.addEventListener("click",()=>b.closest("dialog").close()));
+function exportProfile(settings,quality){
+  const scales={preview:.5,balanced:2/3,full:1,high:1},scale=scales[quality]||1;
+  return {width:Math.max(2,Math.round(settings.width*scale/2)*2),height:Math.max(2,Math.round(settings.height*scale/2)*2)};
+}
+function configureExportControls(){
+  $("#format-controls").hidden=!editorFeatures.export_profiles;
+  if(!editorFeatures.export_profiles)return;
+  const quality=$("#export-quality"),selectedQuality=quality.value;
+  quality.innerHTML=[["full","Entrega final"],["balanced","Equilibrada · arquivo menor"],["high","Alta qualidade · arquivo maior"],["preview","Prévia leve"]].map(([value,label])=>{const size=exportProfile(project.settings,value);return `<option value="${value}">${label} · ${size.width} × ${size.height}</option>`;}).join("");
+  quality.value=selectedQuality||"full";
+  $("#project-format").value=project.settings.width===project.settings.height?"square":project.settings.width>project.settings.height?"landscape":"vertical";
+}
+function updateExportSummary(){
+  if(!project)return;const size=exportProfile(project.settings,$("#export-quality").value);
+  $("#export-summary").textContent=`${project.timeline.length} cenas · ${precise(project.duration)} · ${size.width} × ${size.height} · MP4 / H.264 · versão ${project.revision}. Tamanho final depende do conteúdo.`;
+}
+$("#project-format").addEventListener("change",e=>mutate("settings_update",{format:e.target.value},"Formato da montagem atualizado."));
+$("#export-quality").addEventListener("change",updateExportSummary);
 async function showExports(){pause();$("#export-dialog").showModal();await refreshJobs();}
 $("#export-button").addEventListener("click",showExports);$("#step-export").addEventListener("click",showExports);
 $("#start-export").addEventListener("click",async()=>{await queue;try{await api(`/api/projects/${project.id}/exports`,{method:"POST",body:JSON.stringify({expected_revision:project.revision,quality:$("#export-quality").value})});toast("Exportação iniciada. Você pode continuar revisando o projeto.");await refreshJobs();}catch(e){toast(e.message,true);}});

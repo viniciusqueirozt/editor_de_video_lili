@@ -221,6 +221,13 @@ class ProjectTests(unittest.TestCase):
         self.apply("undo",{});self.apply("undo",{})
         self.assertEqual(self.p["timeline"][0]["title"],"")
 
+    def test_canvas_format_updates_are_atomic_and_undoable(self):
+        original=self.p["settings"].copy()
+        with self.assertRaises(EditorError):self.apply("settings_update",{"format":"bad"})
+        self.apply("settings_update",{"format":"square"})
+        self.assertEqual((self.p["settings"]["width"],self.p["settings"]["height"]),(1080,1080))
+        self.apply("undo",{});self.assertEqual(self.p["settings"],original)
+
 
 if __name__ == "__main__":
     unittest.main()
