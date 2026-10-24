@@ -6,19 +6,19 @@
 - Menu de projeto compacto no celular.
 - Exclusão permanente de projeto já na Lixeira, com confirmação digitada e bloqueio de processamentos. Remove apenas dados na pasta do projeto; arquivos fora dela permanecem.
 
-## Ordem de criação atualizada — 22/10/2026
+## Prioridade de execução — 24/10/2026
 
-Os itens abaixo são planejamento, não recursos disponíveis. O usuário pediu incluir projetos privados, compartilhamento e acabamento de vídeo. A preparação da nuvem continua na esteira, precedida pela identidade/permissões que deverão proteger esses dados.
+O usuário definiu quatro rodadas de recursos de edição, uma revisão dedicada de segurança e uma extra condicional para visual e pesquisa de concorrentes/monetização. Esta estrutura substitui a prioridade anterior de concentrar as rodadas em identidade e contas.
 
-| Etapa | Frente | Resultado esperado |
-| --- | --- | --- |
-| 1 | Identidade e privacidade | Cada pessoa vê apenas seus projetos e os compartilhados com ela. |
-| 2 | Compartilhamento | Proprietário autoriza visualização, download e edição por projeto; pode revogar. |
-| 3 | Edição e acabamento básico | Transições úteis, legendas editáveis, fontes e áudio com prévia/exportação consistentes. |
-| 4 | Nuvem e arquivo | Cópia verificada, histórico, restauração e liberação local segura. |
-| 5 | Estilo e colaboração avançados | Presets da Elisa, revisão por comentários e melhorias da montagem assistida. |
+| Rodadas | Prioridade |
+| --- | --- |
+| 1 a 4 | Edição de vídeo: montagem, efeitos, transições, marca d'água, legendas, áudio, formato, exportação, importação, exclusão e melhorias práticas do fluxo. |
+| 5 | Segurança e contas: procurar/corrigir falhas e melhorar login, convites, sessões, identidade, recuperação de acesso e permissões. |
+| Extra, se houver margem | Melhoria visual e pesquisa objetiva de mercado, concorrentes e modelos de monetização. |
 
-Entregar em incrementos pequenos. Não esperar todas as etapas para liberar funções prontas e testadas. A seleção do provedor de nuvem pode ocorrer em paralelo ao planejamento, sem enviar arquivos antes da configuração e autorização.
+A divisão interna dos quatro temas é flexível conforme os problemas mais úteis de resolver. Contas individuais e permissões podem avançar na rodada de segurança, conforme esclarecimento do usuário. Compartilhamento e nuvem seguem planejados nas seções abaixo, sem ocupar por padrão as quatro rodadas de edição. Nuvem depende de identidade/permissões, escolha do destino e autorização antes de enviar arquivos.
+
+Regras de execução e relatório: outputs/estrutura-das-rodadas.md. Consultar os limites depois dos testes e informar os percentuais restantes ao usuário ao final de cada rodada. A agenda anterior continua encerrada; este planejamento não cria uma nova automação.
 
 ## Projetos privados e compartilhamento
 
