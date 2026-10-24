@@ -30,3 +30,11 @@ Execução direta autorizada pelo usuário: quatro rodadas de edição, uma de s
 - Marca d'água de texto própria do projeto, até 40 caracteres, quatro cantos e opacidade configurável; vazia remove, Desfazer recupera. Mostrada na prévia e exportada, sem cobrança. Não é importação de logotipo em imagem. Permanece visível durante fades, como identificação da entrega.
 - Verificação: 18 testes de estado passaram; Node conferiu estilos de prévia. Exportação real de padrão vermelho/azul confirmou o lado escolhido no recorte e os pixels da marca d'água no canto solicitado. Fonte sintética teve seu parâmetro de duração corrigido antes de concluir o teste.
 - Preparado para próximo início normal do editor, com capacidade framing_watermark. Safari real pendente. O ajuste é estático por cena, sem rastreamento automático ou keyframes nesta entrega.
+
+## Rodada 5 — Segurança e sessões
+
+- Falha identificada: auth() lia o corpo do formulário enquanto segurava o bloqueio global das sessões. Um envio lento podia impedir outras requisições autenticadas. Leitura agora fora desse bloqueio, com limite próprio de dez segundos e recusa de corpo incompleto.
+- Cookies de sessão duplicados dentro do mesmo cabeçalho, inválidos ou grandes demais são recusados. A assinatura/transporte individual existente continua separado e inativo em produção.
+- Novo controle Segurança e sessões permite sair de todos os aparelhos do acesso remoto compartilhado, mediante requisição autenticada e validação de origem. Encerra inclusive a sessão atual e exige nova entrada. Não revoga automaticamente a conta do portal. Controle visível somente se o gateway anunciar suporte.
+- Verificação: 18 testes focados de login, gateway individual e proteções HTTP passaram. Casos novos comprovam que formulário lento não bloqueia uma sessão válida, origem estrangeira não encerra sessões, duas sessões são revogadas e cookie ambíguo é recusado. Nenhuma conta/credencial/sessão real usada ou modificada.
+- Ativação depende do próximo início normal do gateway. Não houve reinício ou encerramento de sessões reais. Não é auditoria integral nem conclusão do isolamento entre usuários.

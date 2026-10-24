@@ -570,7 +570,12 @@ $("#phone-help").addEventListener("click",()=>{
   $("#phone-connection-note").textContent=location.protocol==="https:"?`Endereço deste estúdio: ${location.origin}`:"O acesso por este endereço funciona apenas no notebook. Prepare o login e ative o endereço remoto para abrir no iPhone.";
   $("#phone-dialog").showModal();
 });
-fetch("/auth/status").then(r=>r.ok?r.json():null).then(data=>{if(data?.authenticated)$("#logout-form").hidden=false;}).catch(()=>{});
+fetch("/auth/status").then(r=>r.ok?r.json():null).then(data=>{
+  if(data?.authenticated)$("#logout-form").hidden=false;
+  const supported=data?.features?.logout_all===true;
+  $("#security-button").hidden=!supported;$("#menu-security").hidden=!supported;
+}).catch(()=>{});
+for(const id of ["security-button","menu-security"])$("#"+id).addEventListener("click",()=>{$("#project-menu-dialog").close();$("#security-dialog").showModal();});
 
 $("#delete-project-current").addEventListener("click",async()=>{
   await queue;if(!project||uploadRunning){toast("Aguarde o envio terminar.",true);return;}

@@ -7,7 +7,8 @@ from pathlib import Path
 from urllib.parse import urlencode
 
 from lili.core import Store
-from lili.remote import RemoteServer
+from lili.remote import RemoteServer, RemoteHandler
+from unittest.mock import patch
 from lili.server import EditorServer
 
 
@@ -154,6 +155,47 @@ class RemoteTests(unittest.TestCase):
         self.assertEqual(headers['Location'],'/auth/login')
         self.assertEqual(body,b'')
         self.assertEqual(self.request('/auth/login','POST',{'username':'elisa','password':self.password},navigation)[0],403)
+
+    def test_logout_all_revokes_sessions_but_foreign_origin_cannot_trigger_it(self):
+        self.setup_login();first=self.cookie
+        status,headers,_=self.request('/auth/login','POST',{'username':'elisa','password':self.password})
+        self.assertEqual(status,303);second=headers['Set-Cookie'].split(';')[0]
+        self.assertEqual(self.request('/auth/status')[0],200)
+        self.assertEqual(self.request('/auth/logout-all','POST','',{'Origin':'https://foreign.example'})[0],403)
+        self.assertEqual(self.request('/api/projects')[0],200)
+        status,_,body=self.request('/auth/status');self.assertTrue(json.loads(body)['features']['logout_all'])
+        self.assertEqual(self.request('/auth/logout-all','POST','')[0],303)
+        for cookie in (first,second):
+            self.cookie=cookie;self.assertEqual(self.request('/api/projects')[0],401)
+
+    def test_duplicate_session_cookie_is_rejected(self):
+        self.setup_login();valid=self.cookie
+        for cookie in (valid+'; '+valid,valid+'; lili_session=bad','lili_session=bad'):
+            self.cookie=cookie;self.assertEqual(self.request('/api/projects')[0],401)
+        self.cookie=valid;self.assertEqual(self.request('/api/projects')[0],200)
+
+    def test_slow_login_body_does_not_block_authenticated_requests(self):
+        self.setup_login();entered=threading.Event();finished=threading.Event()
+        original=RemoteHandler.read_form
+        def observe(handler):
+            entered.set()
+            try:return original(handler)
+            finally:finished.set()
+        slow=http.client.HTTPConnection('127.0.0.1',self.remote.server_port,timeout=3)
+        with patch.object(RemoteHandler,'read_form',observe):
+            try:
+                slow.putrequest('POST','/auth/login');slow.putheader('Origin',self.origin)
+                slow.putheader('Content-Type','application/x-www-form-urlencoded');slow.putheader('Content-Length','1000');slow.endheaders()
+                self.assertTrue(entered.wait(3))
+                quick=http.client.HTTPConnection('127.0.0.1',self.remote.server_port,timeout=1)
+                try:
+                    quick.request('GET','/auth/status',headers={'Cookie':self.cookie})
+                    response=quick.getresponse();self.assertEqual(response.status,200);response.read()
+                finally:quick.close()
+                body=urlencode({'username':'elisa','password':'wrong','padding':'x'*900}).encode()
+                slow.send(body+b' '*(1000-len(body)))
+                response=slow.getresponse();self.assertEqual(response.status,401);response.read()
+            finally:slow.close();finished.wait(3)
 
 
 if __name__=='__main__':unittest.main()

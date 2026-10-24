@@ -11,9 +11,10 @@ import html
 import http.client
 import json
 import secrets
+import re
 import threading
 import time
-from http.cookies import SimpleCookie
+from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -110,7 +111,10 @@ class RemoteHandler(BaseHTTPRequestHandler):
             self.send_header(key, value)
         self.end_headers()
         if self.command != "HEAD":
-            self.wfile.write(body)
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
+                pass
 
     def form(self, setup=False, error="", status=200):
         heading = "Prepare seu acesso" if setup else "Entre no seu estúdio"
@@ -128,21 +132,42 @@ class RemoteHandler(BaseHTTPRequestHandler):
         size = int(self.headers.get("Content-Length", "0"))
         if not 0 < size <= 4096:
             raise ValueError("Formulário inválido.")
-        data = parse_qs(self.rfile.read(size).decode("utf-8"))
+        raw = self.rfile.read(size)
+        if len(raw) != size:
+            raise ValueError("Formulário incompleto.")
+        data = parse_qs(raw.decode("utf-8"))
         return {key: values[0] for key, values in data.items()}
 
-    def authenticated(self):
+    def session_token(self):
+        raw = self.headers.get("Cookie", "")
+        if len(raw) > 4096 or sum(part.strip().split("=", 1)[0] == COOKIE for part in raw.split(";")) != 1:
+            return None
         cookie = SimpleCookie()
         try:
-            cookie.load(self.headers.get("Cookie", ""))
+            cookie.load(raw)
             token = cookie[COOKIE].value
-        except (KeyError, ValueError):
-            return False
+        except (CookieError, KeyError, ValueError):
+            return None
+        return token if re.fullmatch(r"[A-Za-z0-9_-]{43}", token) else None
+
+    def authenticated(self):
+        token = self.session_token()
+        if not token: return False
         with self.server.auth_lock:
             return self.server.sessions.get(hashlib.sha256(token.encode()).hexdigest(), 0) > time.time()
 
     def auth(self, setup):
         local = self.origin().startswith("http://")
+        # A slow form must not hold the shared authentication/session lock.
+        # Bound this read separately from the longer streaming upload timeout.
+        data = None
+        if self.command == "POST":
+            previous_timeout = self.connection.gettimeout()
+            self.connection.settimeout(10)
+            try:
+                data = self.read_form()
+            finally:
+                self.connection.settimeout(previous_timeout)
         with self.server.auth_lock:
             credential = self.server.credential()
             if setup and (credential or not local):
@@ -153,7 +178,6 @@ class RemoteHandler(BaseHTTPRequestHandler):
                 return self.form(setup)
             if self.command != "POST":
                 return self.send("Método não permitido.", 405)
-            data = self.read_form()
             username, password = data.get("username", "").strip(), data.get("password", "")
             if setup:
                 if not 2 <= len(username) <= 60 or not 12 <= len(password) <= 256 or password != data.get("confirmation"):
@@ -228,11 +252,14 @@ class RemoteHandler(BaseHTTPRequestHandler):
                     return self.send('{"error":"Entre novamente para acessar o estúdio."}', 401)
                 return self.send("", 303, {"Location": "/auth/login"})
             if self.path == "/auth/status" and self.command == "GET":
-                return self.send(json.dumps({"authenticated": True}))
-            if self.path == "/auth/logout" and self.command == "POST":
-                cookie = SimpleCookie(self.headers.get("Cookie", ""))
+                return self.send(json.dumps({"authenticated": True, "features": {"logout_all": True}}))
+            if self.path in ("/auth/logout", "/auth/logout-all") and self.command == "POST":
+                token = self.session_token()
                 with self.server.auth_lock:
-                    self.server.sessions.pop(hashlib.sha256(cookie[COOKIE].value.encode()).hexdigest(), None)
+                    if self.path == "/auth/logout-all":
+                        self.server.sessions.clear()
+                    else:
+                        self.server.sessions.pop(hashlib.sha256(token.encode()).hexdigest(), None)
                 return self.send("", 303, {"Location": "/auth/login", "Set-Cookie": f"{COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0"})
             self.proxy()
         except (BrokenPipeError, ConnectionResetError, ConnectionAbortedError):
