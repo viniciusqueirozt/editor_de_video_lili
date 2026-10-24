@@ -53,6 +53,41 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.08)
         self.fail("Tempo excedido no processamento")
 
+    def test_music_trim_offset_duck_and_mix_in_export(self):
+        import array
+        import math
+        p = self.client.call("POST", "/api/projects", {"name": "Música sintética"})
+        music_file, voice_file = self.root / "music880.wav", self.root / "voice440.wav"
+        run(["-f", "lavfi", "-i", "sine=frequency=880:duration=4", music_file])
+        run(["-f", "lavfi", "-i", "sine=frequency=440:duration=1", voice_file])
+        assets = []
+        for path in (self.source, music_file, voice_file):
+            upload = self.client.upload(p["id"], path)
+            self.wait_job(upload["job"]["id"])
+            assets.append(upload["media_id"])
+        p = self.client.call("GET", "/api/projects/" + p["id"])
+        for operation, args in [
+            ("timeline_replace", {"clips": [{"media_id": assets[0], "start": 0, "end": 1.6, "volume": 0}] * 2}),
+            ("narration_set", {"media_id": assets[2], "offset": 1}),
+            ("music_set", {"media_id": assets[1], "start": .5, "end": 3, "offset": .2, "volume": .8, "fade_in": .2, "fade_out": .3}),
+        ]:
+            p = self.client.call("POST", f"/api/projects/{p['id']}/commands", {"operation": operation, "args": args, "expected_revision": p["revision"]})
+        job = self.client.call("POST", f"/api/projects/{p['id']}/exports", {"expected_revision": p["revision"], "quality": "preview"})
+        self.wait_job(job["id"])
+        output = self.store.folder(p["id"]) / "exports" / job["id"] / "video.mp4"
+        data = subprocess.run([executable(), "-v", "error", "-i", str(output), "-f", "f32le", "-ac", "1", "-ar", "16000", "pipe:1"], capture_output=True, check=True)
+        samples = array.array("f", data.stdout)
+        def amplitude(start, end):
+            values = samples[int(start*16000):int(end*16000)]
+            return 2*abs(sum(value*complex(math.cos(2*math.pi*880*i/16000), math.sin(2*math.pi*880*i/16000)) for i,value in enumerate(values)))/len(values)
+        normal = amplitude(.6, .8)
+        self.assertGreater(normal, .04)
+        self.assertLess(amplitude(.05, .15), normal*.02)
+        self.assertAlmostEqual(amplitude(1.4, 1.6)/normal, .25, delta=.06)
+        self.assertAlmostEqual(amplitude(2.1, 2.3)/normal, 1, delta=.1)
+        self.assertLess(amplitude(2.9, 3.1), normal*.02)
+        self.assertAlmostEqual(probe(output)["duration"], 3.2, delta=.1)
+
     def test_narration_fades_in_export_with_offset(self):
         import array
         import math

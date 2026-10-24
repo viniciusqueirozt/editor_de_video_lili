@@ -61,9 +61,17 @@ function renderTimeline(){
     body.addEventListener("dragend",()=>{dragId=null;node.classList.remove("dragging");document.querySelectorAll(".drop-target").forEach(n=>n.classList.remove("drop-target"));});
     node.querySelectorAll("[data-edge]").forEach(handle=>handle.addEventListener("pointerdown",beginTrim));
   });
-  renderAudioTrack();renderCaptionTrack(); updatePlayhead(cursor);
+  renderAudioTrack();renderMusicTrack();renderCaptionTrack(); updatePlayhead(cursor);
 }
 
+function renderMusicTrack(){
+  const track=$("#music-track");track.hidden=!editorFeatures.music_track;$("#music-track-label").hidden=!editorFeatures.music_track;
+  if(!editorFeatures.music_track)return;
+  const m=project.music,length=m?Math.max(0,Math.min(m.end-m.start,project.duration-m.offset)):0;
+  const asset=project.media.find(a=>a.id===m?.media_id);
+  track.innerHTML=m&&length>0?`<button class="music-region" style="left:${m.offset*timelineScale}px;width:${length*timelineScale}px">${esc(asset.name)}</button>`:'<button class="add-voice-track">'+(m?'Música após o fim · ajustar':'+ Adicionar música')+'</button>';
+  track.querySelector("button").addEventListener("click",()=>openInspector("music"));
+}
 function renderCaptionTrack(){
   const track=$("#caption-track");track.hidden=!editorFeatures.subtitles;$("#caption-track-label").hidden=!editorFeatures.subtitles;
   if(!editorFeatures.subtitles)return;

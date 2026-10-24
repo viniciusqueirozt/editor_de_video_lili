@@ -66,7 +66,7 @@ def duration(project):
 
 
 class Store:
-    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings", "captions")
+    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings", "captions", "music")
 
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -136,6 +136,7 @@ class Store:
     def public(project):
         result = copy.deepcopy(project)
         result.setdefault("captions", [])
+        result.setdefault("music", None)
         result.pop("access", None)  # Sharing metadata has a separate owner-only API.
         result["undo_available"] = bool(result.pop("history", []))
         result["duration"] = duration(result)
@@ -313,6 +314,7 @@ class Store:
             if isinstance(expected_revision, bool) or expected_revision != p["revision"]:
                 raise EditorError("O projeto mudou. Atualize a página ou leia a revisão atual antes de editar.", 409)
             p.setdefault("captions", [])
+            p.setdefault("music", None)
             snapshot = {k: copy.deepcopy(p[k]) for k in self.SNAPSHOT_FIELDS}
             snapshot["media_visibility"] = {m["id"]: m.get("deleted_at") for m in p["media"]}
             if operation == "script_update":
@@ -371,13 +373,16 @@ class Store:
                     raise EditorError("Aguarde a importação terminar antes de excluir.", 409)
                 clips = [c for c in p["timeline"] if c["media_id"] in ids]
                 narration = p["narration"] and p["narration"]["media_id"] in ids
+                music = p["music"] and p["music"]["media_id"] in ids
                 if any(c["locked"] for c in clips):
                     raise EditorError("Desproteja as cenas deste arquivo antes de excluir.", 409)
-                if (clips or narration) and args.get("remove_usage") is not True:
-                    raise EditorError("Confirme também a remoção das cenas e da narração que usam este arquivo.", 409)
+                if (clips or narration or music) and args.get("remove_usage") is not True:
+                    raise EditorError("Confirme também a remoção das cenas e faixas de áudio que usam este arquivo.", 409)
                 p["timeline"] = [c for c in p["timeline"] if c["media_id"] not in ids]
                 if narration:
                     p["narration"] = None
+                if music:
+                    p["music"] = None
                 stamp = now()
                 for asset in assets:
                     asset["deleted_at"] = stamp
@@ -432,6 +437,29 @@ class Store:
                     if old["locked"] and self.validate_clip(p, old) not in proposed:
                         raise EditorError("A nova montagem precisa preservar as cenas protegidas, incluindo seus identificadores.", 409)
                 p["timeline"] = proposed
+            elif operation == "music_set":
+                media_id = args.get("media_id", (p["music"] or {}).get("media_id"))
+                if media_id is None:
+                    p["music"] = None
+                else:
+                    asset = self.find(p["media"], media_id, "Arquivo")
+                    if asset.get("deleted_at") or asset.get("status") != "ready" or not asset.get("has_audio"):
+                        raise EditorError("Escolha um arquivo pronto que contenha áudio.")
+                    values = {**(p["music"] if p["music"] and p["music"]["media_id"] == media_id else {}), **args}
+                    start = number(values.get("start", 0), 0, asset["duration"])
+                    end = number(values.get("end", asset["duration"]), start, asset["duration"])
+                    length = round(end - start, 4)
+                    if length < .1:
+                        raise EditorError("Deixe pelo menos 0,1 segundo de música.")
+                    fade_in = number(values.get("fade_in", 0), 0, length)
+                    fade_out = number(values.get("fade_out", 0), 0, length)
+                    duck = values.get("duck", True)
+                    if not isinstance(duck, bool) or fade_in + fade_out > length:
+                        raise EditorError("Confira a redução de volume e a duração dos fades da música.")
+                    p["music"] = {"media_id": media_id, "start": start, "end": end,
+                                  "offset": number(values.get("offset", 0), 0, 1800),
+                                  "volume": number(values.get("volume", .2), 0, 1),
+                                  "fade_in": fade_in, "fade_out": fade_out, "duck": duck}
             elif operation == "narration_set":
                 media_id = args.get("media_id")
                 if media_id is None:

@@ -311,6 +311,8 @@ class MediaService:
             run(["-f", "concat", "-safe", "1", "-i", playlist, "-c", "copy", "-movflags", "+faststart", base])
             output = folder / "video.mp4"
             narration = project["narration"]
+            music = project.get("music")
+            inputs, filters, labels = ["-i", base], [], ["[0:a]"]
             if narration:
                 asset = self.store.find(project["media"], narration["media_id"], "Arquivo")
                 delay = round(narration["offset"] * 1000)
@@ -321,8 +323,29 @@ class MediaService:
                     voice_filters.append(f"afade=t=out:st={max(0, asset['duration'] - narration['fade_out'])}:d={narration['fade_out']}")
                 voice_filters.append(f"adelay={delay}:all=1")
                 voice_filter = ",".join(voice_filters)
-                run(["-i", base, "-i", self.source(project_id, asset), "-filter_complex",
-                     f"[1:a]{voice_filter},apad,atrim=duration={duration(project)}[voice];[0:a][voice]amix=inputs=2:duration=first:normalize=0[a]",
+                inputs += ["-i", self.source(project_id, asset)]
+                filters.append(f"[1:a]{voice_filter},apad,atrim=duration={duration(project)}[voice]")
+                labels.append("[voice]")
+            if music:
+                asset = self.store.find(project["media"], music["media_id"], "Arquivo")
+                source_index = len(inputs)//2
+                inputs += ["-i", self.source(project_id, asset)]
+                gain = str(music["volume"])
+                if narration and music.get("duck", True):
+                    voice_asset = self.store.find(project["media"], narration["media_id"], "Arquivo")
+                    gain += f"*if(gte(t+{music['offset']},{narration['offset']})*lt(t+{music['offset']},{narration['offset']+voice_asset['duration']}),0.25,1)"
+                length = music["end"] - music["start"]
+                chain = [f"atrim=start={music['start']}:end={music['end']}", "asetpts=PTS-STARTPTS", f"volume='{gain}':eval=frame"]
+                if music.get("fade_in", 0):
+                    chain.append(f"afade=t=in:st=0:d={music['fade_in']}")
+                if music.get("fade_out", 0):
+                    chain.append(f"afade=t=out:st={length-music['fade_out']}:d={music['fade_out']}")
+                chain += [f"adelay={round(music['offset']*1000)}:all=1", "apad", f"atrim=duration={duration(project)}"]
+                filters.append(f"[{source_index}:a]{','.join(chain)}[music]")
+                labels.append("[music]")
+            if len(labels) > 1:
+                filters.append(f"{''.join(labels)}amix=inputs={len(labels)}:duration=first:normalize=0,alimiter=limit=0.95:level=0:latency=1[a]")
+                run([*inputs, "-filter_complex", ";".join(filters),
                      "-map", "0:v:0", "-map", "[a]", "-c:v", "copy", "-c:a", "aac", "-b:a", "160k", "-ar", "48000", "-ac", "2", "-movflags", "+faststart", output])
             else:
                 base.replace(output)

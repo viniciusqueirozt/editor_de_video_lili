@@ -4,7 +4,7 @@ const esc = value => String(value ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;",
 const icon = name => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const clock = seconds => { seconds = Math.max(0, seconds || 0); return `${String(Math.floor(seconds / 60)).padStart(2,"0")}:${String(Math.floor(seconds % 60)).padStart(2,"0")}`; };
 const precise = seconds => `${Number(seconds).toFixed(1).replace(".",",")} s`;
-const player = $("#player"), voice = $("#voice-player");
+const player = $("#player"), voice = $("#voice-player"), musicPlayer = $("#music-player");
 let project = null, selected = null, projects = [], queue = Promise.resolve(), toastTimer, uploadRunning = false, playing = false, seekBusy = false, loadedSource = "", dragId = null;
 let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
 let editorFeatures = {};
@@ -93,7 +93,7 @@ function render() {
   $("#trash-count").textContent=trash.length?`(${trash.length})`:"";
   $("#trash-list").innerHTML=trash.map(m=>`<article class="trash-card"><div>${icon(m.kind==="audio"?"mic":"film")}<strong>${esc(m.name)}</strong></div><button class="button secondary" data-restore-media="${m.id}">Restaurar</button></article>`).join("")||'<p class="empty-note">Nenhum arquivo na Lixeira.</p>';
   $("#trash-list").querySelectorAll("[data-restore-media]").forEach(button=>button.addEventListener("click",()=>mutate("media_restore",{media_id:button.dataset.restoreMedia},"Arquivo restaurado à biblioteca.")));
-  renderCaptionInspector();renderTimeline(); renderRequests(); seekTo(Math.min(cursor, project.duration));
+  renderMusicInspector();renderCaptionInspector();renderTimeline(); renderRequests(); seekTo(Math.min(cursor, project.duration));
   $("#undo-button").disabled = !project.undo_available;
   $("#draft-button").disabled = !project.script.trim() || !project.media.some(m=>m.kind==="video" && m.status==="ready");
   $("#export-button").disabled = !project.timeline.length;
@@ -166,9 +166,9 @@ function updatePreviewSubtitle(time){
   if(caption){renderPreviewCaption({...caption,title:caption.text},"#preview-subtitle");node.style.opacity=1;}
 }
 function renderRequests(){const pending=project.requests.filter(r=>r.status==="pending").length;$("#request-count").textContent=pending?`(${pending})`:"";$("#requests-list").innerHTML=[...project.requests].reverse().map(r=>`<article class="request-card ${r.status==="done"?"done":""}"><small>${r.status==="done"?"CONCLUÍDO":"AGUARDANDO O CODEX"}</small><p>${esc(r.text)}</p>${r.result?`<p class="help">${esc(r.result)}</p>`:""}</article>`).join("");}
-function setInspector(name){$("#captions-inspector").hidden=name!=="captions";document.querySelectorAll("[data-inspector]").forEach(b=>b.classList.toggle("active",b.dataset.inspector===name));$("#scene-inspector").hidden=name!=="scene";$("#voice-inspector").hidden=name!=="voice";$("#step-visual").classList.toggle("active",name==="scene");$("#step-voice").classList.toggle("active",name==="voice");}
+function setInspector(name){$("#music-inspector").hidden=name!=="music";$("#captions-inspector").hidden=name!=="captions";document.querySelectorAll("[data-inspector]").forEach(b=>b.classList.toggle("active",b.dataset.inspector===name));$("#scene-inspector").hidden=name!=="scene";$("#voice-inspector").hidden=name!=="voice";$("#step-visual").classList.toggle("active",name==="scene");$("#step-voice").classList.toggle("active",name==="voice");}
 function pause(){
-  playing=false; playTicket++; player.pause(); voice.pause();
+  playing=false; playTicket++; player.pause(); voice.pause();musicPlayer.pause();
   cancelAnimationFrame(playbackFrame); playbackFrame=0;
   $("#play-button").innerHTML=icon("play");
   $("#play-button").setAttribute("aria-label","Reproduzir montagem");
@@ -182,7 +182,7 @@ async function play(){
   try {
     await player.play();
     if(ticket!==playTicket || !playing) return;
-    syncVoice();
+    syncVoice();syncMusic();
     cancelAnimationFrame(playbackFrame); playbackFrame=requestAnimationFrame(playbackTick);
   } catch(e) {
     if(ticket!==playTicket || e.name==="AbortError") return;
@@ -218,7 +218,7 @@ function updatePlayer(resume=false, time=before()){
   $("#preview-empty").hidden=!!c; player.hidden=!c;
   renderPreviewCaption(c);renderPreviewFraming(c);
   cursor=Math.max(0,Math.min(project.duration,time));
-  if(!c){player.removeAttribute("src");voice.pause();loadedSource="";cursor=0;$("#scene-position").textContent="Nenhuma cena";updateTime();return;}
+  if(!c){player.removeAttribute("src");voice.pause();musicPlayer.pause();loadedSource="";cursor=0;$("#scene-position").textContent="Nenhuma cena";updateTime();return;}
   const source=assetUrl(m), clipId=c.id;
   const position=Math.min(c.end-.001,c.start+Math.max(0,cursor-before())*(c.speed||1));
   const seekAndPlay=()=>{
@@ -232,7 +232,7 @@ function updatePlayer(resume=false, time=before()){
   player.onloadedmetadata=seekAndPlay;
   player.poster=frameUrl(c); player.volume=Math.min(1,c.volume);
   if(loadedSource!==source){
-    playerLoading=true; voice.pause(); player.src=source; loadedSource=source; player.load();
+    playerLoading=true; voice.pause();musicPlayer.pause(); player.src=source; loadedSource=source; player.load();
   } else if(player.readyState>=1) seekAndPlay();
   const narration=project.narration;
   if(narration){
@@ -240,6 +240,9 @@ function updatePlayer(resume=false, time=before()){
     if(voice.getAttribute("src")!==src){voice.src=src;voice.load();}
     voice.volume=voiceGain(narration,cursor-narration.offset,a.duration);
   } else if(voice.hasAttribute("src")){voice.removeAttribute("src");voice.load();}
+  const music=project.music;
+  if(music){const source=assetUrl(project.media.find(m=>m.id===music.media_id));if(musicPlayer.getAttribute("src")!==source){musicPlayer.src=source;musicPlayer.load();}}
+  else if(musicPlayer.hasAttribute("src")){musicPlayer.removeAttribute("src");musicPlayer.load();}
   $("#scene-position").textContent=`Cena ${index()+1} de ${project.timeline.length}`;
   updateTime();
 }
@@ -256,6 +259,36 @@ function syncVoice(){
   if(time<0||time>=asset.duration){voice.pause();return;}
   if(voice.readyState>=1&&Math.abs(voice.currentTime-time)>.12) voice.currentTime=time;
   if(voice.paused) voice.play().catch(()=>{});
+}
+function musicGain(m,time,narration,narrationDuration=0){
+  const local=time-m.offset,length=m.end-m.start;
+  if(local<0||local>=length)return 0;
+  const envelope=Math.max(0,Math.min(1,m.fade_in?local/m.fade_in:1,m.fade_out?(length-local)/m.fade_out:1));
+  const duck=m.duck&&narration&&time>=narration.offset&&time<narration.offset+narrationDuration ? .25 : 1;
+  return Math.min(1,m.volume*envelope*duck);
+}
+function syncMusic(){
+  const m=project?.music;
+  if(!m||!playing||playerLoading||player.seeking||player.paused){musicPlayer.pause();return;}
+  const voiceAsset=project.media.find(a=>a.id===project.narration?.media_id);
+  musicPlayer.volume=musicGain(m,cursor,project.narration,voiceAsset?.duration||0);
+  const local=cursor-m.offset;
+  if(local<0||local>=m.end-m.start){musicPlayer.pause();return;}
+  const time=m.start+local;
+  if(musicPlayer.readyState>=1&&Math.abs(musicPlayer.currentTime-time)>.12)musicPlayer.currentTime=time;
+  if(musicPlayer.paused)musicPlayer.play().catch(()=>{});
+}
+function renderMusicInspector(){
+  $("#music-tab").hidden=!editorFeatures.music_track;
+  if(!editorFeatures.music_track)return;
+  const m=project.music,assets=project.media.filter(a=>a.status==="ready"&&a.has_audio),asset=assets.find(a=>a.id===m?.media_id);
+  $("#music-inspector").innerHTML=`<p class="help">Música independente da voz e do som das cenas. Importe um áudio que você tenha direito de usar.</p><label class="field-label" for="music-source">Arquivo de música</label><select id="music-source"><option value="">Sem música</option>${assets.map(a=>`<option value="${a.id}" ${a.id===m?.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><button id="import-music" class="button secondary full">Importar áudio</button>${m?`${[["start","Entrada no arquivo",asset.duration],["end","Saída no arquivo",asset.duration],["offset","Começar na montagem",1800],["fade_in","Entrada suave",m.end-m.start],["fade_out","Saída suave",m.end-m.start]].map(([key,label,max])=>`<label class="field-label" for="music-${key}">${label} · segundos</label><input id="music-${key}" type="number" min="0" max="${max}" step="0.1" value="${m[key]}">`).join("")}<label class="field-label" for="music-volume">Volume · <output id="music-volume-value">${Math.round(m.volume*100)}%</output></label><input id="music-volume" type="range" min="0" max="100" value="${Math.round(m.volume*100)}"><label class="mirror-control"><input id="music-duck" type="checkbox" ${m.duck?"checked":""}> Abaixar música durante narração</label><p class="help">Reduz a música para 25% do volume escolhido durante a faixa de narração adicional. A exportação protege os picos da mistura.</p>${m.offset+m.end-m.start>project.duration?'<p class="voice-note">A música será cortada no fim da montagem.</p>':""}<button id="remove-music" class="danger-button">Remover música</button>`:""}`;
+  $("#music-source").addEventListener("change",e=>mutate("music_set",{media_id:e.target.value||null}));
+  $("#import-music").addEventListener("click",()=>$("#file-input").click());
+  if(m){for(const key of ["start","end","offset","fade_in","fade_out","volume"])$("#music-"+key).addEventListener("change",e=>mutate("music_set",{[key]:Number(e.target.value)/(key==="volume"?100:1)}));
+    $("#music-volume").addEventListener("input",e=>$("#music-volume-value").textContent=e.target.value+"%");
+    $("#music-duck").addEventListener("change",e=>mutate("music_set",{duck:e.target.checked}));
+    $("#remove-music").addEventListener("click",()=>mutate("music_set",{media_id:null}));}
 }
 function renderPreviewFraming(clip){
   player.style.objectFit=clip?.framing||"contain";
@@ -330,7 +363,7 @@ function advance(){
   const i=index();
   if(i < project.timeline.length-1){
     cursor=before(i+1); selected=project.timeline[i+1].id;
-    voice.pause(); markSelection(); updatePlayer(true,cursor);
+    voice.pause();musicPlayer.pause(); markSelection(); updatePlayer(true,cursor);
   }else{cursor=project.duration;pause();updateTime();}
 }
 function playbackTick(){
@@ -339,13 +372,13 @@ function playbackTick(){
   const c=currentClip();
   if(c&&!playerLoading&&!player.seeking){
     cursor=before()+Math.max(0,Math.min(clipDuration(c),(player.currentTime-c.start)/(c.speed||1)));
-    updateTime();syncVoice();
+    updateTime();syncVoice();syncMusic();
     if(player.currentTime>=c.end-.012){advance();return;}
   }
   playbackFrame=requestAnimationFrame(playbackTick);
 }
-player.addEventListener("seeked",()=>{playerLoading=false;syncVoice();});
-player.addEventListener("waiting",()=>voice.pause());
+player.addEventListener("seeked",()=>{playerLoading=false;syncVoice();syncMusic();});
+player.addEventListener("waiting",()=>{voice.pause();musicPlayer.pause();});
 player.addEventListener("ended",advance);
 player.addEventListener("error",()=>{if(currentClip()){pause();toast("A prévia não abriu. Aguarde a importação ou consulte o arquivo original.",true);}});
 $("#play-button").addEventListener("click",()=>playing?pause():play());
@@ -538,10 +571,10 @@ function confirmMediaRemoval(value){
   const ids=Array.isArray(value)?value:[value], assets=ids.map(id=>project.media.find(a=>a.id===id));
   if(!ids.length||assets.some(a=>!a))return;
   pause();pendingRemoval={projectId:project.id,mediaIds:ids,revision:project.revision};
-  const clips=project.timeline.filter(c=>ids.includes(c.media_id)), narration=ids.includes(project.narration?.media_id), locked=clips.some(c=>c.locked);
+  const clips=project.timeline.filter(c=>ids.includes(c.media_id)), narration=ids.includes(project.narration?.media_id), music=ids.includes(project.music?.media_id), locked=clips.some(c=>c.locked);
   $("#delete-media-title").textContent=ids.length>1?`Excluir ${ids.length} arquivos?`:"Excluir arquivo?";
   $("#delete-media-name").textContent=ids.length>1?assets.slice(0,4).map(a=>a.name).join(", ")+(ids.length>4?` e mais ${ids.length-4}`:""):assets[0].name;
-  $("#delete-media-impact").textContent=locked?"A seleção contém cenas protegidas. Desproteja-as ou retire esses arquivos da seleção antes de excluir.":clips.length||narration?`Também serão removidas ${clips.length} cena(s) da linha do tempo${narration?" e a faixa de narração":""}. Você pode recuperar tudo com um único Desfazer.`:"Os arquivos selecionados não estão em uso na montagem.";
+  $("#delete-media-impact").textContent=locked?"A seleção contém cenas protegidas. Desproteja-as ou retire esses arquivos da seleção antes de excluir.":clips.length||narration||music?`Também serão removidas ${clips.length} cena(s) da linha do tempo${narration?" e a faixa de narração":""}${music?" e a faixa de música":""}. Você pode recuperar tudo com um único Desfazer.`:"Os arquivos selecionados não estão em uso na montagem.";
   $("#confirm-delete-media").disabled=locked;
   $("#delete-media-dialog").showModal();
 }
@@ -649,7 +682,7 @@ async function refreshJobs(){
 }
 
 setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
-(async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}document.body.classList.toggle("has-subtitles",Boolean(editorFeatures.subtitles));await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
+(async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}document.body.classList.toggle("has-subtitles",Boolean(editorFeatures.subtitles));document.body.classList.toggle("has-music",Boolean(editorFeatures.music_track));await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 $("#phone-help").addEventListener("click",()=>{

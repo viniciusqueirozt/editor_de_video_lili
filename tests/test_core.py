@@ -28,6 +28,26 @@ class ProjectTests(unittest.TestCase):
         self.apply("clip_add", {"media_id": self.asset["id"], "start": 1, "end": 4})
         return self.p["timeline"][-1]
 
+    def test_music_partial_updates_validation_removal_and_undo(self):
+        self.apply("music_set", {"media_id": self.asset["id"], "start": 1, "end": 8, "offset": 2, "fade_in": 1})
+        self.apply("music_set", {"volume": .4})
+        self.assertEqual(self.p["music"]["start"], 1)
+        self.assertEqual(self.p["music"]["offset"], 2)
+        revision = self.p["revision"]
+        for changes in ({"start": 8}, {"end": 11}, {"duck": "yes"}, {"volume": True}, {"volume": 2}, {"fade_in": 5, "fade_out": 3}):
+            with self.subTest(changes=changes), self.assertRaises(EditorError):
+                self.apply("music_set", changes)
+        self.refresh()
+        self.assertEqual(self.p["revision"], revision)
+        original = self.p["music"].copy()
+        with self.assertRaises(EditorError):
+            self.apply("media_remove", {"media_id": self.asset["id"]})
+        self.apply("media_remove", {"media_id": self.asset["id"], "remove_usage": True})
+        self.assertIsNone(self.p["music"])
+        self.apply("undo", {})
+        self.assertEqual(self.p["music"], original)
+        self.assertEqual(len(self.p["media"]), 1)
+
     def test_narration_fades_validate_atomically_and_undo(self):
         self.apply("narration_set", {"media_id": self.asset["id"]})
         original = self.p["narration"].copy()

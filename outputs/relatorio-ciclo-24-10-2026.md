@@ -67,3 +67,9 @@ Faixa de legendas independente das cenas, com início/fim/texto/estilo editávei
 Prévia e exportação mostram a legenda pelo tempo da montagem, inclusive atravessando cortes; ficam legíveis durante fades da imagem. Legendas que ultrapassam a montagem são sinalizadas para revisão, sem deslocamento silencioso. Transcrição automática continua pendente.
 
 Verificação: parser/roundtrip SRT e validações, edição atômica/Desfazer, permissões HTTP e Node de limites da prévia. Teste FFmpeg confirmou ausência/presença nos quadros antes, durante e depois do intervalo, inclusive após a junção de cenas. Somente projetos sintéticos.
+
+### Pacote de áudio ampliado
+
+Faixa independente de música, com seleção de arquivo importado, entrada/saída na fonte, início na montagem, volume e fades. Redução opcional para 25% do volume escolhido durante a narração adicional, na prévia e na exportação. A mistura exportada recebe limitador de picos; não é normalização por loudness nem detecção automática de fala no som original. Música que ultrapassa a montagem termina com o vídeo, com aviso no painel.
+
+Atualizações parciais preservam os outros ajustes; Desfazer inclui música e exclusão de mídia avisa/remove/restaura seu uso. Verificação: 22 testes de estado, teste Node de envelope e intervalos e duas exportações sintéticas. Análise de frequência do arquivo exportado confirmou início, fim, corte da fonte e redução real da música durante a voz. Safari real pendente.

@@ -1,0 +1,13 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const source=fs.readFileSync('web/app.js','utf8');
+const context={};vm.createContext(context);
+vm.runInContext(source.slice(source.indexOf('function musicGain('),source.indexOf('function syncMusic(')),context);
+const music={start:2,end:6,offset:1,volume:.8,fade_in:1,fade_out:1,duck:true};
+assert.equal(context.musicGain(music,.9,null),0);
+assert.equal(context.musicGain(music,1.5,null),.4);
+assert.equal(context.musicGain(music,2.5,{offset:2},1),.2);
+assert.equal(context.musicGain(music,3,{offset:2},1),.8);
+assert.equal(context.musicGain({...music,duck:false},2.5,{offset:2},1),.8);
+assert.equal(context.musicGain(music,4.5,null),.4);
+assert.equal(context.musicGain(music,5,null),0);
+console.log('Music preview: offsets, trim, fades and duck boundaries passed');
