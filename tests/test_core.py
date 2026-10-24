@@ -28,6 +28,22 @@ class ProjectTests(unittest.TestCase):
         self.apply("clip_add", {"media_id": self.asset["id"], "start": 1, "end": 4})
         return self.p["timeline"][-1]
 
+    def test_scene_audio_fades_speed_split_and_narration_partial_update(self):
+        c=self.add()
+        self.apply('clip_update',{'clip_id':c['id'],'speed':2,'audio_fade_in':.2,'audio_fade_out':.3})
+        self.apply('clip_split',{'clip_id':c['id'],'at':2.5})
+        left,right=self.p['timeline']
+        self.assertEqual((left['audio_fade_in'],left['audio_fade_out']),(.2,0))
+        self.assertEqual((right['audio_fade_in'],right['audio_fade_out']),(0,.3))
+        revision=self.p['revision']
+        for changes in ({'audio_fade_in':True},{'audio_fade_out':float('nan')},{'audio_fade_in':.5,'audio_fade_out':.5}):
+            with self.subTest(changes=changes),self.assertRaises(EditorError):self.apply('clip_update',{'clip_id':left['id'],**changes})
+        self.refresh();self.assertEqual(self.p['revision'],revision)
+        self.apply('narration_set',{'media_id':self.asset['id'],'offset':2,'fade_in':1})
+        self.apply('narration_set',{'volume':.5})
+        self.assertEqual(self.p['narration']['offset'],2)
+        self.assertEqual(self.p['narration']['fade_in'],1)
+
     def test_redo_multiple_edits_media_visibility_and_branch(self):
         self.assertFalse(self.p['redo_available'])
         clip=self.add()

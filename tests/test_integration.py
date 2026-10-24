@@ -53,6 +53,27 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.08)
         self.fail("Tempo excedido no processamento")
 
+    def test_scene_audio_fades_after_speed_and_peak_limiter(self):
+        import array, math
+        source=self.root/'loud-scene.mp4'
+        run(['-f','lavfi','-i','color=c=blue:s=160x90:r=30:d=2.4','-f','lavfi','-i','sine=frequency=440:duration=2.4','-af','volume=7','-c:v','libx264','-c:a','aac','-shortest',source])
+        p=self.client.call('POST','/api/projects',{'name':'Fades do som da cena'})
+        upload=self.client.upload(p['id'],source);self.wait_job(upload['job']['id'])
+        p=self.client.call('GET','/api/projects/'+p['id'])
+        p=self.client.call('POST',f"/api/projects/{p['id']}/commands",{'operation':'clip_add','args':{'media_id':upload['media_id'],'start':0,'end':2.4,'speed':2,'volume':2,'audio_fade_in':.3,'audio_fade_out':.3},'expected_revision':p['revision']})
+        job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+        output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+        data=subprocess.run([executable(),'-v','error','-i',str(output),'-f','f32le','-ac','1','-ar','16000','pipe:1'],capture_output=True,check=True)
+        samples=array.array('f',data.stdout)
+        def rms(a,b):
+            section=samples[int(a*16000):int(b*16000)]
+            return math.sqrt(sum(v*v for v in section)/len(section))
+        self.assertGreater(rms(.5,.7),.4)
+        self.assertLess(rms(.02,.06),rms(.5,.7)*.4)
+        self.assertLess(rms(1.14,1.18),rms(.5,.7)*.5)
+        self.assertLess(max(map(abs,samples)),1.05)
+        self.assertAlmostEqual(probe(output)['duration'],1.2,delta=.1)
+
     def test_still_photo_upload_preview_and_export_preserve_original(self):
         from PIL import Image
         source=self.root/'foto.jpg'

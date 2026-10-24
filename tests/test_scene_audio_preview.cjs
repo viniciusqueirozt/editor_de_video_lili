@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert/strict');
+const source=fs.readFileSync('web/app.js','utf8'),context={};vm.createContext(context);
+for(const [start,end] of [['function clipDuration(','function before('],['function voiceGain(','function syncVoice('],['function originalGain(','function sceneFadeGain(']])vm.runInContext(source.slice(source.indexOf(start),source.indexOf(end)),context);
+const clip={start:1,end:5,speed:2,volume:.8,audio_fade_in:.4,audio_fade_out:.5};
+assert.equal(context.originalGain(clip,-.01),0);
+assert.equal(context.originalGain(clip,.2),.4);
+assert.equal(context.originalGain(clip,1),.8);
+assert.equal(context.originalGain(clip,1.75),.4);
+assert.equal(context.originalGain(clip,2),0);
+console.log('Original scene audio gain respects montage speed and independent fades');

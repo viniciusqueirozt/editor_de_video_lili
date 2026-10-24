@@ -311,7 +311,12 @@ class MediaService:
                     mark_x = "w-text_w-w*0.04" if right else "w*0.04"
                     mark_y = "h-text_h-h*0.04" if bottom else "h*0.04"
                     filters += f",drawtext=fontfile='{escape_path(font)}':textfile='{escape_path(watermark_file)}':expansion=none:fontsize={max(8, round(width*.025))}:fontcolor=white@{watermark['opacity']}:shadowcolor=black@0.5:shadowx=1:shadowy=1:x={mark_x}:y={mark_y}"
-                audio_filters = [f"atrim=duration={raw_duration}", "asetpts=PTS-STARTPTS", *tempo_filters(speed), f"volume={clip['volume']}", "apad"]
+                audio_filters = [f"atrim=duration={raw_duration}", "asetpts=PTS-STARTPTS", *tempo_filters(speed), f"volume={clip['volume']}"]
+                if clip.get("audio_fade_in", 0):
+                    audio_filters.append(f"afade=t=in:st=0:d={clip['audio_fade_in']}")
+                if clip.get("audio_fade_out", 0):
+                    audio_filters.append(f"afade=t=out:st={output_duration-clip['audio_fade_out']}:d={clip['audio_fade_out']}")
+                audio_filters += ["apad", "alimiter=limit=0.95:level=0:latency=1"]
                 args += ["-t", output_duration, "-map", "0:v:0", "-map", "0:a:0" if asset["has_audio"] else "1:a:0",
                          "-vf", filters, "-af", ",".join(audio_filters), "-c:v", "libx264", "-preset", "veryfast", "-crf", str(profile["crf"]),
                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "160k", "-video_track_timescale", "90000", folder / f"{index:04d}.mp4"]

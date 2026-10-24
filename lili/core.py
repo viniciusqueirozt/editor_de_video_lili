@@ -295,8 +295,13 @@ class Store:
         fade_out = number(data.get("fade_out", 0), 0, length)
         if fade_in + fade_out > length + 0.00001:
             raise EditorError("As entradas e saídas suaves não podem ultrapassar a duração da cena.")
+        audio_fade_in = number(data.get("audio_fade_in", 0), 0, length)
+        audio_fade_out = number(data.get("audio_fade_out", 0), 0, length)
+        if audio_fade_in + audio_fade_out > length + .00001:
+            raise EditorError("Os fades de áudio não podem ultrapassar a duração da cena.")
         return {"id": clip_id, "media_id": asset["id"], "start": start, "end": end,
                 "fade_in": fade_in, "fade_out": fade_out, "speed": speed, **title_style,
+                "audio_fade_in": audio_fade_in, "audio_fade_out": audio_fade_out,
                 "framing": framing, "mirror": data.get("mirror", False), "pan_x": pan_x, "pan_y": pan_y,
                 "brightness": number(data.get("brightness", 1), .5, 1.5),
                 "contrast": number(data.get("contrast", 1), .5, 1.5),
@@ -415,8 +420,8 @@ class Store:
                 at = number(args.get("at"), clip["start"], clip["end"])
                 if min(round((at - clip["start"])/clip.get("speed",1), 4), round((clip["end"] - at)/clip.get("speed",1), 4)) < 0.1:
                     raise EditorError("Deixe pelo menos 0,1 segundo de cada lado do corte.")
-                left = self.validate_clip(p, {**clip, "end": at, "fade_out": 0})
-                right = self.validate_clip(p, {**clip, "id": uid(), "start": at, "fade_in": 0})
+                left = self.validate_clip(p, {**clip, "end": at, "fade_out": 0, "audio_fade_out": 0})
+                right = self.validate_clip(p, {**clip, "id": uid(), "start": at, "fade_in": 0, "audio_fade_in": 0})
                 clip.update(left)
                 p["timeline"].insert(p["timeline"].index(clip) + 1, right)
             elif operation == "clip_remove":
@@ -463,19 +468,20 @@ class Store:
                                   "volume": number(values.get("volume", .2), 0, 1),
                                   "fade_in": fade_in, "fade_out": fade_out, "duck": duck}
             elif operation == "narration_set":
-                media_id = args.get("media_id")
+                media_id = args.get("media_id", (p["narration"] or {}).get("media_id"))
                 if media_id is None:
                     p["narration"] = None
                 else:
                     asset = self.find(p["media"], media_id, "Arquivo")
                     if asset.get("deleted_at") or asset.get("status") != "ready" or not asset.get("has_audio"):
                         raise EditorError("Escolha um arquivo importado que contenha áudio.")
-                    fade_in = number(args.get("fade_in", 0), 0, asset["duration"])
-                    fade_out = number(args.get("fade_out", 0), 0, asset["duration"])
+                    values = {**(p["narration"] if p["narration"] and p["narration"]["media_id"] == media_id else {}), **args}
+                    fade_in = number(values.get("fade_in", 0), 0, asset["duration"])
+                    fade_out = number(values.get("fade_out", 0), 0, asset["duration"])
                     if fade_in + fade_out > asset["duration"]:
                         raise EditorError("As suavizações juntas não podem ultrapassar a duração da narração.")
-                    p["narration"] = {"media_id": media_id, "volume": number(args.get("volume", 1), 0, 2),
-                                      "offset": number(args.get("offset", 0), 0, 3600),
+                    p["narration"] = {"media_id": media_id, "volume": number(values.get("volume", 1), 0, 2),
+                                      "offset": number(values.get("offset", 0), 0, 3600),
                                       "fade_in": fade_in, "fade_out": fade_out}
             elif operation == "request_add":
                 p["requests"].append({"id": uid(), "text": text(args.get("text", ""), 4000),

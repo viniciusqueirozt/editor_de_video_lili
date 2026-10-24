@@ -84,3 +84,24 @@ Teste de preservação detectou colisão entre nome da miniatura e JPG importado
 Refazer complementa Desfazer com até 30 passos, botão próprio e Ctrl+Shift+Z/Ctrl+Y fora de campos de texto. Histórico persiste no projeto, incluindo música, legendas, formato e restauração/remoção de mídia. Uma edição nova após desfazer abre outro caminho e limpa os passos de refazer. Testes cobrem sequência, reabertura do armazenamento, visibilidade da mídia e proteção contra revisão desatualizada.
 
 A revisão desktop encontrou e corrigiu a última faixa escondida pela altura da linha do tempo e a rolagem vertical indevida nas abas. Vídeo, narração, música e legendas agora aparecem em faixas próprias. A biblioteca oferece Usar como música. Validação humana no Safari permanece pendente.
+
+
+### Acabamento de áudio e revisão ampliada
+
+Fades independentes do som original por cena, em segundos da montagem, compatíveis com velocidade, corte, proteção e histórico. Limitador de picos também no som original exportado. Teste com fonte forte e velocidade 2× confirmou fades, duração final e picos abaixo do teto de tolerância após codificação AAC. O limitador não é medição/normalização de LUFS. Atualizações parciais da narração preservam volume, início e fades já escolhidos.
+
+Ampliar prévia abre monitor com reprodução/busca e retorna ao mesmo cursor, pausando na troca. Revisão desktop confirmou abertura, legenda visível e retorno ao editor. O indicador agora mostra proporção/dimensões reais. Marca d'água opcional fica recolhida na exportação para tornar o fluxo de gerar vídeo mais direto. Botões Refazer e ajustes de música foram usados na demonstração isolada; navegador sem erros capturados na revisão.
+
+## Verificação final do conjunto
+
+Suíte Python: 124 testes passaram em 43,4 segundos. Os 12 arquivos de testes JavaScript passaram; incluem funções reais de prévia, duração, importação cancelável, áudio, cor, texto, cartões e perfis. Testes repetidos durante desenvolvimento não foram somados como casos novos. Revisão do diff e sintaxe passaram. Exportações usam FFmpeg real com imagens, tons e vídeos sintéticos. Demonstração isolada no loopback 8769, fora dos projetos reais. Capturas locais não versionadas em work/demo-cycle-24/.
+
+Safari/iPhone real não testado. MP4/H.264 continua sendo o contêiner/codec de entrega; não houve integração de serviços pagos nem chamadas reais de IA. Montagem aprovada da Cora e originais preservados. Nuvem, isolamento individual ativo, transcrição automática, dissolução entre cenas e keyframes permanecem pendentes.
+
+## Rotina recorrente
+
+Configuradas duas janelas nativas da mesma rotina deste chat: abertura às 23h55 e continuação de 00h55 a 03h55 (São Paulo). Quatro rodadas de edição, quinta de segurança/acesso, extra de visual/mercado quando houver margem e publicação no encerramento. Excluída sexta à noite para sábado; sábado à noite para domingo permitido. Encerrar antes das 5h; sem melhoria automática manhã/tarde. Processo reutilizável em outputs/processo-reutilizavel-de-rodadas.md; percentuais e respostas da conta não são versionados.
+
+## Publicação
+
+A publicação final inclui sincronização GitHub e ativação segura do editor, após confirmar ausência de jobs e uploads. Gateway de acesso mantém sessões em memória e não deve ser reiniciado neste ciclo para não encerrar acessos existentes. Correções de segurança do gateway ficam no código publicado, aguardando próximo início; não apresentar a função de sair de todos os aparelhos como ativa antes disso. O registro da checagem efetiva segue abaixo após a ativação.
