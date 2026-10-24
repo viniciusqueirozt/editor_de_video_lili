@@ -1,5 +1,23 @@
 # Ciclo de demonstração da Lili — 24/10/2026
 
+## Resultado para revisão
+
+Publicado no GitHub e ativo no editor do notebook em 24/10/2026. Atualize a página do editor para carregar os novos controles. Código funcional publicado no commit 9903878; esta documentação registra a verificação posterior.
+
+- Imagem e ritmo: fades para preto, brilho/contraste/saturação, velocidade 0,25×–4×, preenchimento/recorte, posição e espelhamento.
+- Texto: títulos com fontes/tamanho/posição, faixa de legendas com tempos próprios e importação/download SRT, marca d'água de texto opcional.
+- Som: música independente, aparo/início/volume/fades, redução opcional durante narração, fades do som original e proteção de picos na exportação.
+- Montagem e entrega: fotos JPG/PNG/WebP como cenas, Desfazer/Refazer persistentes, prévia ampliada, tela vertical/quadrada/horizontal e quatro perfis MP4/H.264.
+- Interface: quatro faixas visíveis no desktop, biblioteca com Usar como música, histórico de exportações e resumo de resolução/arquivo.
+- Segurança publicada: correção de bloqueio por formulário lento, recusa de cookie ambíguo e revogação de todas as sessões. **Aguardam reinício do gateway**; sessões atuais foram preservadas. Contas individuais do editor ainda não estão ativas.
+
+Validação: 124 testes Python e 12 arquivos de testes JavaScript passaram, com exportações FFmpeg reais de mídia sintética e revisão desktop. Prévia ampliada, música, Refazer e exportação usados na demonstração isolada. Safari/iPhone real pendente.
+
+Rotina recorrente configurada neste chat: 23h55, 00h55, 01h55, 02h55 e 03h55, extra imediatamente ao final quando houver margem e publicação ao encerrar. Exceção sexta à noite para sábado; trabalho termina antes das 5h.
+
+Os tópicos abaixo registram cada entrega durante o desenvolvimento. Menções a recurso preparado no começo do ciclo foram superadas pela ativação final do editor, exceto as correções do gateway explicitamente pendentes.
+
+
 Execução direta autorizada pelo usuário: quatro rodadas de edição, uma de segurança/contas e extra condicional. Rodadas em sequência nesta demonstração, sem limite artificial de tamanho; rotina noturna permanece separada. Percentuais da conta são informados no chat após cada rodada, sem versioná-los.
 
 ## Rodada 1 — Entrada e saída suaves por cena
@@ -105,3 +123,10 @@ Configuradas duas janelas nativas da mesma rotina deste chat: abertura às 23h55
 ## Publicação
 
 A publicação final inclui sincronização GitHub e ativação segura do editor, após confirmar ausência de jobs e uploads. Gateway de acesso mantém sessões em memória e não deve ser reiniciado neste ciclo para não encerrar acessos existentes. Correções de segurança do gateway ficam no código publicado, aguardando próximo início; não apresentar a função de sair de todos os aparelhos como ativa antes disso. O registro da checagem efetiva segue abaixo após a ativação.
+
+
+### Ativação conferida
+
+Editor local reiniciado após confirmar todos os jobs concluídos, nenhum envio parcial e nenhuma mídia em preparo. Saúde HTTP confirmou onze novas capacidades. Os metadados dos três projetos reais mantiveram os mesmos hashes antes/depois; nenhuma mídia real foi usada nos testes. Gateway manteve seu processo original e o túnel permaneceu no mesmo endereço. Consulta externa sem credencial terminou na tela de login HTTP 200, sem erro de origem. Não houve login automatizado com conta real.
+
+Somente código, testes e documentação sincronizados; demonstração, capturas, mídias, estado de orçamento e configurações ficaram ignorados pelo Git. Melhorias de segurança do gateway dependem da próxima reinicialização, pois a troca agora encerraria as sessões que ficam em memória.

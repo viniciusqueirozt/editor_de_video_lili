@@ -166,6 +166,6 @@ Avaliação detalhada e próximos blocos em outputs/mercado-e-basico-da-lili.md.
 
 ## Ciclo manual ampliado de 24/10/2026
 
-Código e verificações detalhados em outputs/relatorio-ciclo-24-10-2026.md. Recursos implementados: fades visuais, luz/cor, velocidade constante, enquadramento/espelhamento, marca de texto, estilos de títulos, legendas independentes com SRT, formatos e perfis MP4, música independente com redução durante narração e limitador da mistura, fotos estáticas e Refazer. A ativação e publicação efetivas são registradas no relatório ao fim da revisão.
+Código e verificações detalhados em outputs/relatorio-ciclo-24-10-2026.md. Recursos implementados: fades visuais, luz/cor, velocidade constante, enquadramento/espelhamento, marca de texto, estilos de títulos, legendas independentes com SRT, formatos e perfis MP4, música independente com redução durante narração e limitador da mistura, fotos estáticas e Refazer. Editor publicado e ativo ao final da revisão; gateway segue com ativação de suas correções pendente para preservar sessões. Verificação detalhada no relatório.
 
 Próximas lacunas: dissolução entre cenas com prévia coerente, keyframes, fotos/logotipos em camadas, HDR/SDR, transcrição local e biblioteca de efeitos sonoros licenciados. Contas individuais integradas e nuvem não foram ativadas por este ciclo.

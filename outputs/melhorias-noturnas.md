@@ -149,3 +149,8 @@ Foi preparado um portal em Sites, por convite e com e-mail/senha próprios. Ver 
 4. **Próxima revisão humana:** quando não houver importações/processamentos, conferir um reinício normal para ativar as melhorias locais e testar Cancelar envio com arquivo descartável. Safari real continua pendente. Depois retomar integração do portal e decisão dos proprietários; nuvem permanece planejada.
 
 Código, testes e documentação sincronizados no GitHub; estado operacional, dados privados e mídias ficaram fora do versionamento.
+
+
+## 24/10/2026 — ciclo manual ampliado, autorizado diretamente
+
+Conjunto de quatro frentes de edição, segurança e extra concluído/publicado. Relatório completo em outputs/relatorio-ciclo-24-10-2026.md. Editor ativo com recursos novos de imagem/ritmo, áudio/música, legendas/SRT, fotos, Refazer, prévia ampliada e perfis de saída. Gateway preservado; correções dele publicadas com ativação pendente do próximo início. Validação: 124 testes Python, 12 arquivos JavaScript e revisão desktop sintética. Originais/projetos reais preservados; Safari real pendente. Agenda recorrente autorizada configurada, excluindo sexta à noite para sábado e sem execução automática manhã/tarde. Próxima rodada deve escolher lacuna nova da esteira e consultar limites reais; não repetir as entregas deste ciclo.
