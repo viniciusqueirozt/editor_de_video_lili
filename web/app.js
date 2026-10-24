@@ -12,6 +12,7 @@ const uploadState = {pending:null, cancel:false, completing:false, available:fal
 let importBatch = null, pendingRemoval = null, aiAvailable = null, aiStarting = false, aiJobsKey = "";
 const aiNotified = new Set();
 let selectingMedia=false;
+let selectedCaption=null,pendingSRT=null;
 const selectedMedia=new Set();
 let pendingProjectRemoval=null;
 
@@ -57,7 +58,7 @@ async function listProjects() {
 }
 async function openProject(id) {
   await queue; pause();
-  selectingMedia=false;selectedMedia.clear();
+  selectingMedia=false;selectedMedia.clear();selectedCaption=null;
   project = await api(`/api/projects/${id}`); selected = project.timeline[0]?.id || null; loadedSource = ""; cursor = 0;
   localStorage.setItem("lili-project",id);history.replaceState(null,"",`/editor?project=${id}`); render(); await refreshJobs();
 }
@@ -92,7 +93,7 @@ function render() {
   $("#trash-count").textContent=trash.length?`(${trash.length})`:"";
   $("#trash-list").innerHTML=trash.map(m=>`<article class="trash-card"><div>${icon(m.kind==="audio"?"mic":"film")}<strong>${esc(m.name)}</strong></div><button class="button secondary" data-restore-media="${m.id}">Restaurar</button></article>`).join("")||'<p class="empty-note">Nenhum arquivo na Lixeira.</p>';
   $("#trash-list").querySelectorAll("[data-restore-media]").forEach(button=>button.addEventListener("click",()=>mutate("media_restore",{media_id:button.dataset.restoreMedia},"Arquivo restaurado à biblioteca.")));
-  renderTimeline(); renderRequests(); seekTo(Math.min(cursor, project.duration));
+  renderCaptionInspector();renderTimeline(); renderRequests(); seekTo(Math.min(cursor, project.duration));
   $("#undo-button").disabled = !project.undo_available;
   $("#draft-button").disabled = !project.script.trim() || !project.media.some(m=>m.kind==="video" && m.status==="ready");
   $("#export-button").disabled = !project.timeline.length;
@@ -138,8 +139,34 @@ function renderInspector() {
   $("#import-voice").addEventListener("click",()=>$("#file-input").click());
   if(n){for(const key of ["fade_in","fade_out"]) $("#voice-"+key).addEventListener("change",e=>mutate("narration_set",{...n,[key]:Number(e.target.value)}));$("#voice-volume").addEventListener("input",e=>{$("#voice-volume-value").value=`${e.target.value}%`;voice.volume=voiceGain({...n,volume:Number(e.target.value)/100},cursor-n.offset,na.duration);});$("#voice-volume").addEventListener("change",e=>mutate("narration_set",{...n,volume:Number(e.target.value)/100}));$("#voice-offset").addEventListener("change",e=>mutate("narration_set",{...n,offset:Number(e.target.value)}));}
 }
+function renderCaptionInspector(){
+  $("#captions-tab").hidden=!editorFeatures.subtitles;
+  if(!editorFeatures.subtitles)return;
+  const captions=project.captions||[];
+  if(!captions.some(c=>c.id===selectedCaption))selectedCaption=captions[0]?.id||null;
+  const c=captions.find(c=>c.id===selectedCaption),outside=captions.filter(c=>c.end>project.duration+.001).length;
+  $("#captions-inspector").innerHTML=`<p class="help">Faixa independente dos cortes. Edite os tempos ou importe um SRT de texto.</p><div class="caption-actions"><button id="add-caption" class="button secondary" ${project.duration<.1?"disabled":""}>+ No cursor</button><button id="import-srt" class="button secondary">Importar SRT</button></div>${captions.length?`<a class="upload-link" href="/api/projects/${project.id}/captions.srt" download>Baixar legendas SRT ↓</a>`:""}${outside?`<p class="voice-warning help">${outside} legenda(s) ultrapassam o fim da montagem. Confira os tempos antes de entregar.</p>`:""}${c?`<label class="field-label" for="caption-selection">Legenda · ${captions.length} no projeto</label><select id="caption-selection">${captions.map((item,i)=>`<option value="${item.id}" ${item.id===c.id?"selected":""}>${i+1}. ${esc(item.text.slice(0,35))}</option>`).join("")}</select><div class="trim-fields"><div><label class="field-label" for="caption-start">Início · segundos</label><input id="caption-start" type="number" min="0" max="1800" step="0.1" value="${c.start}"></div><div><label class="field-label" for="caption-end">Fim · segundos</label><input id="caption-end" type="number" min="0.1" max="1800" step="0.1" value="${c.end}"></div></div><label class="field-label" for="caption-text">Texto</label><textarea id="caption-text" rows="3" maxlength="160">${esc(c.text)}</textarea>${[["title_font","Fonte",[["sans","Arial"],["serif","Georgia"],["mono","Consolas"]]],["title_size","Tamanho",[["small","Pequeno"],["medium","Médio"],["large","Grande"]]],["title_position","Posição",[["bottom","Inferior"],["center","Centro"],["top","Superior"]]]].map(([key,label,options])=>`<label class="field-label" for="caption-${key}">${label}</label><select id="caption-${key}">${options.map(([value,name])=>`<option value="${value}" ${value===c[key]?"selected":""}>${name}</option>`).join("")}</select>`).join("")}<button id="remove-caption" class="danger-button">Remover esta legenda</button>`:'<p class="empty-note">Nenhuma legenda temporizada ainda.</p>'}`;
+  $("#add-caption").addEventListener("click",()=>{
+    const start=Math.max(0,Math.min(cursor,project.duration-.1));
+    const identity=crypto.randomUUID().replaceAll("-","");selectedCaption=identity;
+    mutate("caption_add",{id:identity,start,end:Math.min(project.duration,start+2),text:"Nova legenda"},"Legenda adicionada. Edite o texto e os tempos.");
+  });
+  $("#import-srt").addEventListener("click",()=>$("#srt-input").click());
+  if(!c)return;
+  const update=changes=>mutate("caption_update",{caption_id:c.id,...changes});
+  $("#caption-selection").addEventListener("change",e=>{selectedCaption=e.target.value;const target=captions.find(item=>item.id===selectedCaption);seekTo(target.start);renderCaptionInspector();openInspector("captions");});
+  for(const key of ["start","end"])$("#caption-"+key).addEventListener("change",e=>update({[key]:Number(e.target.value)}));
+  $("#caption-text").addEventListener("change",e=>update({text:e.target.value}));
+  for(const key of ["title_font","title_size","title_position"])$("#caption-"+key).addEventListener("change",e=>update({[key]:e.target.value}));
+  $("#remove-caption").addEventListener("click",()=>mutate("caption_remove",{caption_id:c.id},"Legenda removida. Você pode desfazer."));
+}
+function updatePreviewSubtitle(time){
+  const caption=(project?.captions||[]).find(c=>c.start<=time&&time<c.end),node=$("#preview-subtitle");
+  node.hidden=!caption;
+  if(caption){renderPreviewCaption({...caption,title:caption.text},"#preview-subtitle");node.style.opacity=1;}
+}
 function renderRequests(){const pending=project.requests.filter(r=>r.status==="pending").length;$("#request-count").textContent=pending?`(${pending})`:"";$("#requests-list").innerHTML=[...project.requests].reverse().map(r=>`<article class="request-card ${r.status==="done"?"done":""}"><small>${r.status==="done"?"CONCLUÍDO":"AGUARDANDO O CODEX"}</small><p>${esc(r.text)}</p>${r.result?`<p class="help">${esc(r.result)}</p>`:""}</article>`).join("");}
-function setInspector(name){document.querySelectorAll("[data-inspector]").forEach(b=>b.classList.toggle("active",b.dataset.inspector===name));$("#scene-inspector").hidden=name!=="scene";$("#voice-inspector").hidden=name!=="voice";$("#step-visual").classList.toggle("active",name==="scene");$("#step-voice").classList.toggle("active",name==="voice");}
+function setInspector(name){$("#captions-inspector").hidden=name!=="captions";document.querySelectorAll("[data-inspector]").forEach(b=>b.classList.toggle("active",b.dataset.inspector===name));$("#scene-inspector").hidden=name!=="scene";$("#voice-inspector").hidden=name!=="voice";$("#step-visual").classList.toggle("active",name==="scene");$("#step-voice").classList.toggle("active",name==="voice");}
 function pause(){
   playing=false; playTicket++; player.pause(); voice.pause();
   cancelAnimationFrame(playbackFrame); playbackFrame=0;
@@ -256,8 +283,8 @@ function captionLines(clip){
     if(line||!lines.length)lines.push(line);return lines;
   });
 }
-function renderPreviewCaption(clip){
-  const title=$("#preview-title"),position=clip?.title_position||"legacy";
+function renderPreviewCaption(clip,target="#preview-title"){
+  const title=$(target),position=clip?.title_position||"legacy";
   title.textContent=captionLines(clip).join("\n");
   title.style.fontFamily={sans:"Arial, sans-serif",serif:"Georgia, serif",mono:"Consolas, monospace"}[clip?.title_font||"sans"];
   const ratio=({small:.035,medium:.044,large:.06}[clip?.title_size||"medium"]),lines=captionLines(clip).length;
@@ -296,7 +323,7 @@ function updateTime(){
   $("#timecode").innerHTML=`${stamp(time)} <span>/ ${stamp(project.duration)}</span>`;
   $("#seek").max=project.duration||1;
   if(!seekBusy) $("#seek").value=time;
-  updatePlayhead(time);updateSceneFade();
+  updatePlayhead(time);updateSceneFade();updatePreviewSubtitle(time);
 }
 function advance(){
   if(!playing) return;
@@ -532,6 +559,22 @@ document.querySelectorAll("[data-close-sheet]").forEach(b=>b.addEventListener("c
 $("#sheet-backdrop").addEventListener("click",closeSheet);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!document.querySelector("dialog[open]"))closeSheet();});
 matchMedia("(max-width:740px)").addEventListener("change",()=>closeSheet());
+$("#srt-input").addEventListener("change",async e=>{
+  const file=e.target.files[0];if(!file||!project)return;
+  try{
+    if(file.size>1000000)throw new Error("Use um SRT de até 1 MB.");
+    pendingSRT={projectId:project.id,revision:project.revision,text:await file.text()};
+    $("#srt-summary").textContent=`${file.name} · ${(project.captions||[]).length} legenda(s) atuais.`;
+    $("#srt-dialog").showModal();
+  }catch(error){toast(error.message,true);}finally{e.target.value="";}
+});
+$("#confirm-srt").addEventListener("click",async()=>{
+  await queue;const value=pendingSRT;if(!value)return;
+  if(project.id!==value.projectId||project.revision!==value.revision){$("#srt-dialog").close();toast("O projeto mudou. Selecione o SRT novamente para revisar a substituição.",true);return;}
+  $("#confirm-srt").disabled=true;
+  try{if(await mutate("captions_import",{srt:value.text},"Legendas importadas. Revise os tempos.")){$("#srt-dialog").close();pendingSRT=null;openInspector("captions");}}
+  finally{$("#confirm-srt").disabled=false;}
+});
 $("#file-input").addEventListener("change",e=>uploadFiles([...e.target.files]));
 ["#import-top","#import-zone","#import-main","#import-mobile"].forEach(s=>$(s).addEventListener("click",openFilePicker));
 $("#codex-main").addEventListener("click",()=>openLibraryTab("requests",true));
@@ -606,7 +649,7 @@ async function refreshJobs(){
 }
 
 setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
-(async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
+(async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}document.body.classList.toggle("has-subtitles",Boolean(editorFeatures.subtitles));await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 $("#phone-help").addEventListener("click",()=>{

@@ -66,7 +66,7 @@ def duration(project):
 
 
 class Store:
-    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings")
+    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings", "captions")
 
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -135,6 +135,7 @@ class Store:
     @staticmethod
     def public(project):
         result = copy.deepcopy(project)
+        result.setdefault("captions", [])
         result.pop("access", None)  # Sharing metadata has a separate owner-only API.
         result["undo_available"] = bool(result.pop("history", []))
         result["duration"] = duration(result)
@@ -311,12 +312,28 @@ class Store:
                 raise EditorError("Restaure o projeto antes de editar.", 404)
             if isinstance(expected_revision, bool) or expected_revision != p["revision"]:
                 raise EditorError("O projeto mudou. Atualize a página ou leia a revisão atual antes de editar.", 409)
+            p.setdefault("captions", [])
             snapshot = {k: copy.deepcopy(p[k]) for k in self.SNAPSHOT_FIELDS}
             snapshot["media_visibility"] = {m["id"]: m.get("deleted_at") for m in p["media"]}
             if operation == "script_update":
                 p["script"] = text(args.get("script", p["script"]))
                 p["name"] = text(args.get("name", p["name"]), 120) or p["name"]
                 p["description"] = text(args.get("description", p["description"]), 1000)
+            elif operation in ("caption_add", "caption_update", "caption_remove", "captions_replace", "captions_import"):
+                from .subtitles import parse_srt, validate_captions
+                if operation == "captions_import":
+                    p["captions"] = parse_srt(args.get("srt"))
+                elif operation == "captions_replace":
+                    p["captions"] = validate_captions(args.get("captions"))
+                elif operation == "caption_add":
+                    p["captions"] = validate_captions(p["captions"] + [args])
+                else:
+                    caption = self.find(p["captions"], args.get("caption_id"), "Legenda")
+                    if operation == "caption_remove":p["captions"].remove(caption)
+                    else:
+                        changes = {k:v for k,v in args.items() if k not in ("caption_id", "id")}
+                        caption.update(changes)
+                        p["captions"] = validate_captions(p["captions"])
             elif operation == "settings_update":
                 from .profiles import FORMATS
                 selected_format = args.get("format")

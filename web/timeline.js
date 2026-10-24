@@ -61,7 +61,14 @@ function renderTimeline(){
     body.addEventListener("dragend",()=>{dragId=null;node.classList.remove("dragging");document.querySelectorAll(".drop-target").forEach(n=>n.classList.remove("drop-target"));});
     node.querySelectorAll("[data-edge]").forEach(handle=>handle.addEventListener("pointerdown",beginTrim));
   });
-  renderAudioTrack(); updatePlayhead(cursor);
+  renderAudioTrack();renderCaptionTrack(); updatePlayhead(cursor);
+}
+
+function renderCaptionTrack(){
+  const track=$("#caption-track");track.hidden=!editorFeatures.subtitles;$("#caption-track-label").hidden=!editorFeatures.subtitles;
+  if(!editorFeatures.subtitles)return;
+  track.innerHTML=(project.captions||[]).map(c=>{const end=Math.min(c.end,project.duration);return end>c.start?`<button class="caption-region" data-caption="${c.id}" style="left:${c.start*timelineScale}px;width:${(end-c.start)*timelineScale}px" title="${esc(c.text)}">${esc(c.text)}</button>`:"";}).join("");
+  track.querySelectorAll("[data-caption]").forEach(button=>button.addEventListener("click",()=>{selectedCaption=button.dataset.caption;const c=project.captions.find(c=>c.id===selectedCaption);seekTo(c.start);renderCaptionInspector();openInspector("captions");}));
 }
 
 function renderAudioTrack(){

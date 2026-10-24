@@ -125,7 +125,7 @@ class Handler(BaseHTTPRequestHandler):
         store, media = self.server.store, self.server.media
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
-                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True}})
+                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True}})
             if path == "/auth/status":
                 return self.json({"authenticated": self.server.identity_resolver is not None})
             if path == "/api/projects":
@@ -159,6 +159,18 @@ class Handler(BaseHTTPRequestHandler):
                         "A voz é gravada depois da montagem visual. Não gere nem clone voz sem solicitação.",
                         "Pedidos pendentes estão em project.requests. Só marque como concluído após aplicar e verificar.",
                         "Cada vídeo tem contato visual em /api/projects/{project_id}/media/{media_id}/sheet.jpg."]})
+                if len(parts) == 4 and parts[3] == "captions.srt":
+                    from .subtitles import to_srt
+                    self.require_project(project_id, "download_exports")
+                    data = to_srt(project.get("captions", [])).encode("utf-8")
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/x-subrip; charset=utf-8")
+                    self.send_header("Content-Disposition", 'attachment; filename="lili-legendas.srt"')
+                    self.send_header("Content-Length", str(len(data)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    if self.command != "HEAD":self.wfile.write(data)
+                    return
                 if len(parts) == 6 and parts[3] == "media":
                     asset = store.find(project["media"], parts[4], "Arquivo")
                     kind = parts[5]

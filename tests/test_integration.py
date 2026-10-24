@@ -339,6 +339,19 @@ class IntegrationTests(unittest.TestCase):
             crossings=sum(1 for a,b in zip(samples,samples[1:]) if (a<0<=b) or (b<0<=a))
             self.assertAlmostEqual(crossings/(2*len(samples)/16000),440,delta=15)
 
+    def test_timed_subtitle_crosses_cut_and_srt_download_roundtrips(self):
+        p=self.client.call("POST","/api/projects",{"name":"Timed subtitles"})
+        imported=self.client.upload(p['id'],self.source);self.wait_job(imported['job']['id']);p=self.store.get(p['id'])
+        p=self.client.call('POST',f"/api/projects/{p['id']}/commands",{'operation':'timeline_replace','args':{'clips':[{'media_id':imported['media_id'],'start':0,'end':.5}]*2},'expected_revision':p['revision']})
+        p=self.client.call('POST',f"/api/projects/{p['id']}/commands",{'operation':'captions_import','args':{'srt':'1\n00:00:00,200 --> 00:00:00,800\nLegenda no corte'},'expected_revision':p['revision']})
+        data=self.client.call('GET',f"/api/projects/{p['id']}/captions.srt",binary=True)
+        self.assertIn(b'00:00:00,200 --> 00:00:00,800',data)
+        job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+        output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+        raw=subprocess.run([executable(),'-v','error','-i',str(output),'-vf','crop=540:300:0:650,format=gray','-f','rawvideo','pipe:1'],capture_output=True,check=True).stdout
+        size=540*300;frames=[sum(value>200 for value in raw[i:i+size]) for i in range(0,len(raw),size)]
+        self.assertEqual(frames[0],0);self.assertGreater(frames[9],30);self.assertGreater(frames[18],30);self.assertEqual(frames[-1],0)
+
 
 if __name__ == "__main__":
     unittest.main()

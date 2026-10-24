@@ -260,6 +260,19 @@ class ProjectTests(unittest.TestCase):
         self.apply("undo",{});self.apply("undo",{})
         self.assertEqual(self.p["duration"],3)
 
+    def test_subtitle_lane_is_independent_atomic_and_undoable(self):
+        clip=self.add()
+        self.apply("caption_add",{"start":.2,"end":1.2,"text":"Olá"})
+        caption=self.p["captions"][0]
+        revision=self.p["revision"]
+        with self.assertRaises(EditorError):self.apply("caption_add",{"start":1,"end":2,"text":"sobreposta"})
+        self.refresh();self.assertEqual(self.p["revision"],revision)
+        self.apply("caption_update",{"caption_id":caption['id'],"text":"Oi"})
+        self.apply("clip_split",{"clip_id":clip['id'],"at":2.5})
+        self.assertEqual(self.p['captions'][0]['start'],.2)
+        self.apply("caption_remove",{"caption_id":caption['id']});self.assertEqual(self.p['captions'],[])
+        self.apply("undo",{});self.assertEqual(self.p['captions'][0]['text'],'Oi')
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -130,3 +130,11 @@ class AccessHTTPTests(unittest.TestCase):
         self.assertEqual(self.request(cancel, "POST", {})[0], 404)
         current = self.request(base)[1]
         self.assertEqual(self.request(base + "/trash", "POST", {"expected_revision": current["revision"]})[0], 200)
+
+    def test_subtitle_download_requires_export_permission(self):
+        p=self.create();p=self.store.apply(p['id'],'caption_add',{'start':0,'end':1,'text':'Privado'},p['revision'])
+        self.grant(p,['view']);self.identity=Principal(B)
+        path=f"/api/projects/{p['id']}/captions.srt"
+        self.assertEqual(self.request(path)[0],404)
+        self.grant(p,['view','download_exports']);self.identity=Principal(B)
+        status,body=self.request(path);self.assertEqual(status,200);self.assertIn(b'Privado',body)

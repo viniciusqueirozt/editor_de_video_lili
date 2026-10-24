@@ -13,7 +13,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from .captions import SIZES, caption_lines
+from .text_render import text_filters, escape_path
 from .profiles import render_profile
 from .visuals import color_filter, tempo_filters
 from .core import EditorError, clip_duration, duration, now, number, uid
@@ -258,11 +258,11 @@ class MediaService:
             profile = render_profile(project["settings"], quality)
             width, height = profile["width"], profile["height"]
             font = Path(os.environ.get("LILI_FONT", "C:/Windows/Fonts/arial.ttf" if os.name == "nt" else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"))
-            escape_path = lambda p: p.resolve().as_posix().replace(":", "\\:").replace("'", "'\\''")
             watermark = project["settings"].get("watermark")
             if watermark:
                 watermark_file = folder / "watermark.txt"
                 watermark_file.write_text(watermark["text"], encoding="utf-8")
+            timeline_offset = 0
             for index, clip in enumerate(project["timeline"]):
                 asset = self.store.find(project["media"], clip["media_id"], "Arquivo")
                 args = ["-ss", clip["start"], "-i", self.source(project_id, asset)]
@@ -282,24 +282,16 @@ class MediaService:
                 grading = color_filter(clip)
                 if grading: filters += "," + grading
                 if clip["title"]:
-                    size = clip.get("title_size", "medium")
-                    ratio, _ = SIZES[size]
-                    lines = caption_lines(clip["title"], size)
-                    font_size = max(1, min(round(width * ratio), int(height*.6/(len(lines)*1.2))))
-                    font_name = clip.get("title_font", "sans")
-                    font_candidate = ({"serif": Path("C:/Windows/Fonts/georgia.ttf"), "mono": Path("C:/Windows/Fonts/consola.ttf")} if os.name == "nt" else {"serif": Path("/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf"), "mono": Path("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")}).get(font_name, font)
-                    selected_font = font_candidate if font_candidate.is_file() else font
-                    line_height = font_size * 1.2
-                    block_height = len(lines) * line_height
-                    y_base = {"legacy": height*.32, "top": height*.1, "center": height*.5-block_height/2, "bottom": height*.82-block_height}[clip.get("title_position", "legacy")]
-                    for line_index, line in enumerate(lines):
-                        title_file = folder / f"title-{index:04d}-{line_index:02d}.txt"
-                        title_file.write_text(line, encoding="utf-8")
-                        filters += f",drawtext=fontfile='{escape_path(selected_font)}':textfile='{escape_path(title_file)}':expansion=none:fontsize={font_size}:fontcolor=white:borderw=1:bordercolor=black@0.7:shadowcolor=black@0.5:shadowx=1:shadowy=1:x=(w-text_w)/2:y={y_base+line_index*line_height}"
+                    filters += text_filters(clip, folder, f"title-{index:04d}", width, height, font)
                 if clip.get("fade_in", 0):
                     filters += f",fade=t=in:st=0:d={clip['fade_in']}"
                 if clip.get("fade_out", 0):
                     filters += f",fade=t=out:st={output_duration-clip['fade_out']}:d={clip['fade_out']}"
+                for caption in project.get("captions", []):
+                    start = max(0, caption["start"]-timeline_offset)
+                    end = min(output_duration, caption["end"]-timeline_offset)
+                    if end > start:
+                        filters += text_filters(caption, folder, f"subtitle-{index:04d}-{caption['id']}", width, height, font, f"gte(t,{start})*lt(t,{end})")
                 if watermark:
                     right = watermark["position"].endswith("right")
                     bottom = watermark["position"].startswith("bottom")
@@ -311,6 +303,7 @@ class MediaService:
                          "-vf", filters, "-af", ",".join(audio_filters), "-c:v", "libx264", "-preset", "veryfast", "-crf", str(profile["crf"]),
                          "-pix_fmt", "yuv420p", "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "160k", "-video_track_timescale", "90000", folder / f"{index:04d}.mp4"]
                 run(args)
+                timeline_offset += output_duration
                 self.job_update(job_id, progress=round((index + 1) / len(project["timeline"]) * 85))
             playlist = folder / "segments.txt"
             playlist.write_text("\n".join(f"file '{i:04d}.mp4'" for i in range(len(project["timeline"]))), encoding="utf-8")

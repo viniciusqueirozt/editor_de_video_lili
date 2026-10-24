@@ -59,3 +59,11 @@ Brilho, contraste e saturação por cena, prévia ao ajustar e botão de restaur
 Velocidade constante de 0,25× a 4×, com duração da montagem, cursor, largura dos clipes, busca e aparo convertidos entre tempo da fonte e da montagem. Som original usa mudança de tempo com preservação de tom. A narração independente continua no tempo da montagem, com o aviso de duração existente. Fades são medidos em segundos da montagem; alterações incompatíveis são recusadas sem apagar os ajustes.
 
 Verificação: 20 testes de estado passaram; Node conferiu durações/offsets e curva de fade. Três exportações reais a 0,5×, 2× e 4× confirmaram duração e tom próximo de 440 Hz. Não inclui speed ramp nem interpolação por IA.
+
+### Pacote de legendas ampliado
+
+Faixa de legendas independente das cenas, com início/fim/texto/estilo editáveis e blocos clicáveis na linha do tempo. Importação SRT com revisão explícita da substituição e download SRT com permissão de entrega. Conteúdo tratado como texto simples; limites de tamanho/quantidade, tempos válidos e ausência de sobreposição na mesma faixa. Desfazer restaura a faixa.
+
+Prévia e exportação mostram a legenda pelo tempo da montagem, inclusive atravessando cortes; ficam legíveis durante fades da imagem. Legendas que ultrapassam a montagem são sinalizadas para revisão, sem deslocamento silencioso. Transcrição automática continua pendente.
+
+Verificação: parser/roundtrip SRT e validações, edição atômica/Desfazer, permissões HTTP e Node de limites da prévia. Teste FFmpeg confirmou ausência/presença nos quadros antes, durante e depois do intervalo, inclusive após a junção de cenas. Somente projetos sintéticos.
