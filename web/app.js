@@ -7,6 +7,7 @@ const precise = seconds => `${Number(seconds).toFixed(1).replace(".",",")} s`;
 const player = $("#player"), voice = $("#voice-player"), musicPlayer = $("#music-player");
 let project = null, selected = null, projects = [], queue = Promise.resolve(), toastTimer, uploadRunning = false, playing = false, seekBusy = false, loadedSource = "", dragId = null;
 let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
+let previewSeek = null;
 let editorFeatures = {};
 const uploadState = {pending:null, cancel:false, completing:false, available:false};
 let importBatch = null, pendingRemoval = null, aiAvailable = null, aiStarting = false, aiJobsKey = "";
@@ -109,7 +110,7 @@ function render() {
   $("#trash-count").textContent=trash.length?`(${trash.length})`:"";
   $("#trash-list").innerHTML=trash.map(m=>`<article class="trash-card"><div>${icon(m.kind==="audio"?"mic":"film")}<strong>${esc(m.name)}</strong></div><button class="button secondary" data-restore-media="${m.id}">Restaurar</button></article>`).join("")||'<p class="empty-note">Nenhum arquivo na Lixeira.</p>';
   $("#trash-list").querySelectorAll("[data-restore-media]").forEach(button=>button.addEventListener("click",()=>mutate("media_restore",{media_id:button.dataset.restoreMedia},"Arquivo restaurado à biblioteca.")));
-  renderMusicInspector();renderCaptionInspector();renderTimeline(); renderRequests(); seekTo(Math.min(cursor, project.duration));
+  renderMusicInspector();renderCaptionInspector();renderTimeline(); renderRequests(); seekTo(Math.min(cursor, project.duration),true);
   $("#undo-button").disabled = !project.undo_available;$("#redo-button").hidden=!editorFeatures.redo;$("#redo-button").disabled=!project.redo_available;
   $("#draft-button").disabled = !project.script.trim() || !project.media.some(m=>m.kind==="video" && m.status==="ready");
   $("#export-button").disabled = !project.timeline.length;
@@ -220,9 +221,10 @@ function selectClip(id, resume=false){
   pause(); selected=id; markSelection(); updatePlayer(false,before());
   if(resume) play();
 }
-function seekTo(time){
+function seekTo(time, refreshInspector=false){
   if(!project) return;
   pause();
+  const previousSelection=selected;
   cursor=Math.max(0,Math.min(project.duration,Number(time)||0));
   let offset=0;
   for(let i=0;i<project.timeline.length;i++){
@@ -230,29 +232,40 @@ function seekTo(time){
     if(cursor < offset+length-.00001 || i===project.timeline.length-1){selected=c.id;break;}
     offset+=length;
   }
-  markSelection(); updatePlayer(false,cursor);
+  if(refreshInspector||selected!==previousSelection)markSelection();
+  updatePlayer(false,cursor);
+}
+// Serialize media seeks: while one is decoding, retain only the newest request.
+// A late seeked event must never mark an older frame as the requested frame.
+function flushPreviewSeek(){
+  const request=previewSeek;
+  if(!request||request.source!==loadedSource||request.clipId!==currentClip()?.id)return;
+  if(player.readyState<1||player.seeking)return;
+  if(Math.abs(player.currentTime-request.position)>.001){
+    playerLoading=true;player.currentTime=request.position;
+  }else{
+    if(player.readyState<2)return;
+    previewSeek=null;playerLoading=false;
+    if(request.resume&&playing)play();
+  }
+  if(typeof updatePrecisionControls==="function")updatePrecisionControls();
 }
 function updatePlayer(resume=false, time=before()){
   const c=currentClip(), m=c&&assetFor(c);
   $("#preview-empty").hidden=!!c; player.hidden=!c;
   renderPreviewCaption(c);renderPreviewFraming(c);
   cursor=Math.max(0,Math.min(project.duration,time));
-  if(!c){player.removeAttribute("src");voice.pause();musicPlayer.pause();loadedSource="";cursor=0;$("#scene-position").textContent="Nenhuma cena";updateTime();return;}
+  if(!c){previewSeek=null;playerLoading=false;player.removeAttribute("src");voice.pause();musicPlayer.pause();loadedSource="";cursor=0;$("#scene-position").textContent="Nenhuma cena";updateTime();return;}
   const source=assetUrl(m), clipId=c.id;
   const position=Math.min(c.end-.001,c.start+Math.max(0,cursor-before())*(c.speed||1));
-  const seekAndPlay=()=>{
-    if(currentClip()?.id!==clipId) return;
-    if(Math.abs(player.currentTime-position)>.008){playerLoading=true;player.currentTime=position;}
-    else playerLoading=false;
-    if(resume && playing) play();
-  };
+  previewSeek={source,clipId,position,resume};playerLoading=true;
   player.playbackRate=c.speed||1;
   player.preservesPitch=true;
-  player.onloadedmetadata=seekAndPlay;
+  player.onloadedmetadata=flushPreviewSeek;
   player.poster=frameUrl(c); player.volume=Math.min(1,c.volume);
   if(loadedSource!==source){
     playerLoading=true; voice.pause();musicPlayer.pause(); player.src=source; loadedSource=source; player.load();
-  } else if(player.readyState>=1) seekAndPlay();
+  } else flushPreviewSeek();
   const narration=project.narration;
   if(narration){
     const a=project.media.find(m=>m.id===narration.media_id), src=assetUrl(a);
@@ -377,6 +390,7 @@ function updateTime(){
   $("#seek").max=project.duration||1;
   if(!seekBusy) $("#seek").value=time;
   updatePlayhead(time);updateSceneFade();updatePreviewSubtitle(time);
+  if(typeof updatePrecisionControls==="function")updatePrecisionControls();
 }
 function advance(){
   if(!playing) return;
@@ -397,7 +411,8 @@ function playbackTick(){
   }
   playbackFrame=requestAnimationFrame(playbackTick);
 }
-player.addEventListener("seeked",()=>{playerLoading=false;syncVoice();syncMusic();});
+player.addEventListener("seeked",()=>{flushPreviewSeek();syncVoice();syncMusic();});
+player.addEventListener("loadeddata",flushPreviewSeek);
 player.addEventListener("waiting",()=>{voice.pause();musicPlayer.pause();});
 player.addEventListener("ended",advance);
 player.addEventListener("error",()=>{if(currentClip()){pause();toast("A prévia não abriu. Aguarde a importação ou consulte o arquivo original.",true);}});

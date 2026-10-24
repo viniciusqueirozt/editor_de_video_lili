@@ -16,7 +16,7 @@ function renderTimeline(){
   $("#clip-count").textContent=`${clips.length} ${clips.length===1?"cena":"cenas"}`;
   $("#total-duration").textContent=`Duração ${precise(project.duration)}`;
   $("#timeline-subtitle").textContent=clips.length?"Selecione • apare pelas bordas • divida no cursor":"Adicione um vídeo para começar.";
-  if(!timelineGesture)$("#timeline-hint").textContent="Clique na régua para posicionar o cursor. Arraste as bordas do clipe para aparar.";
+  if(!timelineGesture)$("#timeline-hint").textContent="Régua: posicione ou use dois dedos para ampliar. Precisão: avance por quadro e apare no cursor.";
   $("#timeline-zoom").value=timelineZoom;
   const step=[.1,.25,.5,1,2,5,10,15,30,60,120,300,600].find(s=>s*timelineScale>=65)||600;
   const ticks=[];
@@ -121,15 +121,55 @@ function updatePlayhead(time){
 }
 
 function pointerTime(e){return clamp((e.clientX-trackCanvas.getBoundingClientRect().left)/timelineScale,0,project.duration);}
+const rulerPointers=new Map();
+let rulerFrame=0;
+function pinchGeometry(points){
+  const [a,b]=points;
+  return {distance:Math.abs(a-b),center:(a+b)/2};
+}
+function moveRulerPinch(){
+  rulerFrame=0;
+  const gesture=timelineGesture;if(gesture?.type!=="pinch"||rulerPointers.size!==2)return;
+  const geometry=pinchGeometry([...rulerPointers.values()]);
+  timelineZoom=clamp(gesture.zoom*geometry.distance/gesture.distance,.5,8);
+  renderTimeline();
+  trackScroll.scrollLeft=Math.max(0,gesture.anchor*timelineScale-(geometry.center-trackScroll.getBoundingClientRect().left));
+}
 trackCanvas.addEventListener("pointerdown",e=>{
   if(e.button!==0||!project?.timeline.length||e.target.closest("button")) return;
-  pause();timelineGesture={type:"seek",pointerId:e.pointerId};
+  if(timelineGesture?.type==="trim"||timelineGesture?.type==="drain")return;
+  if(e.pointerType==="touch"&&e.target.closest("#time-ruler")){
+    if(rulerPointers.size>=2)return;
+    rulerPointers.set(e.pointerId,e.clientX);
+    if(rulerPointers.size===2){
+      const geometry=pinchGeometry([...rulerPointers.values()]);
+      if(geometry.distance<8){rulerPointers.delete(e.pointerId);return;}
+      const original=timelineGesture?.originalCursor??cursor;
+      timelineGesture={type:"pinch",distance:geometry.distance,zoom:timelineZoom,anchor:(geometry.center-trackCanvas.getBoundingClientRect().left)/timelineScale};
+      trackCanvas.setPointerCapture(e.pointerId);seekTo(original);return;
+    }
+  }
+  if(timelineGesture)return;
+  pause();timelineGesture={type:"seek",pointerId:e.pointerId,originalCursor:cursor};
   trackCanvas.setPointerCapture(e.pointerId);seekTo(pointerTime(e));
 });
 trackCanvas.addEventListener("pointermove",e=>{
+  if(rulerPointers.has(e.pointerId))rulerPointers.set(e.pointerId,e.clientX);
+  if(timelineGesture?.type==="pinch"){
+    if(!rulerFrame)rulerFrame=requestAnimationFrame(moveRulerPinch);return;
+  }
   if(timelineGesture?.type==="seek"&&e.pointerId===timelineGesture.pointerId)seekTo(pointerTime(e));
 });
-function endScrub(e){if(timelineGesture?.type==="seek"&&e.pointerId===timelineGesture.pointerId){timelineGesture=null;if(trackCanvas.hasPointerCapture(e.pointerId))trackCanvas.releasePointerCapture(e.pointerId);}}
+function endScrub(e){
+  if((timelineGesture?.type==="pinch"||timelineGesture?.type==="drain")&&!rulerPointers.has(e.pointerId))return;
+  rulerPointers.delete(e.pointerId);
+  if(trackCanvas.hasPointerCapture(e.pointerId))trackCanvas.releasePointerCapture(e.pointerId);
+  if(timelineGesture?.type==="pinch"||timelineGesture?.type==="drain"){
+    cancelAnimationFrame(rulerFrame);rulerFrame=0;
+    timelineGesture=rulerPointers.size?{type:"drain"}:null;return;
+  }
+  if(timelineGesture?.type==="seek"&&e.pointerId===timelineGesture.pointerId)timelineGesture=null;
+}
 trackCanvas.addEventListener("pointerup",endScrub);trackCanvas.addEventListener("pointercancel",endScrub);
 
 function beginTrim(e){
@@ -137,8 +177,9 @@ function beginTrim(e){
   e.preventDefault();e.stopPropagation();pause();
   const handle=e.currentTarget,node=handle.closest("[data-clip]"),c=project.timeline.find(c=>c.id===node.dataset.clip);
   if(c.locked)return;
+  const originalCursor=cursor;
   selected=c.id;markSelection();updatePlayer(false,before());
-  timelineGesture={type:"trim",clip:{...c},edge:handle.dataset.edge,x:e.clientX,pointerId:e.pointerId,node,revision:project.revision,changed:null};
+  timelineGesture={type:"trim",clip:{...c},edge:handle.dataset.edge,x:e.clientX,pointerId:e.pointerId,node,revision:project.revision,changed:null,originalCursor};
   handle.setPointerCapture(e.pointerId);node.classList.add("trimming");
   handle.addEventListener("pointermove",moveTrim);
   handle.addEventListener("pointerup",finishTrim,{once:true});
@@ -149,7 +190,7 @@ function moveTrim(e){
   const gesture=timelineGesture;
   if(gesture?.type!=="trim"||gesture.pointerId!==e.pointerId)return;
   const c=gesture.clip, edge=gesture.edge, speed=c.speed||1, delta=(e.clientX-gesture.x)/timelineScale*speed;
-  const minimum=Math.max(.1,(c.fade_in||0)+(c.fade_out||0))*speed;
+  const minimum=minimumClipLength(c)*speed;
   const asset=assetFor(c), value=roundTime(edge==="start"?clamp(c.start+delta,0,c.end-minimum):clamp(c.end+delta,c.start+minimum,asset.duration));
   gesture.changed={[edge]:value};
   const start=edge==="start"?value:c.start, end=edge==="end"?value:c.end;
@@ -159,7 +200,10 @@ function moveTrim(e){
   gesture.node.style.left=`${(before()+(edge==="start"?(start-c.start)/speed:0))*timelineScale}px`;
   $("#clip-start").value=start;$("#clip-end").value=end;
   $("#timeline-hint").textContent=`Entrada ${precise(start)} → saída ${precise(end)} · duração ${precise((end-start)/speed)}`;
-  if(player.readyState>=1&&loadedSource===assetUrl(asset))player.currentTime=edge==="start"?start:Math.max(start,end-.033);
+  if(loadedSource===assetUrl(asset)){
+    previewSeek={source:loadedSource,clipId:c.id,position:edge==="start"?start:Math.max(start,end-.001),resume:false};
+    playerLoading=true;flushPreviewSeek();
+  }
 }
 function clearTrim(handle){
   handle.removeEventListener("pointermove",moveTrim);handle.removeEventListener("pointerup",finishTrim);handle.removeEventListener("pointercancel",cancelTrim);
@@ -170,10 +214,89 @@ function finishTrim(e){
   clearTrim(e.currentTarget);timelineGesture=null;suppressClipClick=true;
   setTimeout(()=>{suppressClipClick=false;},0);
   if(gesture.changed&&gesture.changed[gesture.edge]!==gesture.clip[gesture.edge]){
-    cursor=before();mutate("clip_update",{clip_id:gesture.clip.id,...gesture.changed},"Corte ajustado e salvo.");
-  }else{renderTimeline();seekTo(cursor);}
+    cursor=trimmedCursor(gesture.clip,gesture.edge,gesture.changed[gesture.edge],before());
+    mutate("clip_update",{clip_id:gesture.clip.id,...gesture.changed},"Corte ajustado e salvo.");
+  }else{renderTimeline();seekTo(gesture.originalCursor);}
 }
-function cancelTrim(e){clearTrim(e.currentTarget);timelineGesture=null;renderTimeline();seekTo(cursor);}
+function cancelTrim(e){const original=timelineGesture?.originalCursor??cursor;clearTrim(e.currentTarget);timelineGesture=null;renderTimeline();seekTo(original);}
+
+// Montage output is 30 fps; stepping uses its grid, not the source's VFR frames.
+function frameStep(time,direction,duration){
+  const frame=time*30, nearest=Math.round(frame);
+  const atFrame=Math.abs(frame-nearest)<.00001;
+  const next=atFrame?nearest+direction:direction>0?Math.ceil(frame):Math.floor(frame);
+  return clamp(next/30,0,duration);
+}
+function parseMontageTime(value){
+  const text=String(value).trim().replace(",",".");
+  if(/^\d+(?:\.\d{1,3})?$/.test(text))return Number(text);
+  if(!/^\d+:\d{2}(?:\.\d{1,3})?$/.test(text))return null;
+  const [minutes,seconds]=text.split(":").map(Number);
+  return seconds<60?minutes*60+seconds:null;
+}
+function montageTime(time){
+  const ms=Math.round(Math.max(0,time)*1000);
+  return `${String(Math.floor(ms/60000)).padStart(2,"0")}:${String(Math.floor(ms/1000)%60).padStart(2,"0")}.${String(ms%1000).padStart(3,"0")}`;
+}
+function minimumClipLength(c){
+  return Math.max(.1,(c.fade_in||0)+(c.fade_out||0),(c.audio_fade_in||0)+(c.audio_fade_out||0));
+}
+function cursorTrim(c,edge,time,offset){
+  if(!c||c.locked||!Number.isFinite(time))return null;
+  const value=roundTime(c.start+(time-offset)*(c.speed||1));
+  const start=edge==="start"?value:c.start,end=edge==="end"?value:c.end;
+  if(start<c.start||end>c.end||start>=end||(end-start)/(c.speed||1)<minimumClipLength(c)-.000001||value===c[edge])return null;
+  return {[edge]:value};
+}
+function trimmedCursor(c,edge,value,offset){
+  const length=((edge==="end"?value:c.end)-(edge==="start"?value:c.start))/(c.speed||1);
+  return offset+(edge==="end"?Math.max(0,length-.001):0);
+}
+let precisionSaving=false;
+function updatePrecisionControls(){
+  const c=currentClip(),available=!!c&&!precisionSaving;
+  $("#precision-open").disabled=!c;$("#timecode").disabled=!c;
+  if(!$("#precision-dialog").open)return;
+  const input=$("#precision-time");
+  input.disabled=precisionSaving;$("#precision-go").disabled=precisionSaving;
+  if(document.activeElement!==input)input.value=montageTime(cursor);
+  $("#precision-scene").textContent=c?`Cena ${index()+1} · ${c.label}`:"Adicione uma cena para começar.";
+  $("#precision-status").textContent=precisionSaving?"Salvando corte…":playerLoading||player.seeking?"Buscando quadro…":"Posição pronta";
+  $("#precision-back").disabled=!available||cursor<=0;
+  $("#precision-forward").disabled=!available||cursor>=project.duration;
+  $("#precision-undo").disabled=precisionSaving||!project.undo_available;
+  for(const edge of ["start","end"])$("#precision-"+edge).disabled=!available||playerLoading||player.seeking||!cursorTrim(c,edge,cursor,before());
+  $("#precision-trim-note").textContent=c?.locked?"Esta cena está protegida. Desproteja nos ajustes para aparar.":"Apara somente a cena selecionada. O restante da sequência se aproxima; narração, música e legendas mantêm suas posições. Você pode desfazer.";
+}
+function openPrecision(){
+  if(!currentClip())return;
+  pause();$("#precision-error").hidden=true;$("#precision-time").removeAttribute("aria-invalid");$("#precision-dialog").showModal();updatePrecisionControls();
+  $("#precision-time").value=montageTime(cursor);
+}
+$("#precision-open").addEventListener("click",openPrecision);
+$("#timecode").addEventListener("click",openPrecision);
+$("#precision-undo").addEventListener("click",async()=>{
+  if(precisionSaving||!project.undo_available)return;
+  precisionSaving=true;updatePrecisionControls();
+  try{await mutate("undo",{},"Última alteração desfeita.");}
+  finally{precisionSaving=false;updatePrecisionControls();}
+});
+$("#precision-form").addEventListener("submit",e=>{
+  e.preventDefault();if(precisionSaving)return;
+  const input=$("#precision-time"),time=parseMontageTime(input.value),error=$("#precision-error");
+  if(time===null||!Number.isFinite(time)||time>project.duration){
+    error.textContent=`Use uma posição entre 0 e ${montageTime(project.duration)}.`;error.hidden=false;input.setAttribute("aria-invalid","true");return;
+  }
+  error.hidden=true;input.removeAttribute("aria-invalid");input.blur();seekTo(time);
+});
+for(const [id,direction] of [["back",-1],["forward",1]])$("#precision-"+id).addEventListener("click",()=>seekTo(frameStep(cursor,direction,project.duration)));
+for(const edge of ["start","end"])$("#precision-"+edge).addEventListener("click",async()=>{
+  if(precisionSaving||playerLoading||player.seeking)return;
+  const c=currentClip(),changes=cursorTrim(c,edge,cursor,before());if(!changes)return;
+  precisionSaving=true;cursor=trimmedCursor(c,edge,changes[edge],before());updatePrecisionControls();
+  try{await mutate("clip_update",{clip_id:c.id,...changes},"Corte no cursor salvo. Você pode desfazer.");}
+  finally{precisionSaving=false;updatePrecisionControls();}
+});
 
 function setTimelineZoom(value){
   const anchor=cursor;timelineZoom=clamp(Number(value),.5,8);renderTimeline();
@@ -190,8 +313,9 @@ $("#split-button").addEventListener("click",()=>{
 $("#delete-button").addEventListener("click",()=>{const c=currentClip();if(c&&!c.locked)mutate("clip_remove",{clip_id:c.id},"Cena removida. Você pode desfazer.");});
 $("#duplicate-button").addEventListener("click",()=>{const c=currentClip();if(c&&!$("#duplicate-button").disabled)mutate("clip_duplicate",{clip_id:c.id},"Cena duplicada. A cópia pode ser ajustada livremente.");});
 trackScroll.addEventListener("keydown",e=>{
+  if(/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)||!project)return;
   if(e.key==="ArrowLeft"||e.key==="ArrowRight"){
-    e.preventDefault();seekTo(cursor+(e.key==="ArrowLeft"?-1:1)*(e.shiftKey?1:1/30));
+    e.preventDefault();const direction=e.key==="ArrowLeft"?-1:1;seekTo(e.shiftKey?cursor+direction:frameStep(cursor,direction,project.duration));
   }else if(e.key==="Home"){e.preventDefault();seekTo(0);}
   else if(e.key==="End"){e.preventDefault();seekTo(project.duration);}
 });

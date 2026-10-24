@@ -20,6 +20,12 @@ Base de trabalho: [estudo detalhado do CapCut Mobile](capcut-mobile-estudo-inter
 
 Antes de implementar, abrir a referência do Fxx na seção Mobile ou no minuto marcado do vídeo. Verificar plataforma e versão; separar documentação, amostragem visual, transcrição e proposta. Cada tarefa deve registrar os IDs consultados, comportamento da Lili, testes e estado de ativação. Efeitos elaborados permanecem após a base, conforme o catálogo do estudo.
 
+### Primeira implementação após o estudo — 24/10/2026
+
+Entregue parcialmente F05–F08/P01/P03: painel Precisão, posição digitável, passo de um quadro da montagem, aparo no cursor com Desfazer, busca que conserva o último destino, inspetor estável e pinça restrita à régua. Aparo por arraste conserva a saída escolhida e considera fades sonoros. Interface ativa após recarregar; Safari real pendente. Os dois itens P0 acima continuam abertos porque seleção contextual completa, pinça sobre todas as trilhas e ímã ainda faltam.
+
+Relatório e verificação: [rodada de precisão](rodada-precisao-timeline-24-10-2026.md). Próxima prioridade de edição: transição real na junção e aplicação visual de efeitos.
+
 ## Prioridade de execução — 24/10/2026
 
 O usuário definiu quatro rodadas de recursos de edição, uma revisão dedicada de segurança e uma extra condicional para visual e pesquisa de concorrentes/monetização. Esta estrutura substitui a prioridade anterior de concentrar as rodadas em identidade e contas.
