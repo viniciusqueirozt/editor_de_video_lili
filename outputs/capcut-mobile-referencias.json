@@ -1,0 +1,1880 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-24",
+  "scope": "CapCut Mobile iOS/Android; pesquisa e propostas para a Lili, sem implementação nesta etapa",
+  "sources": [
+    {
+      "id": "C01",
+      "title": "Centro de ajuda CapCut",
+      "url": "https://www.capcut.com/help",
+      "locator": "Índice de ajuda; consultar a subseção Mobile de cada artigo",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C02",
+      "title": "Transições: localização e condições",
+      "url": "https://www.capcut.com/help/transitions-in-capcut",
+      "locator": "How to Use Transitions in CapCut on Mobile",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C03",
+      "title": "Aplicação e duração de efeitos",
+      "url": "https://www.capcut.com/help/effectss-not-applying-in-capcut",
+      "locator": "How to Add Effects in CapCut on Mobile",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C04",
+      "title": "Catálogo e ajuste de efeitos no app",
+      "url": "https://www.capcut.com/resource/special-effects-apps",
+      "locator": "How to add video effects with this best video effects app",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C05",
+      "title": "Desfoque e ações de um efeito",
+      "url": "https://www.capcut.com/resource/blur-a-video-app",
+      "locator": "How to create app blur videos with the CapCut app",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C06",
+      "title": "Prévia e edição divergentes",
+      "url": "https://www.capcut.com/help/editing-not-match-displayed",
+      "locator": "CapCut Mobile App (iOS / Android)",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "Usar diagnóstico de resultado; não reproduzir recomendações de limpeza de dados na Lili.",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C07",
+      "title": "Reconhecimento de legendas",
+      "url": "https://www.capcut.com/help/how-to-recognise-subtitles",
+      "locator": "CapCut Mobile App (iOS/Android)",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C08",
+      "title": "Dividir legendas",
+      "url": "https://www.capcut.com/help/split-the-subtiltes",
+      "locator": "CapCut Mobile App (iOS / Android)",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C09",
+      "title": "Corrigir legendas automáticas",
+      "url": "https://www.capcut.com/help/auto-captions-in-capcut",
+      "locator": "CapCut Mobile App (iOS / Android)",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C10",
+      "title": "Zoom com keyframes no celular",
+      "url": "https://www.capcut.com/resource/how-to-zoom-in-on-video",
+      "locator": "How to zoom in on a video edit with the CapCut mobile app",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C11",
+      "title": "Velocidade no iPhone",
+      "url": "https://www.capcut.com/resource/how-to-speed-up-a-video",
+      "locator": "How to speed up a video on an iPhone using CapCut",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C12",
+      "title": "Curvas e auto velocity móvel",
+      "url": "https://www.capcut.com/resource/how-to-do-velocity-on-capcut",
+      "locator": "Method 3. How to make a velocity edit on CapCut mobile app",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C13",
+      "title": "Sobreposição no celular",
+      "url": "https://www.capcut.com/resource/free-video-overlay-effects",
+      "locator": "How to use video overlays on a phone: CapCut mobile app",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C14",
+      "title": "Gravar voz, voz sintética e efeitos sonoros",
+      "url": "https://www.capcut.com/resource/how-to-add-voice-in-a-video",
+      "locator": "Way 2: Using record audio tool; Way 3: Using a sound tool",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C15",
+      "title": "Extrair e editar áudio no app",
+      "url": "https://www.capcut.com/resource/audio-extractor-from-mp4",
+      "locator": "Here are the steps for extracting audio with the CapCut mobile app",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C16",
+      "title": "Fluxo básico no app",
+      "url": "https://www.capcut.com/resource/free-video-edit",
+      "locator": "Using CapCut on the App (Android/iOS)",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C17",
+      "title": "Congelar quadro no celular",
+      "url": "https://www.capcut.com/resource/freeze-frame-final-cut-pro",
+      "locator": "How to freeze frame on Phone with CapCut",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "Página também contém Final Cut Pro e desktop; somente a seção Phone foi aproveitada.",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C18",
+      "title": "Mudanças de localização dos controles",
+      "url": "https://www.capcut.com/help/capcut-ui-update-changes",
+      "locator": "Why Did Feature Locations or the UI Change After I Updated CapCut?",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C19",
+      "title": "Catálogo pode mudar ou perder efeitos",
+      "url": "https://www.capcut.com/help/ai-templates-and-effects",
+      "locator": "CapCut Mobile App (iOS/Android)",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C20",
+      "title": "Desfoque de movimento no celular",
+      "url": "https://www.capcut.com/resource/motion-blur-effect",
+      "locator": "CapCut mobile editing app / Add motion blur effect & edit",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "C21",
+      "title": "Introdução oficial ao telefone",
+      "url": "https://www.capcut.com/resource/capcut-tutorial-for-beginners",
+      "locator": "How to use CapCut for beginners on a mobile phone",
+      "type": "official_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "official_mobile_documentation"
+      ]
+    },
+    {
+      "id": "V01",
+      "title": "CAPCUT - Como EDITAR VÍDEOS do Zero pelo CELULAR — Jefe Vilanova",
+      "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc",
+      "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+      "type": "youtube_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "Amostragem visual da interface móvel em torno de 03:26; transcrição analisada. Interface antiga: revalidar nomes e disponibilidade.",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "public_youtube_transcript",
+        "sampled_visual_review"
+      ],
+      "visual_sample_seconds": [
+        206
+      ],
+      "published_at": "2023-04-20"
+    },
+    {
+      "id": "V02",
+      "title": "CapCut App Video Editing Tutorial - How To Edit Videos On iPhone! — Justin Brown / Primal Video",
+      "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo",
+      "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+      "type": "youtube_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "YouTube mostrou dublagem automática em português. Amostras visuais em 05:23 e 14:08 confirmam telefone e catálogo; não é tutorial desktop.",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "public_youtube_transcript",
+        "sampled_visual_review"
+      ],
+      "visual_sample_seconds": [
+        323,
+        848
+      ],
+      "published_at": "2024-03-06"
+    },
+    {
+      "id": "V03",
+      "title": "20 CapCut Mobile Effects to COMPLETELY Change your Editing — Matt Loui",
+      "url": "https://www.youtube.com/watch?v=KVws1GVHoA0",
+      "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+      "type": "youtube_mobile",
+      "checked_at": "2026-10-24",
+      "limitations": "Amostragem visual em 03:50 confirma camada de ajuste no telefone. Publicidade externa ignorada; recursos gratuitos/Pro não foram auditados em conta real.",
+      "app_version": "não verificada em aparelho real",
+      "review_mode": [
+        "public_youtube_transcript",
+        "sampled_visual_review"
+      ],
+      "visual_sample_seconds": [
+        230
+      ],
+      "published_at": "2025-10-20"
+    }
+  ],
+  "functions": [
+    {
+      "id": "F01",
+      "title": "Importar e começar uma montagem",
+      "category": "Navegação e montagem",
+      "observed_workflow": "Novo projeto abre a seleção de mídias do aparelho; os arquivos escolhidos entram na edição.",
+      "references": [
+        {
+          "source_id": "C21",
+          "url": "https://www.capcut.com/resource/capcut-tutorial-for-beginners",
+          "locator": "How to use CapCut for beginners on a mobile phone",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "C16",
+          "url": "https://www.capcut.com/resource/free-video-edit",
+          "locator": "Using CapCut on the App (Android/iOS)",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Importação local existente, inclusive fotos estáticas.",
+      "lili_proposal": "Mostrar selecionados, ordem de entrada e progresso; distinguir adicionar à biblioteca de inserir na montagem.",
+      "acceptance": "Seleção de três arquivos deve comunicar destino e ordem antes de confirmar.",
+      "priority": "P1",
+      "report_anchor": "#f01"
+    },
+    {
+      "id": "F02",
+      "title": "Ferramentas conforme a seleção",
+      "category": "Navegação e montagem",
+      "observed_workflow": "Selecionar um elemento muda as ferramentas inferiores disponíveis.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=220s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 220,
+          "end_seconds": 256,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Painel Cena concentra muitos grupos; existem abas de narração, música e legendas.",
+      "lili_proposal": "Uma barra contextual curta: vídeo, texto, áudio, efeito ou junção; um painel inferior por tarefa.",
+      "acceptance": "Selecionar música não deve abrir campos de recorte de imagem; voltar deve recuperar o contexto.",
+      "priority": "P0",
+      "report_anchor": "#f02"
+    },
+    {
+      "id": "F03",
+      "title": "Reproduzir, pausar e ampliar a prévia",
+      "category": "Navegação e montagem",
+      "observed_workflow": "Prévia, contador e reprodução ficam próximos; há ampliação do monitor.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=137s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 137,
+          "end_seconds": 185,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Prévia ampliada existente.",
+      "lili_proposal": "Manter cursor e seleção ao ampliar; mostrar quando o quadro solicitado ainda está carregando.",
+      "acceptance": "Pausar e ampliar não podem trocar o instante ou perder o enquadramento.",
+      "priority": "P0",
+      "report_anchor": "#f03"
+    },
+    {
+      "id": "F04",
+      "title": "Desfazer e refazer acessíveis",
+      "category": "Navegação e montagem",
+      "observed_workflow": "As duas ações ficam próximas da reprodução, disponíveis durante a edição.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=158s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 158,
+          "end_seconds": 176,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=1034s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 1034,
+          "end_seconds": 1048,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Histórico persistente e botões existentes.",
+      "lili_proposal": "Manter os botões visíveis no telefone, informar a ação recuperada e desfazer uma confirmação inteira.",
+      "acceptance": "Uma aplicação de efeito seguida de Desfazer deve restaurar tudo; Refazer deve recuperar o mesmo resultado.",
+      "priority": "P1",
+      "report_anchor": "#f04"
+    },
+    {
+      "id": "F05",
+      "title": "Percorrer a linha do tempo",
+      "category": "Navegação e montagem",
+      "observed_workflow": "Arrastar a linha permite explorar o vídeo em relação ao indicador de reprodução.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=203s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 203,
+          "end_seconds": 219,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Régua e cursor arrastáveis; também existe barra de busca separada.",
+      "lili_proposal": "No telefone, testar trilha rolando sob cursor central; separar navegar, selecionar e mover um clipe.",
+      "acceptance": "Ao soltar o dedo, manter o instante escolhido; um toque para selecionar não deve reposicionar o vídeo inesperadamente.",
+      "priority": "P0",
+      "report_anchor": "#f05"
+    },
+    {
+      "id": "F06",
+      "title": "Zoom por pinça na linha do tempo",
+      "category": "Navegação e montagem",
+      "observed_workflow": "O gesto muda a escala temporal, permitindo enxergar uma região menor ou a montagem inteira.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=203s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 203,
+          "end_seconds": 219,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=209s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 209,
+          "end_seconds": 244,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Zoom por botões e slider; gesto de dois dedos não implementado em timeline.js.",
+      "lili_proposal": "Adicionar pinça ancorada no ponto tocado e atalhos Ajustar/Detalhar, preservando a posição.",
+      "acceptance": "O mesmo corte deve continuar sob o ponto de referência depois de ampliar/reduzir.",
+      "priority": "P0",
+      "report_anchor": "#f06"
+    },
+    {
+      "id": "F07",
+      "title": "Aparar pelas bordas",
+      "category": "Navegação e montagem",
+      "observed_workflow": "Selecionar um clipe revela alças nas extremidades para ajustar entrada e saída.",
+      "references": [
+        {
+          "source_id": "C16",
+          "url": "https://www.capcut.com/resource/free-video-edit",
+          "locator": "Using CapCut on the App (Android/iOS)",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=273s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 273,
+          "end_seconds": 292,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Alças e campos de segundos existem.",
+      "lili_proposal": "Alças com área de toque maior, quadro da borda em revisão e controles finos separados do arraste.",
+      "acceptance": "Aparar fim deve exibir o último quadro que permanecerá, inclusive com velocidade diferente de 1×.",
+      "priority": "P0",
+      "report_anchor": "#f07"
+    },
+    {
+      "id": "F08",
+      "title": "Dividir no cursor",
+      "category": "Navegação e montagem",
+      "observed_workflow": "Posicionar o indicador dentro de um clipe e acionar a divisão gera dois trechos.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=293s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 293,
+          "end_seconds": 323,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "C16",
+          "url": "https://www.capcut.com/resource/free-video-edit",
+          "locator": "Using CapCut on the App (Android/iOS)",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Divisão existente; precisão por teclado disponível no desktop.",
+      "lili_proposal": "Botão Dividir sempre reconhecível quando uma cena estiver selecionada; mostrar o instante exato.",
+      "acceptance": "Um cursor parado não pode saltar para o início da cena ao abrir a ferramenta.",
+      "priority": "P0",
+      "report_anchor": "#f08"
+    },
+    {
+      "id": "F09",
+      "title": "Remover, copiar e reorganizar trechos",
+      "category": "Navegação e montagem",
+      "observed_workflow": "A edição combina seleção, remoção e deslocamento/cópia dos elementos na montagem.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=452s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 452,
+          "end_seconds": 665,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=902s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 902,
+          "end_seconds": 929,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Remover, duplicar e reordenar existentes; arraste usa também mecanismo HTML draggable.",
+      "lili_proposal": "Oferecer operações contextuais claras e reordenação por toque prolongado no telefone.",
+      "acceptance": "Arrastar para navegar não pode reordenar; excluir um trecho deve ser recuperável.",
+      "priority": "P1",
+      "report_anchor": "#f09"
+    },
+    {
+      "id": "F10",
+      "title": "Proporção e enquadramento",
+      "category": "Navegação e montagem",
+      "observed_workflow": "Há escolha de proporção e manipulação da imagem na prévia.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=120s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 120,
+          "end_seconds": 207,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "C13",
+          "url": "https://www.capcut.com/resource/free-video-overlay-effects",
+          "locator": "How to use video overlays on a phone: CapCut mobile app",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Três formatos e enquadramento estático existentes.",
+      "lili_proposal": "Separar Tela da montagem de Enquadrar esta cena; permitir reposicionar visualmente com limites.",
+      "acceptance": "Mudar 9:16 para 1:1 deve mostrar corte/barras antes da confirmação, sem deformar a imagem.",
+      "priority": "P1",
+      "report_anchor": "#f10"
+    },
+    {
+      "id": "F11",
+      "title": "Transição na junção entre cenas",
+      "category": "Transições",
+      "observed_workflow": "O acesso nasce no pequeno controle entre dois clipes adjacentes.",
+      "references": [
+        {
+          "source_id": "C02",
+          "url": "https://www.capcut.com/help/transitions-in-capcut",
+          "locator": "How to Use Transitions in CapCut on Mobile",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=830s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 830,
+          "end_seconds": 860,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=752s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 752,
+          "end_seconds": 778,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Há fade por cena; não existe transição real entre duas tomadas.",
+      "lili_proposal": "Criar alvo de toque em cada junção e abrir catálogo ligado ao par correto; corte seco continua opção.",
+      "acceptance": "A junção entre cenas 2 e 3 deve afetar esse par; projeto com uma única cena deve explicar a indisponibilidade.",
+      "priority": "P0",
+      "report_anchor": "#f11"
+    },
+    {
+      "id": "F12",
+      "title": "Escolher duração e confirmar transição",
+      "category": "Transições",
+      "observed_workflow": "O painel oferece escolha visual e ajuste de duração, com confirmação.",
+      "references": [
+        {
+          "source_id": "C02",
+          "url": "https://www.capcut.com/help/transitions-in-capcut",
+          "locator": "How to Use Transitions in CapCut on Mobile",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=862s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 862,
+          "end_seconds": 889,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Fades usam campos numéricos no painel de cena.",
+      "lili_proposal": "Miniaturas, reprodução do encontro e slider com número legível; Aplicar/Cancelar sem gravar cada toque exploratório.",
+      "acceptance": "Cancelar preserva o projeto; Aplicar grava uma operação e permite Desfazer.",
+      "priority": "P0",
+      "report_anchor": "#f12"
+    },
+    {
+      "id": "F13",
+      "title": "Aplicar uma transição a vários cortes",
+      "category": "Transições",
+      "observed_workflow": "O tutorial apresenta aplicação ao corte atual ou a todos os cortes.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=862s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 862,
+          "end_seconds": 877,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Não disponível.",
+      "lili_proposal": "Aplicar a todos deve ser ação explícita, mostrar quantas junções serão alteradas e respeitar restrições.",
+      "acceptance": "Não tocar nas cenas protegidas silenciosamente nem gerar uma operação de histórico para cada junção.",
+      "priority": "P1",
+      "report_anchor": "#f13"
+    },
+    {
+      "id": "F14",
+      "title": "Catálogo de famílias de transição",
+      "category": "Transições",
+      "observed_workflow": "A demonstração mostra categorias e cartões; há mistura de itens gratuitos e Pro.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=830s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 830,
+          "end_seconds": 889,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem biblioteca de transições entre cenas.",
+      "lili_proposal": "Começar com dissolver, passar por preto/branco, deslizar e wipe; categorias curtas, Sem transição e favoritas.",
+      "acceptance": "Nome e miniatura devem antecipar o resultado; item não implementado não pode parecer disponível.",
+      "priority": "P0",
+      "report_anchor": "#f14"
+    },
+    {
+      "id": "F15",
+      "title": "Encontrar um efeito visual",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O menu de efeitos abre uma biblioteca de efeitos de vídeo; há busca e opções de ajuste.",
+      "references": [
+        {
+          "source_id": "C03",
+          "url": "https://www.capcut.com/help/effectss-not-applying-in-capcut",
+          "locator": "How to Add Effects in CapCut on Mobile",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "C04",
+          "url": "https://www.capcut.com/resource/special-effects-apps",
+          "locator": "How to add video effects with this best video effects app",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Não há catálogo visual equivalente.",
+      "lili_proposal": "Cartões com miniatura animada sob demanda, categorias legíveis, busca e recentes; mostrar somente efeitos executáveis.",
+      "acceptance": "Encontrar um desfoque não deve exigir entender filtros FFmpeg ou campos técnicos.",
+      "priority": "P0",
+      "report_anchor": "#f15"
+    },
+    {
+      "id": "F16",
+      "title": "Efeito com início e fim próprios",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "Um efeito pode aparecer como elemento temporal, movido e aparado na trilha.",
+      "references": [
+        {
+          "source_id": "C03",
+          "url": "https://www.capcut.com/help/effectss-not-applying-in-capcut",
+          "locator": "How to Add Effects in CapCut on Mobile",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=775s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 775,
+          "end_seconds": 825,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "C20",
+          "url": "https://www.capcut.com/resource/motion-blur-effect",
+          "locator": "CapCut mobile editing app / Add motion blur effect & edit",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Ajustes visuais atuais valem pela cena inteira; não há trilha independente de efeitos.",
+      "lili_proposal": "Criar faixa Efeitos, blocos selecionáveis e alças; explicitar se o alvo é uma cena, camada ou imagem composta.",
+      "acceptance": "Efeito de 2 a 4 segundos deve aparecer só nesse intervalo na prévia e no arquivo final.",
+      "priority": "P0",
+      "report_anchor": "#f16"
+    },
+    {
+      "id": "F17",
+      "title": "Ajustar, substituir, duplicar e excluir efeito",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "A documentação do app descreve ações de manutenção no efeito selecionado.",
+      "references": [
+        {
+          "source_id": "C05",
+          "url": "https://www.capcut.com/resource/blur-a-video-app",
+          "locator": "How to create app blur videos with the CapCut app",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Sem objeto independente de efeito.",
+      "lili_proposal": "Barra contextual do bloco com quatro ações claras e um controle de intensidade quando aplicável.",
+      "acceptance": "Substituir mantém intervalo por padrão; excluir não apaga a cena; duplicar pode ser desfeito.",
+      "priority": "P0",
+      "report_anchor": "#f17"
+    },
+    {
+      "id": "F18",
+      "title": "Parâmetros específicos do efeito",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "Desfoque e outros efeitos oferecem parâmetros próprios, em vez de uma configuração única universal.",
+      "references": [
+        {
+          "source_id": "C05",
+          "url": "https://www.capcut.com/resource/blur-a-video-app",
+          "locator": "How to create app blur videos with the CapCut app",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "C20",
+          "url": "https://www.capcut.com/resource/motion-blur-effect",
+          "locator": "CapCut mobile editing app / Add motion blur effect & edit",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Brilho, contraste e saturação têm sliders.",
+      "lili_proposal": "Expor intensidade primeiro e esconder ajustes avançados; unidades legíveis e botão Restaurar.",
+      "acceptance": "Um efeito sem parâmetro de direção não deve mostrar campo de direção; zero/neutralidade precisa ser previsível.",
+      "priority": "P1",
+      "report_anchor": "#f18"
+    },
+    {
+      "id": "F19",
+      "title": "Correção de luz e cor",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O ajuste móvel inclui controles como brilho, contraste, saturação e temperatura.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1329s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1329,
+          "end_seconds": 1362,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=173s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 173,
+          "end_seconds": 236,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Brilho, contraste e saturação ativos; temperatura não implementada.",
+      "lili_proposal": "Agrupar correção em Ajustar imagem, com comparação original e redefinição por grupo.",
+      "acceptance": "A comparação deve preservar o instante; preview e exportação precisam concordar, com atenção a HDR/SDR.",
+      "priority": "P1",
+      "report_anchor": "#f19"
+    },
+    {
+      "id": "F20",
+      "title": "Filtros de aparência",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O tutorial usa filtros e controle de intensidade para mudar o aspecto da imagem.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1327s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1327,
+          "end_seconds": 1361,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Há correção básica, mas não presets de aparência.",
+      "lili_proposal": "Separar corrigir a imagem de aplicar um look; filtros locais reversíveis, com intensidade e Sem filtro.",
+      "acceptance": "Remover o look não deve remover correções manuais ou mudar a duração do vídeo.",
+      "priority": "P1",
+      "report_anchor": "#f20"
+    },
+    {
+      "id": "F21",
+      "title": "Isolar uma cor / HSL",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O tutorial demonstra tratamento seletivo de cor no telefone.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=49s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 49,
+          "end_seconds": 96,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem HSL seletivo.",
+      "lili_proposal": "Adicionar depois da base: faixa de cor e intensidade, sem transformar o controle de cor comum em um formulário longo.",
+      "acceptance": "A pele e as cores não selecionadas devem ser avaliadas; não prometer seleção perfeita de objetos.",
+      "priority": "P2",
+      "report_anchor": "#f21"
+    },
+    {
+      "id": "F22",
+      "title": "Camada de ajuste sobre várias cenas",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O exemplo estende uma camada de correção para afetar mais clipes.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=173s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 173,
+          "end_seconds": 236,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Correção por cena; sem camada global temporizada.",
+      "lili_proposal": "Implementar camada de ajuste com intervalo próprio e ordem de composição visível.",
+      "acceptance": "Aparar a camada deve limitar o look ao intervalo, sem copiar valores ocultos em todas as cenas.",
+      "priority": "P2",
+      "report_anchor": "#f22"
+    },
+    {
+      "id": "F23",
+      "title": "Animação de entrada e saída de um elemento",
+      "category": "Camadas e movimento",
+      "observed_workflow": "Animações são aplicadas ao elemento; não equivalem ao encontro de duas tomadas.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=667s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 667,
+          "end_seconds": 752,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=539s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 539,
+          "end_seconds": 574,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Fades por cena e texto, sem biblioteca de animações.",
+      "lili_proposal": "Separar Entrada, Saída e Durante para textos/imagens; duração coerente com o elemento.",
+      "acceptance": "Uma animação de título não pode alterar a narração ou virar transição entre vídeos.",
+      "priority": "P1",
+      "report_anchor": "#f23"
+    },
+    {
+      "id": "F24",
+      "title": "Keyframes de escala e posição",
+      "category": "Camadas e movimento",
+      "observed_workflow": "Marcar dois instantes com enquadramentos diferentes produz movimento entre eles.",
+      "references": [
+        {
+          "source_id": "C10",
+          "url": "https://www.capcut.com/resource/how-to-zoom-in-on-video",
+          "locator": "How to zoom in on a video edit with the CapCut mobile app",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=256s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 256,
+          "end_seconds": 323,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Posição e espelhamento estáticos; sem keyframes.",
+      "lili_proposal": "Começar por escala, posição e opacidade; adicionar, selecionar, navegar e remover pontos.",
+      "acceptance": "Reabrir deve preservar pontos; exportação deve manter o mesmo enquadramento em cada instante.",
+      "priority": "P2",
+      "report_anchor": "#f24"
+    },
+    {
+      "id": "F25",
+      "title": "Curvas de suavização",
+      "category": "Camadas e movimento",
+      "observed_workflow": "O exemplo de zoom troca a curva entre pontos para suavizar o movimento.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=276s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 276,
+          "end_seconds": 323,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Não disponível.",
+      "lili_proposal": "Oferecer Linear, Suave e entradas/saídas simples antes de um editor complexo de curvas.",
+      "acceptance": "A curva deve modificar o percurso temporal sem deslocar os keyframes.",
+      "priority": "P2",
+      "report_anchor": "#f25"
+    },
+    {
+      "id": "F26",
+      "title": "Movimento de câmera simulado",
+      "category": "Camadas e movimento",
+      "observed_workflow": "Reposicionamentos em keyframes geram deslocamento lateral em um vídeo existente.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=324s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 324,
+          "end_seconds": 362,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Reposicionamento por cena é estático.",
+      "lili_proposal": "Preset de pan/zoom discreto, com início e fim editáveis; alertar quando o recorte expõe bordas.",
+      "acceptance": "Não deve aparecer barra inesperada nem haver salto na borda do efeito.",
+      "priority": "P2",
+      "report_anchor": "#f26"
+    },
+    {
+      "id": "F27",
+      "title": "Sobreposição e B-roll",
+      "category": "Camadas e movimento",
+      "observed_workflow": "Adicionar uma sobreposição cria mídia em outra camada; pode ser aparada e posicionada.",
+      "references": [
+        {
+          "source_id": "C13",
+          "url": "https://www.capcut.com/resource/free-video-overlay-effects",
+          "locator": "How to use video overlays on a phone: CapCut mobile app",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=1048s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 1048,
+          "end_seconds": 1499,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Uma trilha principal de vídeo; fotos entram como cenas, não como overlays.",
+      "lili_proposal": "Adicionar imagem/vídeo acima da trilha principal, com intervalo, escala e posição próprios.",
+      "acceptance": "Adicionar um logo não deve substituir a cena; ocultar a camada deve revelar a imagem de baixo.",
+      "priority": "P1",
+      "report_anchor": "#f27"
+    },
+    {
+      "id": "F28",
+      "title": "Mistura e opacidade de camadas",
+      "category": "Camadas e movimento",
+      "observed_workflow": "A documentação e a aula apresentam transparência e modos de mistura.",
+      "references": [
+        {
+          "source_id": "C13",
+          "url": "https://www.capcut.com/resource/free-video-overlay-effects",
+          "locator": "How to use video overlays on a phone: CapCut mobile app",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=655s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 655,
+          "end_seconds": 686,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem composição visual de múltiplas camadas.",
+      "lili_proposal": "Começar por opacidade normal; modos de mistura depois, com miniatura e nome descritivo.",
+      "acceptance": "PNG transparente deve manter transparência; usar uma foto como cena continua sendo operação distinta.",
+      "priority": "P2",
+      "report_anchor": "#f28"
+    },
+    {
+      "id": "F29",
+      "title": "Remover fundo / recorte do sujeito",
+      "category": "Camadas e movimento",
+      "observed_workflow": "A aula demonstra remoção automática do fundo e recomposição sobre outra imagem.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=620s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 620,
+          "end_seconds": 654,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Não implementado.",
+      "lili_proposal": "Avaliar motor local e qualidade em cabelo/pelo; manter original e permitir desfazer.",
+      "acceptance": "Não anunciar resultado automático confiável para a Cora sem amostras adequadas e medição de tempo.",
+      "priority": "P3",
+      "report_anchor": "#f29"
+    },
+    {
+      "id": "F30",
+      "title": "Adesivos e elementos gráficos",
+      "category": "Camadas e movimento",
+      "observed_workflow": "O editor permite inserir e posicionar elementos sobre o vídeo.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1021s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1021,
+          "end_seconds": 1041,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=655s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 655,
+          "end_seconds": 686,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem catálogo ou camada gráfica independente.",
+      "lili_proposal": "Biblioteca própria pequena, com licença registrada, importação local e favoritos.",
+      "acceptance": "Nenhum recurso do catálogo CapCut ou patrocinador deve ser copiado para a Lili sem licença.",
+      "priority": "P2",
+      "report_anchor": "#f30"
+    },
+    {
+      "id": "F31",
+      "title": "Texto manual e estilo",
+      "category": "Texto e legendas",
+      "observed_workflow": "Texto pode ser inserido, editado e transformado na prévia.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=961s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 961,
+          "end_seconds": 1020,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=779s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 779,
+          "end_seconds": 909,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Títulos por cena e legendas temporizadas com estilos básicos.",
+      "lili_proposal": "Camada de texto com tipografia, alinhamento, cor, contorno e fundo; controles visuais simples.",
+      "acceptance": "Texto deve permanecer legível na área segura e preservar caracteres acentuados.",
+      "priority": "P1",
+      "report_anchor": "#f31"
+    },
+    {
+      "id": "F32",
+      "title": "Modelos de texto reutilizáveis",
+      "category": "Texto e legendas",
+      "observed_workflow": "Há modelos que aceitam troca de texto sem refazer todo o desenho.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=704s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 704,
+          "end_seconds": 742,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=978s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 978,
+          "end_seconds": 1020,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Não há modelos salvos de estilo.",
+      "lili_proposal": "Salvar Estilo da Elisa e kit de títulos próprios, usando fontes locais/licenciadas.",
+      "acceptance": "Aplicar um estilo não deve sobrescrever as palavras nem alterar tempos das legendas.",
+      "priority": "P1",
+      "report_anchor": "#f32"
+    },
+    {
+      "id": "F33",
+      "title": "Legendas automáticas",
+      "category": "Texto e legendas",
+      "observed_workflow": "O app oferece idioma e geração, seguida da edição das caixas de legenda.",
+      "references": [
+        {
+          "source_id": "C07",
+          "url": "https://www.capcut.com/help/how-to-recognise-subtitles",
+          "locator": "CapCut Mobile App (iOS/Android)",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Edição manual e SRT ativos; transcrição automática pendente.",
+      "lili_proposal": "Preferir transcrição local viável; escolher fonte de voz e idioma, com progresso e revisão.",
+      "acceptance": "Nenhum áudio deve ser enviado a uma API externa sem escolha/autorização; geração não pode apagar revisão manual sem confirmar.",
+      "priority": "P1",
+      "report_anchor": "#f33"
+    },
+    {
+      "id": "F34",
+      "title": "Corrigir e dividir uma legenda",
+      "category": "Texto e legendas",
+      "observed_workflow": "Selecionar uma legenda permite corrigir seu conteúdo e dividir no instante escolhido.",
+      "references": [
+        {
+          "source_id": "C08",
+          "url": "https://www.capcut.com/help/split-the-subtiltes",
+          "locator": "CapCut Mobile App (iOS / Android)",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "C09",
+          "url": "https://www.capcut.com/help/auto-captions-in-capcut",
+          "locator": "CapCut Mobile App (iOS / Android)",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Tempos/textos editáveis; divisão específica de legenda não implementada.",
+      "lili_proposal": "Lista de frases sincronizada com vídeo; dividir/juntar e aparar sem repetir ajustes de estilo.",
+      "acceptance": "O corte deve preservar legibilidade e sincronismo; não duplicar frases nem criar sobreposição acidental.",
+      "priority": "P1",
+      "report_anchor": "#f34"
+    },
+    {
+      "id": "F35",
+      "title": "Música do aparelho e biblioteca",
+      "category": "Áudio",
+      "observed_workflow": "O fluxo aceita áudio e permite escolher trecho para a montagem.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=1621s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 1621,
+          "end_seconds": 1801,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "C16",
+          "url": "https://www.capcut.com/resource/free-video-edit",
+          "locator": "Using CapCut on the App (Android/iOS)",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Música independente ativa, com aparo e offset numéricos.",
+      "lili_proposal": "Selecionar com escuta curta, forma de onda e alças; explicitar substituir música ou adicionar outra faixa.",
+      "acceptance": "Uma música não pode virar narração automaticamente; mostrar origem/licença das faixas fornecidas.",
+      "priority": "P1",
+      "report_anchor": "#f35"
+    },
+    {
+      "id": "F36",
+      "title": "Extrair som de um vídeo",
+      "category": "Áudio",
+      "observed_workflow": "A opção de extração gera áudio editável separado da imagem.",
+      "references": [
+        {
+          "source_id": "C15",
+          "url": "https://www.capcut.com/resource/audio-extractor-from-mp4",
+          "locator": "Here are the steps for extracting audio with the CapCut mobile app",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Arquivos de vídeo com som podem ser usados como fonte; extração como ação dedicada não existe.",
+      "lili_proposal": "Ação Extrair áudio cria faixa ligada à fonte; explicitar se o som original ficará mudo.",
+      "acceptance": "Evitar tocar duas cópias do mesmo áudio; manter alinhamento inicial e permitir separar depois.",
+      "priority": "P1",
+      "report_anchor": "#f36"
+    },
+    {
+      "id": "F37",
+      "title": "Gravar narração vendo a montagem",
+      "category": "Áudio",
+      "observed_workflow": "O app oferece gravação pelo microfone dentro do projeto.",
+      "references": [
+        {
+          "source_id": "C14",
+          "url": "https://www.capcut.com/resource/how-to-add-voice-in-a-video",
+          "locator": "Way 2: Using record audio tool; Way 3: Using a sound tool",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Importa narração; não grava voz no navegador.",
+      "lili_proposal": "Gravar no cursor, contagem curta, escuta e nova tomada; verificar permissões e codecs do Safari real.",
+      "acceptance": "Gravação recusada ou interrompida não pode perder a montagem; ouvir a tomada antes de substituir a anterior.",
+      "priority": "P1",
+      "report_anchor": "#f37"
+    },
+    {
+      "id": "F38",
+      "title": "Efeitos sonoros",
+      "category": "Áudio",
+      "observed_workflow": "A área de áudio apresenta uma biblioteca de sons/efeitos.",
+      "references": [
+        {
+          "source_id": "C14",
+          "url": "https://www.capcut.com/resource/how-to-add-voice-in-a-video",
+          "locator": "Way 2: Using record audio tool; Way 3: Using a sound tool",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Sem biblioteca de SFX e sem várias faixas livres de áudio.",
+      "lili_proposal": "Sons locais/licenciados com busca, categorias, pré-escuta e volume; alinhar no cursor.",
+      "acceptance": "Um efeito curto deve poder ser movido e aparado sem substituir música ou narração.",
+      "priority": "P1",
+      "report_anchor": "#f38"
+    },
+    {
+      "id": "F39",
+      "title": "Volume e fades de áudio",
+      "category": "Áudio",
+      "observed_workflow": "Selecionar áudio dá acesso ao volume e às suavizações nas extremidades.",
+      "references": [
+        {
+          "source_id": "C15",
+          "url": "https://www.capcut.com/resource/audio-extractor-from-mp4",
+          "locator": "Here are the steps for extracting audio with the CapCut mobile app",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=1757s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 1757,
+          "end_seconds": 1768,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Volume e fades ativos para música, voz e som da cena.",
+      "lili_proposal": "Mostrar os fades na própria região de áudio e oferecer slider com leitura clara.",
+      "acceptance": "Alterar entrada suave da música não deve modificar o fade visual; exportação deve evitar picos.",
+      "priority": "P1",
+      "report_anchor": "#f39"
+    },
+    {
+      "id": "F40",
+      "title": "Alinhar som pela forma de onda",
+      "category": "Áudio",
+      "observed_workflow": "A aula usa picos da música para escolher cortes e alinhar momentos; descreve encaixe no alinhamento.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=1802s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 1802,
+          "end_seconds": 1835,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Forma de onda da narração; música sem onda e sem arraste temporal.",
+      "lili_proposal": "Forma de onda nas faixas relevantes; ímã temporal opcional para cortes, cursor e marcadores.",
+      "acceptance": "Com ímã desligado, permitir ajuste fino; não confundir guia de centro da imagem com encaixe na timeline.",
+      "priority": "P0",
+      "report_anchor": "#f40"
+    },
+    {
+      "id": "F41",
+      "title": "Melhorar voz / reduzir ruído",
+      "category": "Áudio",
+      "observed_workflow": "O tutorial demonstra processamento de voz em um controle do clipe.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=732s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 732,
+          "end_seconds": 765,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem tratamento de ruído dedicado.",
+      "lili_proposal": "Avaliar filtro local com comparação e intensidade; não tratar limiter como remoção de ruído.",
+      "acceptance": "Testar preservação de consoantes e som ambiente desejado; tempo de processamento deve ficar claro.",
+      "priority": "P2",
+      "report_anchor": "#f41"
+    },
+    {
+      "id": "F42",
+      "title": "Velocidade normal e curvas",
+      "category": "Ritmo e entrega",
+      "observed_workflow": "No celular, o menu de velocidade separa valor constante e curva.",
+      "references": [
+        {
+          "source_id": "C11",
+          "url": "https://www.capcut.com/resource/how-to-speed-up-a-video",
+          "locator": "How to speed up a video on an iPhone using CapCut",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "C12",
+          "url": "https://www.capcut.com/resource/how-to-do-velocity-on-capcut",
+          "locator": "Method 3. How to make a velocity edit on CapCut mobile app",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Velocidade constante 0,25× a 4× ativa; sem rampa.",
+      "lili_proposal": "Manter Normal simples e adicionar Curva depois de modelo temporal consistente e prévia.",
+      "acceptance": "Mudança de ritmo deve comunicar duração final e efeito sobre voz/legendas; nunca cortar fala silenciosamente.",
+      "priority": "P1",
+      "report_anchor": "#f42"
+    },
+    {
+      "id": "F43",
+      "title": "Congelar um quadro",
+      "category": "Ritmo e entrega",
+      "observed_workflow": "O guia móvel descreve escolher o quadro e aplicar congelamento, com duração ajustável.",
+      "references": [
+        {
+          "source_id": "C17",
+          "url": "https://www.capcut.com/resource/freeze-frame-final-cut-pro",
+          "locator": "How to freeze frame on Phone with CapCut",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Importação de foto existe; congelamento de quadro do vídeo não.",
+      "lili_proposal": "Ação Congelar quadro cria trecho estático do instante aprovado, com duração explícita.",
+      "acceptance": "Congelar o aceno deve segurar a pessoa, sem avançar para o mato do take seguinte. É diferente de proteger a cena.",
+      "priority": "P1",
+      "report_anchor": "#f43"
+    },
+    {
+      "id": "F44",
+      "title": "Exportar com parâmetros claros",
+      "category": "Ritmo e entrega",
+      "observed_workflow": "O fluxo do telefone leva a configurações de resolução e taxa de quadros e então à saída.",
+      "references": [
+        {
+          "source_id": "C21",
+          "url": "https://www.capcut.com/resource/capcut-tutorial-for-beginners",
+          "locator": "How to use CapCut for beginners on a mobile phone",
+          "evidence": "official_mobile_section"
+        },
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1378s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1378,
+          "end_seconds": 1429,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "C11",
+          "url": "https://www.capcut.com/resource/how-to-speed-up-a-video",
+          "locator": "How to speed up a video on an iPhone using CapCut",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "MP4/H.264 com quatro perfis; 30 fps fixos no motor atual.",
+      "lili_proposal": "Resumo antes de gerar, FPS explicado, estimativa distinta de tamanho final e prévia curta de validação.",
+      "acceptance": "Não prometer 4K/60 fps ou MOV enquanto não implementados; saída deve refletir a versão e os efeitos escolhidos.",
+      "priority": "P1",
+      "report_anchor": "#f44"
+    },
+    {
+      "id": "F45",
+      "title": "Templates de montagem",
+      "category": "Recursos elaborados",
+      "observed_workflow": "A aula mostra modelos para substituir conteúdos preservando uma estrutura pronta.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=97s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 97,
+          "end_seconds": 172,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Montagem por roteiro/IA e rascunho; sem template visual salvo.",
+      "lili_proposal": "Modelos próprios de vlog/review, com espaços explícitos e prévia antes de aplicar.",
+      "acceptance": "Escolher modelo não deve apagar montagem aprovada sem confirmação; não importar template proprietário do concorrente.",
+      "priority": "P2",
+      "report_anchor": "#f45"
+    },
+    {
+      "id": "F46",
+      "title": "Tracking de texto ou objeto",
+      "category": "Recursos elaborados",
+      "observed_workflow": "A aula define alvo e manda acompanhar seu movimento.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=575s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 575,
+          "end_seconds": 619,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem tracking.",
+      "lili_proposal": "Futuro: alvo editável, progresso e correção manual; validar em animais e câmera de mão.",
+      "acceptance": "Se perder o alvo, sinalizar e permitir corrigir, sem afirmar que o resultado está pronto.",
+      "priority": "P3",
+      "report_anchor": "#f46"
+    },
+    {
+      "id": "F47",
+      "title": "Desenho e escrita por cima do vídeo",
+      "category": "Recursos elaborados",
+      "observed_workflow": "Há ferramenta de desenho, e a aula combina escrita com animação de revelação.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1039s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1039,
+          "end_seconds": 1075,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=541s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 541,
+          "end_seconds": 574,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem desenho/camada vetorial.",
+      "lili_proposal": "Começar por setas/círculos; guardar traços editáveis e duração própria.",
+      "acceptance": "Alterar duração do desenho não deve alterar a cena ou rasterizar o original.",
+      "priority": "P2",
+      "report_anchor": "#f47"
+    },
+    {
+      "id": "F48",
+      "title": "Câmera 3D",
+      "category": "Recursos elaborados",
+      "observed_workflow": "O tutorial apresenta uma opção de movimento tridimensional.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=517s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 517,
+          "end_seconds": 540,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Não existe.",
+      "lili_proposal": "Somente após camadas/keyframes; protótipo separado para avaliar custo e qualidade.",
+      "acceptance": "Não colocar como disponível no catálogo inicial sem prévia/exportação correspondentes.",
+      "priority": "P3",
+      "report_anchor": "#f48"
+    },
+    {
+      "id": "F49",
+      "title": "Movimento flutuante de uma camada",
+      "category": "Recursos elaborados",
+      "observed_workflow": "A aula ajusta movimento aplicado a um elemento sobreposto.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=687s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 687,
+          "end_seconds": 731,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem animação de overlays.",
+      "lili_proposal": "Preset próprio discreto de oscilação, com amplitude e velocidade, respeitando área segura.",
+      "acceptance": "A camada deve continuar legível e dentro da tela; intensidade zero remove o movimento.",
+      "priority": "P3",
+      "report_anchor": "#f49"
+    },
+    {
+      "id": "F50",
+      "title": "Retoque de rosto",
+      "category": "Recursos elaborados",
+      "observed_workflow": "A aula usa ferramentas de retoque e suavização.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=821s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 821,
+          "end_seconds": 873,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem retoque.",
+      "lili_proposal": "Avaliar somente após requisitos essenciais; desligado por padrão e sujeito à escolha da criadora.",
+      "acceptance": "Comparação deve revelar o que mudou; não alterar rostos silenciosamente.",
+      "priority": "P3",
+      "report_anchor": "#f50"
+    },
+    {
+      "id": "F51",
+      "title": "Realçar palavras em uma imagem",
+      "category": "Recursos elaborados",
+      "observed_workflow": "O exemplo combina bloco de cor, recorte, animação e mistura para destacar texto.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=873s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 873,
+          "end_seconds": 924,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem camadas/mesclagem necessárias.",
+      "lili_proposal": "Primeiro um marcador gráfico simples; composições elaboradas dependem de overlays e máscaras.",
+      "acceptance": "Realce não deve cobrir a palavra nem mudar o conteúdo; é composição, não legenda automática.",
+      "priority": "P3",
+      "report_anchor": "#f51"
+    },
+    {
+      "id": "F52",
+      "title": "Barras de cinema",
+      "category": "Recursos elaborados",
+      "observed_workflow": "Um efeito adiciona barras à imagem durante um intervalo.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=924s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 924,
+          "end_seconds": 945,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Proporções de tela existentes; não há efeito letterbox próprio.",
+      "lili_proposal": "Oferecer preset separado de formato de exportação; alertar sobre perda de área útil.",
+      "acceptance": "Adicionar barras não pode mudar 9:16 para 16:9 sem avisar.",
+      "priority": "P2",
+      "report_anchor": "#f52"
+    },
+    {
+      "id": "F53",
+      "title": "Vídeo dentro de letras",
+      "category": "Recursos elaborados",
+      "observed_workflow": "A técnica da aula combina texto, keyframes e composição de vídeos.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=945s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 945,
+          "end_seconds": 1009,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Dependências de composição ausentes.",
+      "lili_proposal": "Guardar como referência de efeito composto, depois de máscaras e keyframes.",
+      "acceptance": "Não apresentar como um filtro simples que já funciona no render atual.",
+      "priority": "P3",
+      "report_anchor": "#f53"
+    },
+    {
+      "id": "F54",
+      "title": "Teleprompter",
+      "category": "Recursos elaborados",
+      "observed_workflow": "O tutorial apresenta leitura guiada do roteiro durante captura.",
+      "references": [
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=1010s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 1010,
+          "end_seconds": 1033,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Roteiro no projeto; sem captura guiada.",
+      "lili_proposal": "Separar modo Gravar do modo Editar; priorizar narração própria antes desse recurso.",
+      "acceptance": "Não solicitar câmera/microfone para editar um vídeo existente.",
+      "priority": "P3",
+      "report_anchor": "#f54"
+    },
+    {
+      "id": "F55",
+      "title": "Encerramento padrão e marca do aplicativo",
+      "category": "Ritmo e entrega",
+      "observed_workflow": "Os tutoriais antigos mostram remoção do encerramento inserido pelo app.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=86s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 86,
+          "end_seconds": 100,
+          "evidence": "video_transcript"
+        },
+        {
+          "source_id": "V03",
+          "url": "https://www.youtube.com/watch?v=KVws1GVHoA0&t=34s",
+          "locator": "Publicado em 20/10/2025; 17:28; transcrição en automática",
+          "start_seconds": 34,
+          "end_seconds": 48,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "A Lili não acrescenta encerramento de marca; marca de texto é opcional.",
+      "lili_proposal": "Manter exportação sem marca obrigatória; deixar identidade do cliente como escolha explícita.",
+      "acceptance": "Nenhum vídeo deve receber logo/encerramento da Lili por surpresa. Não assumir regras atuais de planos CapCut a partir desses vídeos.",
+      "priority": "P1",
+      "report_anchor": "#f55"
+    },
+    {
+      "id": "F56",
+      "title": "Vinheta",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O ajuste móvel demonstrado inclui escurecimento das bordas.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1347s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1347,
+          "end_seconds": 1354,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem vinheta dedicada.",
+      "lili_proposal": "Preset local com intensidade e comparação, preservando o centro e os textos sobrepostos.",
+      "acceptance": "A vinheta não deve recortar a imagem nem escurecer a legenda por acidente.",
+      "priority": "P2",
+      "report_anchor": "#f56"
+    },
+    {
+      "id": "F57",
+      "title": "Grão",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "A aula apresenta grão entre os ajustes de aparência.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1350s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1350,
+          "end_seconds": 1361,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Sem grão dedicado.",
+      "lili_proposal": "Grão discreto com intensidade; definir como o ruído será reproduzido na prévia e exportação.",
+      "acceptance": "Exportar novamente a mesma versão não deve produzir um efeito inexplicavelmente diferente.",
+      "priority": "P2",
+      "report_anchor": "#f57"
+    },
+    {
+      "id": "F58",
+      "title": "Ajuste automático da imagem",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O tutorial menciona uma opção de correção automática após os controles manuais.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1361s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1361,
+          "end_seconds": 1377,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Correção manual básica; sem ajuste automático.",
+      "lili_proposal": "Comparação com original e aplicação optativa; avaliar consistência entre tomadas antes de automatizar.",
+      "acceptance": "Preservar valores anteriores e Desfazer; não alterar imagens aprovadas sem ação explícita.",
+      "priority": "P2",
+      "report_anchor": "#f58"
+    },
+    {
+      "id": "F59",
+      "title": "Harmonizar volumes entre clipes",
+      "category": "Áudio",
+      "observed_workflow": "O tutorial apresenta uma opção para aproximar níveis de áudio de vários clipes.",
+      "references": [
+        {
+          "source_id": "V02",
+          "url": "https://www.youtube.com/watch?v=o6tcF1JLlwo&t=1267s",
+          "locator": "Publicado em 06/03/2024; 25:13; transcrição pt disponibilizada pelo YouTube",
+          "start_seconds": 1267,
+          "end_seconds": 1295,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Volumes individuais e limitador; sem análise de loudness entre clipes.",
+      "lili_proposal": "Medir antes de sugerir ganho; mostrar quais cenas mudarão e preservar escolhas protegidas.",
+      "acceptance": "Não chamar limiter de normalização; comparar percepção de volume sem saturar ou apagar ambiente desejado.",
+      "priority": "P2",
+      "report_anchor": "#f59"
+    },
+    {
+      "id": "F60",
+      "title": "Guias de alinhamento na imagem",
+      "category": "Camadas e movimento",
+      "observed_workflow": "Um elemento gráfico encaixa no centro da tela com uma guia de alinhamento.",
+      "references": [
+        {
+          "source_id": "V01",
+          "url": "https://www.youtube.com/watch?v=dmVeTHBQxEc&t=865s",
+          "locator": "Publicado em 20/04/2023; 34:27; capítulos e transcrição pt automática",
+          "start_seconds": 865,
+          "end_seconds": 876,
+          "evidence": "video_transcript"
+        }
+      ],
+      "lili_current": "Posição configurada por sliders; sem guias de arraste de overlay.",
+      "lili_proposal": "Adicionar guias de centro/bordas ao futuro editor de camadas; manter separado do ímã temporal.",
+      "acceptance": "Centralizar um texto não deve deslocar seu instante na montagem.",
+      "priority": "P2",
+      "report_anchor": "#f60"
+    },
+    {
+      "id": "F61",
+      "title": "Desfoque de movimento",
+      "category": "Efeitos e imagem",
+      "observed_workflow": "O guia móvel descreve efeito com parâmetros e intervalo temporal editável.",
+      "references": [
+        {
+          "source_id": "C20",
+          "url": "https://www.capcut.com/resource/motion-blur-effect",
+          "locator": "CapCut mobile editing app / Add motion blur effect & edit",
+          "evidence": "official_mobile_section"
+        }
+      ],
+      "lili_current": "Não implementado.",
+      "lili_proposal": "Começar por efeito limitado e reversível; avaliar custo de prévia, qualidade e ghosting.",
+      "acceptance": "Não usar simples desfoque espacial e anunciar como equivalente a todo motion blur do concorrente.",
+      "priority": "P2",
+      "report_anchor": "#f61"
+    }
+  ],
+  "lili_proposals": [
+    {
+      "id": "P01",
+      "title": "Posicionamento fino no telefone",
+      "description": "Contador editável mm:ss:quadro ou mm:ss.mmm, botões de um quadro e passos maiores por pressão contínua. Esta combinação é proposta para a Lili; não foi confirmada como interface móvel do CapCut.",
+      "acceptance": "A 30 fps, avançar um quadro deve somar exatamente 1/30 s no modelo, sem arredondar repetidamente. Ao exibir dois decimais, não confundir leitura com precisão interna.",
+      "references": [
+        "F05",
+        "F06",
+        "F07",
+        "F08"
+      ]
+    },
+    {
+      "id": "P02",
+      "title": "Ímã temporal controlável",
+      "description": "Encaixar em corte/cursor/início-fim de legenda com distância calculada em pixels; botão para desligar e indicação do alvo. A fala de alinhamento em V01 não comprova os detalhes desse algoritmo.",
+      "acceptance": "Não puxar o cursor para um alvo distante quando o zoom mudar; prioridade ao ajuste manual fino.",
+      "references": [
+        "F40",
+        "F60"
+      ]
+    },
+    {
+      "id": "P03",
+      "title": "Quadro solicitado versus quadro carregado",
+      "description": "Manter o cursor estável ao soltar e mostrar carregamento até o player alcançar o instante. Evitar redesenhar o formulário inteiro em todo movimento.",
+      "acceptance": "Busca rápida deve terminar na última solicitação; resposta atrasada de outra cena não pode substituir a seleção atual.",
+      "references": [
+        "F03",
+        "F05",
+        "F07"
+      ]
+    },
+    {
+      "id": "P04",
+      "title": "Aplicação de efeito em rascunho",
+      "description": "Escolher e ajustar em estado temporário; Aplicar grava uma alteração, Cancelar restaura. A confirmação visível foi observada, mas a implementação interna do CapCut não é conhecida.",
+      "acceptance": "Fechar/cancelar a seleção não muda revisão nem histórico do projeto; falha do servidor não deixa parte do efeito aplicada.",
+      "references": [
+        "F12",
+        "F15",
+        "F16",
+        "F17"
+      ]
+    },
+    {
+      "id": "P05",
+      "title": "Nomes distintos para travar",
+      "description": "Pausar no instante, encaixar na régua, proteger escolhas e congelar quadro devem ter nomes e controles diferentes.",
+      "acceptance": "Proteger uma cena não congela sua imagem; congelar não bloqueia edição de outras cenas.",
+      "references": [
+        "F03",
+        "F07",
+        "F43"
+      ]
+    },
+    {
+      "id": "P06",
+      "title": "Catálogo executável e próprio",
+      "description": "Biblioteca inicial local e gratuita, com presets, miniaturas e parâmetros versionados. Não extrair assets, fontes, modelos ou shaders proprietários do concorrente.",
+      "acceptance": "Cada cartão disponível precisa ter preview e exportação testados; planejados vão para a esteira, não para botões falsos.",
+      "references": [
+        "F14",
+        "F15",
+        "F30",
+        "F45"
+      ]
+    },
+    {
+      "id": "P07",
+      "title": "Mesma regra de tempo na prévia e render",
+      "description": "Uma especificação única deve definir clipes, sobreposições, efeitos e transições. O cálculo interno do CapCut não foi inferido dos vídeos.",
+      "acceptance": "Mudanças de duração devem explicitar efeito sobre voz/legendas e último quadro; não deslocar a narração aprovada silenciosamente.",
+      "references": [
+        "F11",
+        "F12",
+        "F16",
+        "F42",
+        "F43",
+        "F44"
+      ]
+    }
+  ]
+}

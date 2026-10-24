@@ -6,6 +6,20 @@
 - Menu de projeto compacto no celular.
 - Exclusão permanente de projeto já na Lixeira, com confirmação digitada e bloqueio de processamentos. Remove apenas dados na pasta do projeto; arquivos fora dela permanecem.
 
+## Prioridade de interação móvel — pesquisa de 24/10/2026
+
+O usuário relatou falta de transições reais, aplicação ruim de efeitos, configurações confusas e dificuldade para parar no instante desejado. A próxima evolução de edição deve resolver esse fluxo antes de aumentar o formulário ou adicionar efeitos isolados.
+
+Base de trabalho: [estudo detalhado do CapCut Mobile](capcut-mobile-estudo-interface-funcoes.md) e [índice pesquisável de referências](capcut-mobile-referencias.json). São 61 funções/fluxos, sete propostas próprias e 24 fontes, incluindo três tutoriais específicos de celular. A pesquisa não implementou esses recursos nem validou Safari real.
+
+- [ ] P0: seleção e ferramentas contextuais; distinguir navegar, selecionar, aparar e reordenar. Revisitar F02–F08, P01/P03/P05.
+- [ ] P0: pinça, cursor estável, controle fino por toque e quadro carregado; ímã temporal opcional. Revisitar F05–F08/F40, P01–P03. Avanço por quadro no telefone é proposta própria, não controle confirmado do CapCut.
+- [ ] P0: catálogo visual e aplicação/cancelamento de efeitos, com intervalo próprio e manutenção do bloco. Revisitar F15–F18, P04/P06.
+- [ ] P0: transição na junção, duração e prévia de duas tomadas. Começar por dissolução e passagem por cor; definir regra temporal e preservar voz/legendas/último quadro. Revisitar F11–F14, P07.
+- [ ] P1: fluxo simples de música, gravação de narração, legendas e congelamento do quadro escolhido. Revisitar F31–F44 antes de escolher o pacote.
+
+Antes de implementar, abrir a referência do Fxx na seção Mobile ou no minuto marcado do vídeo. Verificar plataforma e versão; separar documentação, amostragem visual, transcrição e proposta. Cada tarefa deve registrar os IDs consultados, comportamento da Lili, testes e estado de ativação. Efeitos elaborados permanecem após a base, conforme o catálogo do estudo.
+
 ## Prioridade de execução — 24/10/2026
 
 O usuário definiu quatro rodadas de recursos de edição, uma revisão dedicada de segurança e uma extra condicional para visual e pesquisa de concorrentes/monetização. Esta estrutura substitui a prioridade anterior de concentrar as rodadas em identidade e contas.
