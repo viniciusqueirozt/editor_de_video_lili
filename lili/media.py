@@ -300,6 +300,9 @@ class MediaService:
                     filters += f",fade=t=in:st=0:d={clip['fade_in']}"
                 if clip.get("fade_out", 0):
                     filters += f",fade=t=out:st={output_duration-clip['fade_out']}:d={clip['fade_out']}"
+                from .transitions import clip_transition_filters
+                transition_filters = clip_transition_filters(project, index)
+                if transition_filters: filters += "," + transition_filters
                 for caption in project.get("captions", []):
                     start = max(0, caption["start"]-timeline_offset)
                     end = min(output_duration, caption["end"]-timeline_offset)

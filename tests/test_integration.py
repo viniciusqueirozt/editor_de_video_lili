@@ -332,6 +332,30 @@ class IntegrationTests(unittest.TestCase):
             urlopen(Request(self.base + "/api/projects", data=b"[]", headers={"Content-Type": "application/json"}))
         self.assertEqual(error.exception.code, 400)
 
+    def test_pair_color_transitions_render_two_sides_without_changing_audio_or_duration(self):
+        p=self.client.call("POST","/api/projects",{"name":"Synthetic pair passages"})
+        imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"])
+        audio=self.client.upload(p["id"],self.audio);self.wait_job(audio["job"]["id"])
+        p=self.store.get(p["id"])
+        for _ in range(2):
+            p=self.store.apply(p["id"],"clip_add",{"media_id":imported["media_id"],"start":.2,"end":1.4},p["revision"])
+        p=self.store.apply(p["id"],"narration_set",{"media_id":audio["media_id"],"offset":.2},p["revision"])
+        original_clips=p["timeline"];narration=p["narration"]
+        for kind in ("white","black"):
+            p=self.store.apply(p["id"],"transition_set",{"left":p["timeline"][0]["id"],"right":p["timeline"][1]["id"],"kind":kind,"duration":.8},p["revision"])
+            self.assertEqual(p["timeline"],original_clips);self.assertEqual(p["narration"],narration)
+            job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"preview"});self.wait_job(job["id"])
+            output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+            raw=subprocess.run([executable(),"-v","error","-i",str(output),"-vf","crop=20:20:(iw-20)/2:(ih-20)/2,scale=1:1,format=gray","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
+            self.assertAlmostEqual(probe(output)["duration"],2.4,delta=.15)
+            self.assertGreater(raw[10],30);self.assertGreater(raw[-8],30)
+            if kind=="white":self.assertGreater(raw[35],200);self.assertGreater(raw[36],235)
+            else:self.assertLess(raw[35],15);self.assertLess(raw[36],10)
+            audio_data=subprocess.run([executable(),"-v","error","-ss","1.05","-i",str(output),"-t","0.3","-vn","-f","s16le","-ac","1","-ar","8000","pipe:1"],capture_output=True,check=True).stdout
+            import array
+            samples=array.array("h",audio_data)
+            self.assertGreater(max(abs(v) for v in samples),500)
+
     def test_visual_fades_render_black_edges_and_keep_duration(self):
         p = self.client.call("POST", "/api/projects", {"name": "Visual fades synthetic"})
         imported = self.client.upload(p["id"], self.source)

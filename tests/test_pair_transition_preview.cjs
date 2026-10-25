@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const source=fs.readFileSync('web/timeline.js','utf8');
+const ctx=vm.createContext({project:{id:'p',revision:4,timeline:[{id:'a',start:0,end:2},{id:'b',start:0,end:2}],transitions:[{left:'a',right:'b',kind:'black',duration:1}]},transitionDraft:null,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),clipDuration:c=>(c.end-c.start)/(c.speed||1)});
+vm.runInContext(source.slice(source.indexOf('function transitionPair('),source.indexOf('function updateTransitionPreview(')),ctx);
+const [a,b]=ctx.project.timeline,items=ctx.project.transitions;
+assert.equal(ctx.transitionBlend(a,1,items).opacity,0);assert.equal(ctx.transitionBlend(a,1.75,items).opacity,.5);assert.equal(ctx.transitionBlend(b,0,items).opacity,1);assert.equal(ctx.transitionBlend(b,.25,items).opacity,.5);assert.equal(ctx.transitionBlend(b,1,items).opacity,0);
+assert.equal(ctx.transitionMaximum([{start:0,end:2,speed:4},b]),.5);
+ctx.transitionDraft={projectId:'p',revision:4,left:'a',right:'b',kind:'white',duration:.4};assert.equal(ctx.transitionListForPreview()[0].kind,'white');assert.equal(ctx.project.transitions[0].kind,'black');
+ctx.transitionDraft.kind='none';assert.equal(ctx.transitionListForPreview().length,0);assert.equal(ctx.project.transitions.length,1);
+ctx.transitionDraft.revision=3;assert.equal(ctx.transitionListForPreview()[0].kind,'black');
+ctx.transitionDraft=null;assert.equal(ctx.transitionListForPreview()[0].kind,'black');
+assert.equal(ctx.transitionPair('a','b').length,2);assert.equal(ctx.transitionPair('b','a'),null);
+console.log('Pair transitions: half-duration, speed, draft isolation, cancellation and stale revision passed');

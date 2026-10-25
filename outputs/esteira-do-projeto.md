@@ -26,6 +26,12 @@ Entregue parcialmente F05–F08/P01/P03: painel Precisão, posição digitável,
 
 Relatório e verificação: [rodada de precisão](rodada-precisao-timeline-24-10-2026.md). Próxima prioridade de edição: transição real na junção e aplicação visual de efeitos.
 
+### Noite de 24 para 25/10 — transições preparadas
+
+Rodada 1 implementou passagem por preto/branco e corte seco ligados a IDs de cenas adjacentes, catálogo, duração, prévia local e Aplicar/Cancelar, com histórico e exportação. Testada em ambiente sintético; produção ainda sem a capacidade pair_transitions, aguardando fechamento do ciclo. Dissolução, sobreposição e aplicação em todas as junções continuam pendentes. F11/F12/F14/P04/P07 avançaram parcialmente; não marcar o P0 inteiro como concluído.
+
+Detalhes e verificação: [rodada noturna de transições](rodada-noturna-2026-10-24-01-transicoes.md). Próximo pacote: seleção visual e aplicação reversível de efeitos por cena.
+
 ## Prioridade de execução — 24/10/2026
 
 O usuário definiu quatro rodadas de recursos de edição, uma revisão dedicada de segurança e uma extra condicional para visual e pesquisa de concorrentes/monetização. Esta estrutura substitui a prioridade anterior de concentrar as rodadas em identidade e contas.

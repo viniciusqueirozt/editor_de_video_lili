@@ -66,7 +66,7 @@ def duration(project):
 
 
 class Store:
-    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings", "captions", "music")
+    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings", "captions", "music", "transitions")
 
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -137,6 +137,8 @@ class Store:
         result = copy.deepcopy(project)
         result.setdefault("captions", [])
         result.setdefault("music", None)
+        from .transitions import clean_transitions
+        result["transitions"] = clean_transitions(result)
         result.pop("access", None)  # Sharing metadata has a separate owner-only API.
         result["undo_available"] = bool(result.pop("history", []))
         result["redo_available"] = bool(result.pop("future", []))
@@ -322,6 +324,7 @@ class Store:
             p.setdefault("captions", [])
             p.setdefault("music", None)
             p.setdefault("future", [])
+            p.setdefault("transitions", [])
             snapshot = {k: copy.deepcopy(p[k]) for k in self.SNAPSHOT_FIELDS}
             snapshot["media_visibility"] = {m["id"]: m.get("deleted_at") for m in p["media"]}
             if operation == "script_update":
@@ -398,6 +401,22 @@ class Store:
                 if not asset.get("deleted_at"):
                     raise EditorError("O arquivo não está na Lixeira.", 409)
                 asset.pop("deleted_at")
+            elif operation == "transition_set":
+                from .transitions import KINDS
+                left = self.find(p["timeline"], args.get("left"))
+                right = self.find(p["timeline"], args.get("right"))
+                at = p["timeline"].index(left)
+                if at + 1 >= len(p["timeline"]) or p["timeline"][at + 1]["id"] != right["id"]:
+                    raise EditorError("Escolha duas cenas vizinhas para a transição.", 409)
+                if left["locked"] or right["locked"]:
+                    raise EditorError("Desproteja as duas cenas antes de alterar a transição.", 409)
+                kind = args.get("kind")
+                if not isinstance(kind, str) or kind not in KINDS | {"none"}:
+                    raise EditorError("Escolha corte seco, passagem por preto ou passagem por branco.")
+                value = number(args.get("duration", .5), .1, min(3, clip_duration(left), clip_duration(right))) if kind != "none" else 0
+                p["transitions"] = [t for t in p["transitions"] if (t["left"], t["right"]) != (left["id"], right["id"])]
+                if kind != "none":
+                    p["transitions"].append({"left":left["id"], "right":right["id"], "kind":kind, "duration":value})
             elif operation == "clip_add":
                 p["timeline"].append(self.validate_clip(p, args))
             elif operation == "clip_update":
@@ -506,6 +525,7 @@ class Store:
                             asset["deleted_at"] = visibility[asset["id"]]
                         else:
                             asset.pop("deleted_at", None)
+                p["transitions"] = previous.get("transitions", [])
                 p.update(previous)
             else:
                 raise EditorError("Operação desconhecida.")
@@ -514,6 +534,15 @@ class Store:
                 p["future"] = []
             if len(p["timeline"]) > 100 or duration(p) > 1800:
                 raise EditorError("O piloto aceita até 100 cenas e 30 minutos por montagem.")
+            from .transitions import clean_transitions
+            p["transitions"] = clean_transitions(p)
+            if operation not in ("undo", "redo"):
+                protected = {c["id"] for c in snapshot["timeline"] if c.get("locked")}
+                current_pairs = {(t["left"], t["right"]):t for t in p["transitions"]}
+                for old in snapshot["transitions"]:
+                    pair = (old["left"], old["right"])
+                    if protected.intersection(pair) and current_pairs.get(pair) != old:
+                        raise EditorError("Desproteja as cenas da junção antes de remover ou encurtar sua transição.", 409)
             self._touch(p, text(actor, 160), operation)
             self._write(p)
             return self.public(p)

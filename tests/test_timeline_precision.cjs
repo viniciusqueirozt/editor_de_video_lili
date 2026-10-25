@@ -63,7 +63,7 @@ function node(id){if(!nodes.has(id))nodes.set(id,{listeners:{},style:{},clientWi
  addEventListener(type,fn){this.listeners[type]=fn;},setPointerCapture(id){this.capture??=new Set();this.capture.add(id);},
  hasPointerCapture(id){return this.capture?.has(id)||false;},releasePointerCapture(id){this.capture.delete(id);},
  getBoundingClientRect(){return {left:id==='#timeline'?50-node('#timeline-scroll').scrollLeft:50};}});return nodes.get(id);}
-const gestureContext=vm.createContext({$:node,Map,project:{duration:20,timeline:[{id:'a',start:0,end:20}]},cursor:.5,playing:false,editorFeatures:{},document:{addEventListener(){}},ResizeObserver:class{observe(){}},
+const gestureContext=vm.createContext({$:node,Map,project:{duration:20,timeline:[{id:'a',start:0,end:20}]},cursor:.5,playing:false,editorFeatures:{},document:{addEventListener(){},querySelectorAll(){return [];}},ResizeObserver:class{observe(){}},
  requestAnimationFrame(fn){frames.set(++frameId,fn);return frameId;},cancelAnimationFrame(id){frames.delete(id);},pause(){},seekTo(time){gestureContext.cursor=time;}});
 vm.runInContext(timeline,gestureContext);
 vm.runInContext('renderTimeline=function(){timelineScale=30*timelineZoom;}',gestureContext);

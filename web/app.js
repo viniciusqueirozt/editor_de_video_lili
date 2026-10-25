@@ -381,6 +381,7 @@ function updateSceneFade(){
   const clip=currentClip(),gain=clip?sceneFadeGain(clip,cursor-before()):1;
   updatePreviewGrade(clip);if(clip)player.volume=originalGain(clip,cursor-before());
   $("#preview-title").style.opacity=gain;
+  if(typeof updateTransitionPreview==="function")updateTransitionPreview();
 }
 function updateTime(){
   if(!project) return;
@@ -407,6 +408,7 @@ function playbackTick(){
   if(c&&!playerLoading&&!player.seeking){
     cursor=before()+Math.max(0,Math.min(clipDuration(c),(player.currentTime-c.start)/(c.speed||1)));
     updateTime();syncVoice();syncMusic();
+    if(typeof transitionPreviewEnd!=="undefined"&&transitionPreviewEnd!==null&&cursor>=transitionPreviewEnd){transitionPreviewEnd=null;pause();return;}
     if(player.currentTime>=c.end-.012){advance();return;}
   }
   playbackFrame=requestAnimationFrame(playbackTick);
@@ -717,7 +719,7 @@ async function refreshJobs(){
   $("#start-export").disabled=running||!project.timeline.length;renderExportJobs(exports);
 }
 
-setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
+setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture&&!$("#transition-dialog").open){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
 (async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}document.body.classList.toggle("has-subtitles",Boolean(editorFeatures.subtitles));document.body.classList.toggle("has-music",Boolean(editorFeatures.music_track));if(editorFeatures.still_images)$("#file-input").accept+=",.jpg,.jpeg,.png,.webp";await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});
