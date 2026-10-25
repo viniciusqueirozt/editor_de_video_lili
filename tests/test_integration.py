@@ -415,6 +415,37 @@ class IntegrationTests(unittest.TestCase):
             raw=subprocess.run([executable(),"-v","error","-i",str(output),"-frames:v","1","-vf","crop=160:120:0:0,format=gray","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
             self.assertGreater(sum(v>200 for v in raw),10)
 
+    def test_appearance_grades_keep_metadata_and_render_each_look(self):
+        p=self.client.call("POST","/api/projects",{"name":"Synthetic local looks"})
+        imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"])
+        voice=self.client.upload(p["id"],self.audio);self.wait_job(voice["job"]["id"])
+        p=self.store.get(p["id"])
+        looks=[(1,1,1),(1.04,.9,.9),(1.02,1.12,1.25),(1,1.16,.82),(1,1.06,0),(1.12,1.02,1.02)]
+        for i,_ in enumerate(looks):
+            p=self.store.apply(p["id"],"clip_add",{"media_id":imported["media_id"],"start":.2,"end":1.2,"label":f"Scene {i+1}","block_id":"keep-block","volume":.35,"title":"Keep title","title_position":"bottom"},p["revision"])
+        p=self.store.apply(p["id"],"narration_set",{"media_id":voice["media_id"],"offset":.2,"volume":.5},p["revision"])
+        p=self.store.apply(p["id"],"caption_add",{"start":.1,"end":2,"text":"Keep subtitle"},p["revision"])
+        from copy import deepcopy
+        baseline=deepcopy(p)
+        for clip,(brightness,contrast,saturation) in zip(baseline["timeline"],looks):
+            p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":"clip_update","args":{"clip_id":clip["id"],"brightness":brightness,"contrast":contrast,"saturation":saturation},"expected_revision":p["revision"]})
+            actual=next(c for c in p["timeline"] if c["id"]==clip["id"])
+            for key in clip:
+                if key not in ("brightness","contrast","saturation"):self.assertEqual(actual[key],clip[key])
+        self.assertEqual(p["narration"],baseline["narration"]);self.assertEqual(p["captions"],baseline["captions"]);self.assertEqual(p["duration"],6)
+        p=self.store.apply(p["id"],"undo",{},p["revision"]);self.assertEqual(p["timeline"][-1]["brightness"],1)
+        p=self.store.apply(p["id"],"redo",{},p["revision"]);self.assertEqual(p["timeline"][-1]["brightness"],1.12)
+        job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"preview"});self.wait_job(job["id"])
+        output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+        self.assertAlmostEqual(probe(output)["duration"],6,delta=.2)
+        for i,(brightness,contrast,saturation) in enumerate(looks):
+            raw=subprocess.run([executable(),"-v","error","-ss",str(i+.5),"-i",str(output),"-frames:v","1","-vf","crop=20:20:(iw-20)/2:(ih-20)/2,scale=1:1,format=rgb24","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
+            base=[min(255,max(0,v*brightness*contrast+.5*(1-contrast)*brightness*255)) for v in (0,128,0)]
+            luma=sum(a*b for a,b in zip(base,(.2126,.7152,.0722)))
+            expected=[min(255,max(0,luma+(v-luma)*saturation)) for v in base]
+            self.assertEqual(len(raw),3)
+            for actual,value in zip(raw,expected):self.assertAlmostEqual(actual,value,delta=7,msg=f"look {i}")
+
     def test_color_adjustment_exports_desaturated_pixels(self):
         p=self.client.call("POST","/api/projects",{"name":"Color synthetic"})
         imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"]);p=self.store.get(p["id"])

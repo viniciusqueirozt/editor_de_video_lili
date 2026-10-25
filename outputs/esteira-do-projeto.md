@@ -30,7 +30,13 @@ Relatório e verificação: [rodada de precisão](rodada-precisao-timeline-24-10
 
 Rodada 1 implementou passagem por preto/branco e corte seco ligados a IDs de cenas adjacentes, catálogo, duração, prévia local e Aplicar/Cancelar, com histórico e exportação. Testada em ambiente sintético; produção ainda sem a capacidade pair_transitions, aguardando fechamento do ciclo. Dissolução, sobreposição e aplicação em todas as junções continuam pendentes. F11/F12/F14/P04/P07 avançaram parcialmente; não marcar o P0 inteiro como concluído.
 
-Detalhes e verificação: [rodada noturna de transições](rodada-noturna-2026-10-24-01-transicoes.md). Próximo pacote: seleção visual e aplicação reversível de efeitos por cena.
+Detalhes e verificação: [rodada noturna de transições](rodada-noturna-2026-10-24-01-transicoes.md). Continuação: catálogo de aparências implementado na rodada 2 abaixo.
+
+### Noite de 24 para 25/10 — aparências com rascunho
+
+Rodada 2: catálogo de seis aparências locais mais Atual, miniaturas do vídeo, intensidade, comparação pausada, Quadro central, reprodução da cena e Aplicar/Cancelar. Usa os ajustes RGB existentes; fica disponível após recarregar, sem reinício. Publicação Git aguarda o fim do ciclo. Não é camada independente ou efeito temporizado; Original restaura os valores de cor e Desfazer recupera os anteriores. F15/F18/F20/P04/P06 avançaram parcialmente; os itens P0 completos permanecem abertos.
+
+Verificação e limites: [rodada 2 de aparências](rodada-noturna-2026-10-24-02-aparencias.md). Próxima frente: posicionamento e aparo de áudio na linha do tempo, respeitando os limites existentes.
 
 ## Prioridade de execução — 24/10/2026
 

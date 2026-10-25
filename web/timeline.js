@@ -37,7 +37,7 @@ function renderTimeline(){
     const trimHandle=edge=>`<button class="trim-handle trim-${edge}" data-edge="${edge}" aria-label="${edge==="start"?"Aparar início":"Aparar fim"} da cena ${i+1}" title="Arraste para aparar" ${c.locked?"disabled":""}></button>`;
     return `<div class="timeline-clip ${c.id===selected?"selected":""} ${width<45?"narrow":""}" data-clip="${c.id}" style="left:${left}px;width:${width}px">
       <button class="clip-body" draggable="true" aria-pressed="${c.id===selected}" aria-label="Cena ${i+1}: ${esc(c.label)}, ${precise(length)}" title="${esc(c.label)} · ${precise(length)}">
-        <span class="clip-filmstrip">${strip}</span><span class="clip-caption">${String(i+1).padStart(2,"0")} · ${esc(c.label)}</span><span class="clip-duration">${precise(length)}</span>${c.locked?`<span class="clip-lock">${icon("lock")}</span>`:""}
+        <span class="clip-filmstrip">${strip}</span><span class="clip-caption">${String(i+1).padStart(2,"0")} · ${esc(c.label)}</span><span class="clip-duration">${precise(length)}</span>${["brightness","contrast","saturation"].some(k=>(c[k]??1)!==1)?`<span class="clip-look" title="Cor ajustada" aria-hidden="true">◐</span>`:""}${c.locked?`<span class="clip-lock">${icon("lock")}</span>`:""}
       </button>${trimHandle("start")}${trimHandle("end")}</div>`;
   }).join("") || '<div class="track-empty">Importe um vídeo e clique em Adicionar.</div>';
   $("#video-track").querySelectorAll("[data-clip]").forEach(node=>{
@@ -415,4 +415,117 @@ $("#transition-apply").addEventListener("click",async()=>{
   transitionSaving=true;refreshTransitionDraft();
   try{const ok=await mutate("transition_set",{left,right,kind,duration},kind==="none"?"Corte seco aplicado.":"Transição salva. Você pode desfazer.");if(ok){transitionDraft=null;$("#transition-dialog").close();}}
   finally{transitionSaving=false;refreshTransitionDraft();}
+});
+
+// Local looks are absolute grading targets. Strength blends from the saved scene,
+// never from the previous slider event, so trying looks cannot accumulate edits.
+const EFFECT_PRESETS=[
+  {id:"current",name:"Atual",description:"Como a cena está salva",values:null},
+  {id:"original",name:"Original",description:"Cor sem ajustes",values:{brightness:1,contrast:1,saturation:1}},
+  {id:"soft",name:"Suave",description:"Menos contraste e cor",values:{brightness:1.04,contrast:.9,saturation:.9}},
+  {id:"vivid",name:"Vivo",description:"Realça contraste e cor",values:{brightness:1.02,contrast:1.12,saturation:1.25}},
+  {id:"editorial",name:"Editorial",description:"Contraste com cor discreta",values:{brightness:1,contrast:1.16,saturation:.82}},
+  {id:"mono",name:"Preto e branco",description:"Imagem sem cor",values:{brightness:1,contrast:1.06,saturation:0}},
+  {id:"light",name:"Mais luz",description:"Clareia sem mudar o corte",values:{brightness:1.12,contrast:1.02,saturation:1.02}}
+];
+let effectDraft=null,effectSaving=false,effectPreviewEnd=null;
+function effectGrade(clip){return Object.fromEntries(["brightness","contrast","saturation"].map(key=>[key,clip?.[key]??1]));}
+function mixEffectGrade(baseline,preset,strength){
+  const target=preset.values||baseline,amount=clamp(Number.isFinite(strength)?strength:0,0,100)/100;
+  return Object.fromEntries(Object.keys(baseline).map(key=>[key,Math.round((baseline[key]+(target[key]-baseline[key])*amount)*10000)/10000]));
+}
+function validEffectDraft(){return !!effectDraft&&effectDraft.projectId===project?.id&&effectDraft.revision===project.revision&&project.timeline.some(c=>c.id===effectDraft.clipId);}
+function effectDraftGrade(){
+  const preset=EFFECT_PRESETS.find(p=>p.id===effectDraft?.preset)||EFFECT_PRESETS[0];
+  return mixEffectGrade(effectDraft.baseline,preset,effectDraft.strength);
+}
+function effectPreviewClip(clip){
+  if(!validEffectDraft()||clip?.id!==effectDraft.clipId)return clip;
+  return {...clip,...(effectDraft.comparing?effectDraft.baseline:effectDraftGrade())};
+}
+function effectChanges(){
+  if(!validEffectDraft())return null;
+  const values=effectDraftGrade();
+  return Object.keys(values).some(k=>Math.abs(values[k]-effectDraft.baseline[k])>.00001)?values:null;
+}
+function stopEffectPlayback(){
+  if(effectPreviewEnd===null)return false;
+  const end=effectPreviewEnd;effectPreviewEnd=null;pause();
+  cursor=Math.max(before(),end-.001);updatePlayer(false,cursor);return true;
+}
+function updateEffectControls(){
+  const c=currentClip();$("#effects-open").hidden=!editorFeatures.color_adjustments;$("#effects-open").disabled=!c;
+  if(!$("#effects-dialog").open||!effectDraft)return;
+  const valid=validEffectDraft(),target=project?.timeline.find(c=>c.id===effectDraft.clipId),waiting=playerLoading||player.seeking;
+  const preset=EFFECT_PRESETS.find(p=>p.id===effectDraft.preset)||EFFECT_PRESETS[0];
+  $("#effects-selected-note").textContent=preset.id==="original"?"Original restaura brilho, contraste e saturação ao padrão. Desfazer recupera os ajustes anteriores.":`${preset.name} · ${preset.description}. Depois de aplicar, os valores ficam em Luz e cor; não é uma camada independente.`;
+  $("#effects-strength").disabled=!valid||effectSaving||effectDraft.preset==="current";
+  $("#effects-scene").disabled=effectSaving;$("#effects-strength").value=effectDraft.strength;$("#effects-strength-value").textContent=effectDraft.strength+"%";
+  $("#effects-apply").disabled=!valid||effectSaving||waiting||target?.locked||effectDraft.comparing||!effectChanges();
+  $("#effects-compare").disabled=!valid||effectSaving;$("#effects-compare").setAttribute("aria-pressed",effectDraft.comparing);
+  $("#effects-compare").textContent=effectDraft.comparing?"Ver ajustado":"Ver antes";
+  $("#effects-center").disabled=!valid||effectSaving;$("#effects-play").disabled=!valid||effectSaving;$("#effects-play").textContent=playing?"Pausar prévia":"Reproduzir cena";
+  $("#effects-status").textContent=!valid?"O projeto mudou. Feche e reabra para revisar os ajustes.":effectSaving?"Salvando aparência…":target?.locked?"Prévia apenas: desproteja esta cena nos ajustes para aplicar.":waiting?"Carregando a cena…":effectDraft.comparing?"Mostrando os ajustes anteriores. Volte ao ajustado para aplicar.":effectChanges()?"Prévia local. Aplicar salva uma alteração; Cancelar descarta.":"Sem mudança nos ajustes salvos. Escolha uma aparência para comparar.";
+  $("#effects-catalog").querySelectorAll("[data-effect]").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.effect===effectDraft.preset);b.disabled=!valid||effectSaving;});
+}
+function effectFrameAt(clip,time,offset,assetDuration){
+  const source=clip.start+clamp(time-offset,0,clipDuration(clip))*(clip.speed||1);
+  // The frame API reserves 40 ms at the source end; never round beyond its bound.
+  return Math.floor(clamp(source,0,Math.max(0,assetDuration-.04))*1000)/1000;
+}
+function renderEffectCatalog(clip){
+  const asset=assetFor(clip),at=effectFrameAt(clip,cursor,before(),asset.duration);
+  const frame=assetUrl(asset,"frame.jpg")+"?at="+at;
+  $("#effects-catalog").innerHTML=EFFECT_PRESETS.map(p=>{
+    const grade=gradeValues(p.values||effectDraft.baseline),id="effect-grade-"+p.id;
+    const channels=["R","G","B"].map(channel=>`<feFunc${channel} type="linear" slope="${grade.slope}" intercept="${grade.offset}"/>`).join("");
+    return `<button type="button" data-effect="${p.id}" aria-pressed="${p.id===effectDraft.preset}" title="${p.description}"><svg aria-hidden="true" width="0" height="0"><defs><filter id="${id}" color-interpolation-filters="sRGB"><feComponentTransfer>${channels}</feComponentTransfer><feColorMatrix type="matrix" values="${grade.matrix.join(" ")}"/></filter></defs></svg><img alt="" loading="lazy" src="${frame}" style="filter:url(#${id})"><span>${p.name}</span></button>`;
+  }).join("");
+  $("#effects-catalog").querySelectorAll("[data-effect]").forEach(b=>b.addEventListener("click",()=>chooseEffectPreset(b.dataset.effect)));
+}
+function chooseEffectPreset(id){
+  if(!validEffectDraft()||effectSaving||!EFFECT_PRESETS.some(p=>p.id===id))return;
+  effectDraft.preset=id;effectDraft.comparing=false;effectDraft.strength=100;updateTime();
+}
+function chooseEffectScene(id){
+  if(effectSaving)return;
+  pause();effectPreviewEnd=null;
+  const c=project.timeline.find(c=>c.id===id);if(!c)return;
+  effectDraft={...effectDraft,projectId:project.id,revision:project.revision,clipId:id,baseline:effectGrade(c),preset:"current",strength:100,comparing:false};
+  if(selected!==id)selectClip(id);
+  renderEffectCatalog(c);updateTime();
+}
+async function openEffects(){
+  await queue;if(!currentClip()||!editorFeatures.color_adjustments||effectSaving)return;
+  pause();closeSheet();effectDraft={originalCursor:cursor};
+  $("#effects-scene").innerHTML=project.timeline.map((c,i)=>`<option value="${c.id}">${i+1} · ${esc(c.label)}</option>`).join("");
+  $("#effects-scene").value=selected;chooseEffectScene(selected);$("#effects-dialog").showModal();updateEffectControls();
+}
+$("#effects-open").addEventListener("click",openEffects);
+$("#effects-scene").addEventListener("change",e=>chooseEffectScene(e.target.value));
+$("#effects-strength").addEventListener("input",e=>{
+  if(!validEffectDraft()||effectSaving)return;
+  effectDraft.strength=clamp(Number(e.target.value)||0,0,100);effectDraft.comparing=false;updateTime();
+});
+$("#effects-compare").addEventListener("click",()=>{if(validEffectDraft()&&!effectSaving){pause();effectPreviewEnd=null;effectDraft.comparing=!effectDraft.comparing;updateTime();}});
+$("#effects-center").addEventListener("click",()=>{
+  if(!validEffectDraft()||effectSaving)return;
+  effectPreviewEnd=null;const c=project.timeline.find(c=>c.id===effectDraft.clipId);
+  seekTo(before(project.timeline.indexOf(c))+clipDuration(c)/2);renderEffectCatalog(c);updateTime();
+});
+$("#effects-play").addEventListener("click",()=>{
+  if(!validEffectDraft()||effectSaving)return;
+  if(playing){effectPreviewEnd=null;pause();updateEffectControls();return;}
+  const c=project.timeline.find(c=>c.id===effectDraft.clipId);seekTo(before(project.timeline.indexOf(c)));effectPreviewEnd=before()+clipDuration(c);play();updateEffectControls();
+});
+$("#effects-dialog").addEventListener("close",()=>{
+  const original=effectDraft?.originalCursor;pause();effectPreviewEnd=null;effectDraft=null;
+  if(original!==undefined)seekTo(original);else updateTime();
+});
+$("#effects-apply").addEventListener("click",async()=>{
+  if(effectSaving||!effectDraft||$("#effects-apply").disabled)return;
+  const changes=effectChanges();if(!changes)return;
+  effectSaving=true;pause();effectPreviewEnd=null;updateEffectControls();
+  try{const ok=await mutate("clip_update",{clip_id:effectDraft.clipId,...changes},"Aparência salva. Você pode desfazer ou ajustar a cor.");if(ok){effectDraft=null;$("#effects-dialog").close();}}
+  finally{effectSaving=false;updateEffectControls();}
 });
