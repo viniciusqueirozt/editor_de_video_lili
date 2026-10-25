@@ -201,3 +201,8 @@ Avaliação detalhada e próximos blocos em outputs/mercado-e-basico-da-lili.md.
 Código e verificações detalhados em outputs/relatorio-ciclo-24-10-2026.md. Recursos implementados: fades visuais, luz/cor, velocidade constante, enquadramento/espelhamento, marca de texto, estilos de títulos, legendas independentes com SRT, formatos e perfis MP4, música independente com redução durante narração e limitador da mistura, fotos estáticas e Refazer. Editor publicado e ativo ao final da revisão; gateway segue com ativação de suas correções pendente para preservar sessões. Verificação detalhada no relatório.
 
 Próximas lacunas: dissolução entre cenas com prévia coerente, keyframes, fotos/logotipos em camadas, HDR/SDR, transcrição local e biblioteca de efeitos sonoros licenciados. Contas individuais integradas e nuvem não foram ativadas por este ciclo.
+
+
+## Áudio — rodada 3 da noite de 24/10
+
+Implementado painel de música/voz com rascunho, início preciso, alinhamento ao cursor, aparo sincronizado da música, volume/fades/redução, forma de onda de música e voz e aplicação única reversível. Frontend disponível após recarregar pela API já ativa, sem reiniciar serviços; sincronização no encerramento do ciclo. Validação/limites em outputs/rodada-noturna-2026-10-24-03-audio.md. Pendentes: arraste das faixas, ímã/batidas, aparo/split da narração, múltiplos sons e biblioteca licenciada. Uma música e uma narração continuam sendo os limites atuais. Safari real não validado.

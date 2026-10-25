@@ -747,7 +747,7 @@ Cada Fxx é uma função ou fluxo encontrado, com fonte, estado local, proposta 
 
 **Revisitar:** [V01 · 30:02–30:35](https://www.youtube.com/watch?v=dmVeTHBQxEc&t=1802s).
 
-**Na Lili hoje:** Forma de onda da narração; música sem onda e sem arraste temporal.
+**Na Lili hoje (rodada de 25/10):** Forma de onda da narração e música, com trecho/cursor e ajustes precisos em painel de prévia Aplicar/Cancelar. Aparar música no cursor preserva o sincronismo; início pode ser alinhado ou deslocado por quadro. Ainda sem arraste temporal, ímã ou marcadores de batida. F40 parcialmente atendida; ver outputs/rodada-noturna-2026-10-24-03-audio.md.
 
 **Aplicação proposta:** Forma de onda nas faixas relevantes; ímã temporal opcional para cortes, cursor e marcadores.
 
