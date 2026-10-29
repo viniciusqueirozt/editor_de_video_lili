@@ -72,8 +72,8 @@ function renderMusicTrack(){
 function renderCaptionTrack(){
   const track=$("#caption-track");track.hidden=!editorFeatures.subtitles;$("#caption-track-label").hidden=!editorFeatures.subtitles;
   if(!editorFeatures.subtitles)return;
-  track.innerHTML=(project.captions||[]).map(c=>{const end=Math.min(c.end,project.duration);return end>c.start?`<button class="caption-region" data-caption="${c.id}" style="left:${c.start*timelineScale}px;width:${(end-c.start)*timelineScale}px" title="${esc(c.text)}">${esc(c.text)}</button>`:"";}).join("");
-  track.querySelectorAll("[data-caption]").forEach(button=>button.addEventListener("click",()=>{selectedCaption=button.dataset.caption;const c=project.captions.find(c=>c.id===selectedCaption);seekTo(c.start);renderCaptionInspector();openInspector("captions");}));
+  track.innerHTML=(project.captions||[]).map(c=>{const end=Math.min(c.end,project.duration);return end>c.start?`<button class="caption-region" data-caption="${c.id}" aria-current="${c.id===selectedCaption}" style="left:${c.start*timelineScale}px;width:${(end-c.start)*timelineScale}px" title="${esc(c.text)}">${esc(c.text)}</button>`:"";}).join("");
+  track.querySelectorAll("[data-caption]").forEach(button=>button.addEventListener("click",()=>{selectedCaption=button.dataset.caption;const c=project.captions.find(c=>c.id===selectedCaption);openCaptionEdit(c.id);}));
 }
 
 function renderAudioTrack(){renderSoundTrack("narration",$("#audio-track"));}
@@ -620,3 +620,92 @@ function seekAudioTime(){
 }
 $("#audio-seek-go").addEventListener("click",seekAudioTime);
 $("#audio-seek-time").addEventListener("keydown",e=>{if(e.key==="Enter"){e.preventDefault();seekAudioTime();}});
+
+
+// Subtitle text, timing and typography are one reversible edit, not autosaved keystrokes.
+let captionDraft=null,captionSaving=false,captionPreviewEnd=null;
+function validCaptionDraft(){
+  return !!captionDraft&&project?.id===captionDraft.projectId&&project.revision===captionDraft.revision&&(captionDraft.isNew?!project.captions.some(c=>c.id===captionDraft.values.id):project.captions.some(c=>c.id===captionDraft.values.id));
+}
+function captionDraftProblem(values=captionDraft?.values){
+  if(!validCaptionDraft())return "O projeto mudou. Cancele e abra a legenda novamente.";
+  if(!values||!Number.isFinite(values.start)||!Number.isFinite(values.end)||values.start<0||values.end>1800||values.end-values.start<.09999)return "Use entrada e saída entre 0 e 30 minutos, com pelo menos 0,1 s de duração.";
+  if(typeof values.text!=="string"||!values.text.trim()||values.text.length>160)return "Escreva a legenda com até 160 caracteres.";
+  if(!["sans","serif","mono"].includes(values.title_font)||!["small","medium","large"].includes(values.title_size)||!["top","center","bottom"].includes(values.title_position))return "Escolha fonte, tamanho e posição disponíveis.";
+  if((project.captions||[]).some(c=>c.id!==values.id&&values.start<c.end-.00001&&values.end>c.start+.00001))return "Este intervalo encontra outra legenda. Ajuste os tempos; a faixa não aceita sobreposição.";
+  return "";
+}
+function captionPreviewItems(){
+  const saved=project?.captions||[];
+  if(!validCaptionDraft()||captionDraftProblem())return saved;
+  const list=[...saved.filter(c=>c.id!==captionDraft.values.id),{...captionDraft.values,text:captionDraft.values.text.trim()}].sort((a,b)=>a.start-b.start);
+  return captionDraft.styleAll?list.map(c=>({...c,...captionStyle(captionDraft.values)})):list;
+}
+function captionStyle(c){return {title_font:c.title_font||"sans",title_size:c.title_size||"medium",title_position:c.title_position||"bottom"};}
+function captionHasChanges(){return validCaptionDraft()&&(captionDraft.isNew||Object.keys(captionDraft.values).some(k=>captionDraft.values[k]!==captionDraft.baseline[k])||captionDraft.styleAll&&(project.captions||[]).some(c=>Object.keys(captionStyle(c)).some(k=>captionStyle(c)[k]!==captionDraft.values[k])));}
+
+function writeCaptionFields(){
+  const d=captionDraft.values;for(const key of ["text","title_font","title_size","title_position"])$("#caption-edit-"+key).value=d[key];
+  for(const key of ["start","end"])$("#caption-edit-"+key).value=Number.isFinite(d[key])?montageTime(d[key]):"";
+}
+function updateCaptionControls(){
+  if(!captionDraft)return;const d=captionDraft.values,problem=captionDraftProblem(),canPreview=!problem&&d.start<project.duration&&project.timeline.length>0;
+  $("#caption-style-all-label").textContent=`Usar este estilo em todas as legendas (${project.captions.length+(captionDraft.isNew?1:0)})`;
+  $("#caption-edit-count").textContent=d.text.length+"/160";$("#caption-edit-error").hidden=!problem;$("#caption-edit-error").textContent=problem;
+  $("#caption-edit-cursor").textContent=`Cursor ${montageTime(cursor)} · duração ${Number.isFinite(d.end-d.start)?precise(d.end-d.start):"—"}`;
+  $("#caption-edit-status").textContent=captionSaving?"Salvando…":problem?"A prévia usa as legendas salvas até corrigir os valores.":d.end>project.duration?"A legenda ultrapassa a montagem. Só o trecho dentro do vídeo será exportado.":(captionDraft.styleAll?"Aplicar também padroniza o estilo de todas as legendas. ":"Prévia local. ")+"Texto, tempos e estilo são salvos de uma vez; Cancelar descarta.";
+  for(const node of $("#caption-edit-dialog").querySelectorAll("input,textarea,select,button"))node.disabled=captionSaving;
+  $("#caption-edit-apply").disabled=captionSaving||!!problem||!captionHasChanges();
+  $("#caption-review").disabled=captionSaving||!canPreview;$("#caption-play").disabled=captionSaving||!canPreview||playerLoading;
+  $("#caption-play").textContent=playing?"Pausar prévia":"Reproduzir legenda";
+  $("#caption-edit-remove").hidden=captionDraft.isNew;$("#caption-edit-remove").disabled=captionSaving||!validCaptionDraft();
+  for(const edge of ["start","end"])$("#caption-"+edge+"-here").disabled=captionSaving||!!captionDraftProblem({...d,[edge]:roundTime(cursor)});
+  $("#caption-move-here").disabled=captionSaving||!!captionDraftProblem({...d,start:roundTime(cursor),end:roundTime(cursor+d.end-d.start)});
+}
+function changeCaptionDraft(patch,write=false){
+  if(!validCaptionDraft()||captionSaving)return;pause();captionPreviewEnd=null;Object.assign(captionDraft.values,patch);if(write)writeCaptionFields();updateTime();
+}
+async function openCaptionEdit(id=null){
+  await queue;if(!project||!editorFeatures.subtitles||captionSaving)return;
+  let saved=id&&(project.captions||[]).find(c=>c.id===id),start=clamp(cursor,0,Math.max(0,project.duration-.1));
+  if(id&&!saved)return;
+  if(!saved)saved=(project.captions||[]).find(c=>c.start<=start&&start<c.end);
+  let values;
+  if(saved)values={title_font:"sans",title_size:"medium",title_position:"bottom",...saved};else{
+    if(project.duration<.1||(project.captions||[]).length>=500){toast("A montagem precisa de espaço e aceita até 500 legendas.",true);return;}
+    const next=(project.captions||[]).filter(c=>c.start>=start).sort((a,b)=>a.start-b.start)[0];
+    const end=Math.min(project.duration,start+2,next?.start??1800);
+    if(end-start<.09999){toast("Não cabe outra legenda neste instante. Mova o cursor para um espaço livre.",true);return;}
+    values={id:crypto.randomUUID().replaceAll("-",""),start:roundTime(start),end:roundTime(end),text:"",title_font:"sans",title_size:"medium",title_position:"bottom"};
+  }
+  pause();closeSheet();captionPreviewEnd=null;captionDraft={projectId:project.id,revision:project.revision,originalCursor:cursor,isNew:!saved,styleAll:false,baseline:{...values},values};
+  selectedCaption=values.id;$("#caption-edit-title").textContent=saved?"Editar legenda":"Nova legenda";$("#caption-edit-note").textContent=saved?"Ajuste esta legenda sem gravar experiências no projeto.":"Comece pelo texto. A legenda só entra no projeto quando você aplicar.";
+  $("#caption-style-all").checked=false;writeCaptionFields();$("#caption-edit-dialog").showModal();updateTime();
+}
+$("#caption-style-all").addEventListener("change",e=>{if(!validCaptionDraft()||captionSaving)return;pause();captionPreviewEnd=null;captionDraft.styleAll=e.target.checked;updateTime();});
+for(const key of ["text","start","end"])$("#caption-edit-"+key).addEventListener("input",e=>changeCaptionDraft({[key]:key==="text"?e.target.value:parseMontageTime(e.target.value)??NaN}));
+for(const key of ["title_font","title_size","title_position"])$("#caption-edit-"+key).addEventListener("change",e=>changeCaptionDraft({[key]:e.target.value}));
+for(const edge of ["start","end"])$("#caption-"+edge+"-here").addEventListener("click",()=>{if(!captionDraft||captionSaving)return;const patch={[edge]:roundTime(cursor)};if(!captionDraftProblem({...captionDraft.values,...patch}))changeCaptionDraft(patch,true);});
+$("#caption-move-here").addEventListener("click",()=>{if(!captionDraft||captionSaving)return;const d=captionDraft.values,patch={start:roundTime(cursor),end:roundTime(cursor+d.end-d.start)};if(!captionDraftProblem({...d,...patch}))changeCaptionDraft(patch,true);});
+for(const [key,direction] of [["back",-1],["forward",1]])$("#caption-cursor-"+key).addEventListener("click",()=>{if(captionDraft&&!captionSaving){captionPreviewEnd=null;seekTo(frameStep(cursor,direction,project.duration));}});
+$("#caption-review").addEventListener("click",()=>{if(!validCaptionDraft()||captionSaving||captionDraftProblem()||captionDraft.values.start>=project.duration)return;captionPreviewEnd=null;const d=captionDraft.values;seekTo((d.start+Math.min(d.end,project.duration))/2);$("#expand-preview").click();});
+$("#caption-play").addEventListener("click",()=>{
+  if(!validCaptionDraft()||captionSaving||captionDraftProblem()||captionDraft.values.start>=project.duration)return;
+  if(playing){captionPreviewEnd=null;pause();updateCaptionControls();return;}
+  seekTo(captionDraft.values.start);captionPreviewEnd=Math.min(captionDraft.values.end,project.duration);play();updateCaptionControls();
+});
+function stopCaptionPlayback(){
+  if(captionPreviewEnd===null||cursor<captionPreviewEnd-1/30)return false;
+  const end=captionPreviewEnd,start=captionDraft?.values.start??0;captionPreviewEnd=null;pause();seekTo(Math.max(start,end-1/30));return true;
+}
+$("#caption-edit-dialog").addEventListener("cancel",e=>{if(captionSaving)e.preventDefault();});
+$("#caption-edit-dialog").addEventListener("close",()=>{const original=captionDraft?.originalCursor;pause();captionPreviewEnd=null;captionDraft=null;if(original!==undefined)seekTo(original);else updateTime();});
+async function saveCaptionDraft(remove=false){
+  await queue;if(captionSaving||!validCaptionDraft()||(remove?captionDraft.isNew:captionDraftProblem()||!captionHasChanges()))return;
+  const draft=captionDraft;captionSaving=true;pause();captionPreviewEnd=null;updateCaptionControls();
+  const args=remove?{caption_id:draft.values.id}:draft.styleAll?{captions:captionPreviewItems()}:draft.isNew?{...draft.values}:{caption_id:draft.values.id,...Object.fromEntries(Object.entries(draft.values).filter(([key])=>key!=="id"))};
+  try{const ok=await mutate(remove?"caption_remove":draft.styleAll?"captions_replace":draft.isNew?"caption_add":"caption_update",args,remove?"Legenda removida. Você pode desfazer.":"Legenda salva. Você pode desfazer pela linha do tempo.");if(ok){captionDraft=null;$("#caption-edit-dialog").close();}}
+  finally{captionSaving=false;updateCaptionControls();}
+}
+$("#caption-edit-apply").addEventListener("click",()=>saveCaptionDraft());
+$("#caption-edit-remove").addEventListener("click",()=>saveCaptionDraft(true));

@@ -206,3 +206,8 @@ Próximas lacunas: dissolução entre cenas com prévia coerente, keyframes, fot
 ## Áudio — rodada 3 da noite de 24/10
 
 Implementado painel de música/voz com rascunho, início preciso, alinhamento ao cursor, aparo sincronizado da música, volume/fades/redução, forma de onda de música e voz e aplicação única reversível. Frontend disponível após recarregar pela API já ativa, sem reiniciar serviços; sincronização no encerramento do ciclo. Validação/limites em outputs/rodada-noturna-2026-10-24-03-audio.md. Pendentes: arraste das faixas, ímã/batidas, aparo/split da narração, múltiplos sons e biblioteca licenciada. Uma música e uma narração continuam sendo os limites atuais. Safari real não validado.
+
+
+## Legendas — rodada 1 da noite de 28/10
+
+Código/testes preparados para painel de rascunho de texto, tempo e estilo, criação sem placeholder gravado, movimento/aparo precisos, padronização opcional da tipografia em lote e aplicação reversível. Reutiliza caption_add/update/remove e captions_replace, sem backend novo. Testes de prévia e exportação sintética passaram; revisão visual bloqueada pela inicialização do navegador, sem validação de Safari. Editor real 8765 não respondeu: ativação pendente, sem alteração dos serviços reais. Relatório/pendências: outputs/rodada-noturna-2026-10-28-01-legendas.md. Priorizar retomar a revisão visual e conferir ativação ao fechar a noite; depois entrega/exportação, arraste/divisão de legendas e fontes licenciadas. Não contar os três checkpoints ainda locais do ciclo anterior como publicados.

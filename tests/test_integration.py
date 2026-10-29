@@ -385,6 +385,35 @@ class IntegrationTests(unittest.TestCase):
         self.assertGreater(min(bright),h*.68)
         self.assertLess(max(bright),h*.84)
 
+    def test_independent_subtitle_draft_payload_timing_style_and_undo_export(self):
+        p=self.client.call("POST","/api/projects",{"name":"Subtitle draft synthetic"})
+        imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"])
+        def edit(op,args):
+            nonlocal p
+            p=self.client.call("POST",f"/api/projects/{p['id']}/commands",{"operation":op,"args":args,"expected_revision":p["revision"]})
+        p=self.client.call("GET","/api/projects/"+p['id'])
+        edit("clip_add",{"media_id":imported['media_id'],"start":0,"end":1.6})
+        baseline=p['timeline']
+        edit("caption_add",{"start":.3,"end":.8,"text":"Legenda inferior","title_font":"serif","title_size":"large","title_position":"bottom"})
+        first=p['captions'][0]
+        edit("caption_update",{"caption_id":first['id'],"start":.35,"end":.85,"text":"Texto revisado","title_font":"serif","title_size":"large","title_position":"bottom"})
+        edit("undo",{});self.assertEqual(p['captions'][0],first)
+        edit("redo",{});self.assertEqual(p['captions'][0]['text'],"Texto revisado")
+        edit("caption_add",{"start":1,"end":1.5,"text":"Topo","title_font":"mono","title_size":"small","title_position":"top"})
+        self.assertEqual(p['timeline'],baseline)
+        srt=self.client.call('GET',f"/api/projects/{p['id']}/captions.srt",binary=True).decode('utf-8')
+        self.assertIn('00:00:00,350 --> 00:00:00,850',srt);self.assertIn('Texto revisado',srt)
+        job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+        output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+        def white_rows(at):
+            raw=subprocess.run([executable(),'-v','error','-ss',str(at),'-i',str(output),'-frames:v','1','-vf','format=gray','-f','rawvideo','pipe:1'],capture_output=True,check=True).stdout
+            return [i//540 for i,value in enumerate(raw) if value>200]
+        self.assertEqual(white_rows(.1),[])
+        lower,upper=white_rows(.5),white_rows(1.2)
+        self.assertGreater(len(lower),50);self.assertGreater(min(lower),960*.65);self.assertLess(max(lower),960*.85)
+        self.assertGreater(len(upper),5);self.assertLess(max(upper),960*.3)
+        self.assertGreater(len(lower),len(upper));self.assertAlmostEqual(probe(output)['duration'],1.6,delta=.1)
+
     def test_export_presets_render_square_landscape_and_balanced(self):
         p=self.client.call("POST","/api/projects",{"name":"Formats synthetic"})
         imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"]);p=self.store.get(p["id"])

@@ -165,14 +165,11 @@ function renderCaptionInspector(){
   const captions=project.captions||[];
   if(!captions.some(c=>c.id===selectedCaption))selectedCaption=captions[0]?.id||null;
   const c=captions.find(c=>c.id===selectedCaption),outside=captions.filter(c=>c.end>project.duration+.001).length;
-  $("#captions-inspector").innerHTML=`<p class="help">Faixa independente dos cortes. Edite os tempos ou importe um SRT de texto.</p><div class="caption-actions"><button id="add-caption" class="button secondary" ${project.duration<.1?"disabled":""}>+ No cursor</button><button id="import-srt" class="button secondary">Importar SRT</button></div>${captions.length?`<a class="upload-link" href="/api/projects/${project.id}/captions.srt" download>Baixar legendas SRT ↓</a>`:""}${outside?`<p class="voice-warning help">${outside} legenda(s) ultrapassam o fim da montagem. Confira os tempos antes de entregar.</p>`:""}${c?`<label class="field-label" for="caption-selection">Legenda · ${captions.length} no projeto</label><select id="caption-selection">${captions.map((item,i)=>`<option value="${item.id}" ${item.id===c.id?"selected":""}>${i+1}. ${esc(item.text.slice(0,35))}</option>`).join("")}</select><div class="trim-fields"><div><label class="field-label" for="caption-start">Início · segundos</label><input id="caption-start" type="number" min="0" max="1800" step="0.1" value="${c.start}"></div><div><label class="field-label" for="caption-end">Fim · segundos</label><input id="caption-end" type="number" min="0.1" max="1800" step="0.1" value="${c.end}"></div></div><label class="field-label" for="caption-text">Texto</label><textarea id="caption-text" rows="3" maxlength="160">${esc(c.text)}</textarea>${[["title_font","Fonte",[["sans","Arial"],["serif","Georgia"],["mono","Consolas"]]],["title_size","Tamanho",[["small","Pequeno"],["medium","Médio"],["large","Grande"]]],["title_position","Posição",[["bottom","Inferior"],["center","Centro"],["top","Superior"]]]].map(([key,label,options])=>`<label class="field-label" for="caption-${key}">${label}</label><select id="caption-${key}">${options.map(([value,name])=>`<option value="${value}" ${value===c[key]?"selected":""}>${name}</option>`).join("")}</select>`).join("")}<button id="remove-caption" class="danger-button">Remover esta legenda</button>`:'<p class="empty-note">Nenhuma legenda temporizada ainda.</p>'}`;
-  $("#add-caption").addEventListener("click",()=>{
-    const start=Math.max(0,Math.min(cursor,project.duration-.1));
-    const identity=crypto.randomUUID().replaceAll("-","");selectedCaption=identity;
-    mutate("caption_add",{id:identity,start,end:Math.min(project.duration,start+2),text:"Nova legenda"},"Legenda adicionada. Edite o texto e os tempos.");
-  });
+  $("#captions-inspector").innerHTML=`<p class="help">Faixa independente dos cortes. Edite os tempos ou importe um SRT de texto.</p><div class="caption-actions"><button id="add-caption" class="button secondary" ${project.duration<.1?"disabled":""}>+ No cursor</button><button id="import-srt" class="button secondary">Importar SRT</button></div>${captions.length?`<a class="upload-link" href="/api/projects/${project.id}/captions.srt" download>Baixar legendas SRT ↓</a>`:""}${outside?`<p class="voice-warning help">${outside} legenda(s) ultrapassam o fim da montagem. Confira os tempos antes de entregar.</p>`:""}${c?`<button id="caption-open-edit" class="button secondary full">Editar com prévia</button><label class="field-label" for="caption-selection">Legenda · ${captions.length} no projeto</label><select id="caption-selection">${captions.map((item,i)=>`<option value="${item.id}" ${item.id===c.id?"selected":""}>${i+1}. ${esc(item.text.slice(0,35))}</option>`).join("")}</select><div class="trim-fields"><div><label class="field-label" for="caption-start">Início · segundos</label><input id="caption-start" type="number" min="0" max="1800" step="0.1" value="${c.start}"></div><div><label class="field-label" for="caption-end">Fim · segundos</label><input id="caption-end" type="number" min="0.1" max="1800" step="0.1" value="${c.end}"></div></div><label class="field-label" for="caption-text">Texto</label><textarea id="caption-text" rows="3" maxlength="160">${esc(c.text)}</textarea>${[["title_font","Fonte",[["sans","Arial"],["serif","Georgia"],["mono","Consolas"]]],["title_size","Tamanho",[["small","Pequeno"],["medium","Médio"],["large","Grande"]]],["title_position","Posição",[["bottom","Inferior"],["center","Centro"],["top","Superior"]]]].map(([key,label,options])=>`<label class="field-label" for="caption-${key}">${label}</label><select id="caption-${key}">${options.map(([value,name])=>`<option value="${value}" ${value===c[key]?"selected":""}>${name}</option>`).join("")}</select>`).join("")}<button id="remove-caption" class="danger-button">Remover esta legenda</button>`:'<p class="empty-note">Nenhuma legenda temporizada ainda.</p>'}`;
+  $("#add-caption").addEventListener("click",()=>openCaptionEdit());
   $("#import-srt").addEventListener("click",()=>$("#srt-input").click());
   if(!c)return;
+  $("#caption-open-edit").addEventListener("click",()=>openCaptionEdit(c.id));
   const update=changes=>mutate("caption_update",{caption_id:c.id,...changes});
   $("#caption-selection").addEventListener("change",e=>{selectedCaption=e.target.value;const target=captions.find(item=>item.id===selectedCaption);seekTo(target.start);renderCaptionInspector();openInspector("captions");});
   for(const key of ["start","end"])$("#caption-"+key).addEventListener("change",e=>update({[key]:Number(e.target.value)}));
@@ -181,7 +178,7 @@ function renderCaptionInspector(){
   $("#remove-caption").addEventListener("click",()=>mutate("caption_remove",{caption_id:c.id},"Legenda removida. Você pode desfazer."));
 }
 function updatePreviewSubtitle(time){
-  const caption=(project?.captions||[]).find(c=>c.start<=time&&time<c.end),node=$("#preview-subtitle");
+  const caption=(typeof captionPreviewItems==="function"?captionPreviewItems():project?.captions||[]).find(c=>c.start<=time&&time<c.end),node=$("#preview-subtitle");
   node.hidden=!caption;
   if(caption){renderPreviewCaption({...caption,title:caption.text},"#preview-subtitle");node.style.opacity=1;}
 }
@@ -251,6 +248,7 @@ function flushPreviewSeek(){
   if(typeof updatePrecisionControls==="function")updatePrecisionControls();
   if(typeof updateEffectControls==="function")updateEffectControls();
   if(typeof updateAudioControls==="function")updateAudioControls();
+  if(typeof updateCaptionControls==="function")updateCaptionControls();
 }
 function updatePlayer(resume=false, time=before()){
   const c=currentClip(), m=c&&assetFor(c);
@@ -397,10 +395,12 @@ function updateTime(){
   if(typeof updatePrecisionControls==="function")updatePrecisionControls();
   if(typeof updateEffectControls==="function")updateEffectControls();
   if(typeof updateAudioControls==="function")updateAudioControls();
+  if(typeof updateCaptionControls==="function")updateCaptionControls();
 }
 function advance(){
   if(!playing) return;
   if(typeof stopEffectPlayback==="function"&&stopEffectPlayback())return;
+  if(typeof stopCaptionPlayback==="function"&&stopCaptionPlayback())return;
   const i=index();
   if(i < project.timeline.length-1){
     cursor=before(i+1); selected=project.timeline[i+1].id;
@@ -416,6 +416,7 @@ function playbackTick(){
     updateTime();syncVoice();syncMusic();
     if(typeof transitionPreviewEnd!=="undefined"&&transitionPreviewEnd!==null&&cursor>=transitionPreviewEnd){transitionPreviewEnd=null;pause();return;}
     if(typeof effectPreviewEnd!=="undefined"&&effectPreviewEnd!==null&&cursor>=effectPreviewEnd-1/30){stopEffectPlayback();return;}
+    if(typeof stopCaptionPlayback==="function"&&stopCaptionPlayback())return;
     if(player.currentTime>=c.end-.012){advance();return;}
   }
   playbackFrame=requestAnimationFrame(playbackTick);
@@ -726,7 +727,7 @@ async function refreshJobs(){
   $("#start-export").disabled=running||!project.timeline.length;renderExportJobs(exports);
 }
 
-setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture&&!$("#transition-dialog").open&&!$("#effects-dialog").open&&!$("#audio-edit-dialog").open){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
+setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture&&!$("#transition-dialog").open&&!$("#effects-dialog").open&&!$("#audio-edit-dialog").open&&!$("#caption-edit-dialog").open){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
 (async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}document.body.classList.toggle("has-subtitles",Boolean(editorFeatures.subtitles));document.body.classList.toggle("has-music",Boolean(editorFeatures.music_track));if(editorFeatures.still_images)$("#file-input").accept+=",.jpg,.jpeg,.png,.webp";await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});

@@ -331,6 +331,21 @@ class ProjectTests(unittest.TestCase):
         self.apply("undo",{});self.apply("undo",{})
         self.assertEqual(self.p["duration"],3)
 
+    def test_caption_batch_style_preserves_content_timing_and_history(self):
+        self.add()
+        self.apply("caption_add",{"start":.2,"end":1.2,"text":"Primeira"})
+        self.apply("caption_add",{"start":1.5,"end":2.5,"text":"Segunda","title_font":"serif"})
+        original=[c.copy() for c in self.p['captions']]
+        styled=[{**c,"title_font":"mono","title_size":"large","title_position":"top"} for c in original]
+        self.apply("captions_replace",{"captions":styled})
+        self.assertEqual(self.p['captions'],styled)
+        self.assertEqual([(c['id'],c['start'],c['end'],c['text']) for c in self.p['captions']],[(c['id'],c['start'],c['end'],c['text']) for c in original])
+        self.apply("undo",{});self.assertEqual(self.p['captions'],original)
+        self.apply("redo",{});self.assertEqual(self.p['captions'],styled)
+        revision=self.p['revision']
+        with self.assertRaises(EditorError):self.apply("captions_replace",{"captions":[styled[0],{**styled[1],"start":.5}]})
+        self.refresh();self.assertEqual(self.p['revision'],revision);self.assertEqual(self.p['captions'],styled)
+
     def test_subtitle_lane_is_independent_atomic_and_undoable(self):
         clip=self.add()
         self.apply("caption_add",{"start":.2,"end":1.2,"text":"Olá"})
