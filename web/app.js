@@ -153,11 +153,11 @@ function renderInspector() {
     $("#move-right").addEventListener("click",()=>mutate("clip_move",{clip_id:c.id,index:i+1}));
     $("#remove-clip").addEventListener("click",()=>mutate("clip_remove",{clip_id:c.id}));
   }
-  const n=project.narration, audios=project.media.filter(m=>m.status==="ready"&&m.has_audio), na=n&&project.media.find(m=>m.id===n.media_id);
-  $("#voice-inspector").innerHTML = `<p class="help">Monte as cenas primeiro. Depois, traga a narração para encontrar o ritmo final.</p><label class="field-label" for="voice-source">Arquivo de narração</label><select id="voice-source"><option value="">Sem narração adicional</option>${audios.map(a=>`<option value="${a.id}" ${a.id===n?.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><button class="button secondary full" id="import-voice" style="margin-top:12px">${icon("upload")}Importar áudio</button>${n?`<button id="voice-timing" class="button secondary full">Ajustar tempo e ouvir prévia</button><label class="field-label" for="voice-volume">Volume da narração</label><div class="range-row"><input id="voice-volume" type="range" min="0" max="100" value="${Math.round(n.volume*100)}"><output id="voice-volume-value">${Math.round(n.volume*100)}%</output></div><label class="field-label" for="voice-offset">Começar após · segundos</label><input id="voice-offset" type="number" min="0" max="3600" step="0.1" value="${n.offset}"><label class="field-label" for="voice-fade_in">Entrada suave · segundos</label><input id="voice-fade_in" type="number" min="0" max="${na.duration}" step="0.1" value="${n.fade_in||0}"><label class="field-label" for="voice-fade_out">Saída suave · segundos</label><input id="voice-fade_out" type="number" min="0" max="${na.duration}" step="0.1" value="${n.fade_out||0}"><p class="help">A saída suave termina no fim do arquivo de narração. Use 0 para desativar.</p><div class="voice-note ${na.duration+n.offset>project.duration+0.1?"voice-warning":""}">${na.duration+n.offset>project.duration+0.1?"A narração ultrapassa a montagem. Prolongue as cenas para ouvir a fala completa na exportação.":"A narração acompanha a montagem. Ajuste o som original de cada cena para equilibrar a voz."}<br>Áudio: ${precise(na.duration)} · montagem: ${precise(project.duration)}</div>`:'<div class="voice-note">A Elisa continua gravando a própria voz. A narração adicional pode ser adicionada depois.</div>'}`;
+  const n=project.narration, audios=project.media.filter(m=>m.status==="ready"&&m.has_audio), na=n&&project.media.find(m=>m.id===n.media_id),nl=na?audioRange(n,na.duration).length:0;
+  $("#voice-inspector").innerHTML = `<p class="help">Monte as cenas primeiro. Depois, traga a narração para encontrar o ritmo final.</p><label class="field-label" for="voice-source">Arquivo de narração</label><select id="voice-source"><option value="">Sem narração adicional</option>${audios.map(a=>`<option value="${a.id}" ${a.id===n?.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><button class="button secondary full" id="import-voice" style="margin-top:12px">${icon("upload")}Importar áudio</button>${n?`<button id="voice-timing" class="button secondary full">Ajustar tempo e ouvir prévia</button><label class="field-label" for="voice-volume">Volume da narração</label><div class="range-row"><input id="voice-volume" type="range" min="0" max="100" value="${Math.round(n.volume*100)}"><output id="voice-volume-value">${Math.round(n.volume*100)}%</output></div><label class="field-label" for="voice-offset">Começar após · segundos</label><input id="voice-offset" type="number" min="0" max="3600" step="0.1" value="${n.offset}"><label class="field-label" for="voice-fade_in">Entrada suave · segundos</label><input id="voice-fade_in" type="number" min="0" max="${nl}" step="0.1" value="${n.fade_in||0}"><label class="field-label" for="voice-fade_out">Saída suave · segundos</label><input id="voice-fade_out" type="number" min="0" max="${nl}" step="0.1" value="${n.fade_out||0}"><p class="help">A saída suave termina no fim do trecho de narração. Use 0 para desativar.</p><div class="voice-note ${nl+n.offset>project.duration+0.1?"voice-warning":""}">${nl+n.offset>project.duration+0.1?"A narração ultrapassa a montagem. Prolongue as cenas para ouvir a fala completa na exportação.":"A narração acompanha a montagem. Ajuste o som original de cada cena para equilibrar a voz."}<br>Áudio: ${precise(nl)} · montagem: ${precise(project.duration)}</div>`:'<div class="voice-note">A Elisa continua gravando a própria voz. A narração adicional pode ser adicionada depois.</div>'}`;
   $("#voice-source").addEventListener("change",e=>mutate("narration_set",{media_id:e.target.value||null}));
   $("#import-voice").addEventListener("click",()=>$("#file-input").click());
-  if(n){$("#voice-timing").addEventListener("click",()=>openAudioEdit("narration"));for(const key of ["fade_in","fade_out"]) $("#voice-"+key).addEventListener("change",e=>mutate("narration_set",{[key]:Number(e.target.value)}));$("#voice-volume").addEventListener("input",e=>{$("#voice-volume-value").value=`${e.target.value}%`;voice.volume=voiceGain({...n,volume:Number(e.target.value)/100},cursor-n.offset,na.duration);});$("#voice-volume").addEventListener("change",e=>mutate("narration_set",{volume:Number(e.target.value)/100}));$("#voice-offset").addEventListener("change",e=>mutate("narration_set",{offset:Number(e.target.value)}));}
+  if(n){$("#voice-timing").addEventListener("click",()=>openAudioEdit("narration"));for(const key of ["fade_in","fade_out"]) $("#voice-"+key).addEventListener("change",e=>mutate("narration_set",{[key]:Number(e.target.value)}));$("#voice-volume").addEventListener("input",e=>{$("#voice-volume-value").value=`${e.target.value}%`;voice.volume=voiceGain({...n,volume:Number(e.target.value)/100},cursor-n.offset,nl);});$("#voice-volume").addEventListener("change",e=>mutate("narration_set",{volume:Number(e.target.value)/100}));$("#voice-offset").addEventListener("change",e=>mutate("narration_set",{offset:Number(e.target.value)}));}
 }
 function renderCaptionInspector(){
   $("#captions-tab").hidden=!editorFeatures.subtitles;
@@ -270,7 +270,7 @@ function updatePlayer(resume=false, time=before()){
   if(narration){
     const a=project.media.find(m=>m.id===narration.media_id), src=assetUrl(a);
     if(voice.getAttribute("src")!==src){voice.src=src;voice.load();}
-    voice.volume=voiceGain(narration,cursor-narration.offset,a.duration);
+    voice.volume=voiceGain(narration,cursor-narration.offset,audioRange(narration,a.duration).length);
   } else if(voice.hasAttribute("src")){voice.removeAttribute("src");voice.load();}
   const music=typeof audioPreviewTrack==="function"?audioPreviewTrack("music"):project.music;
   if(music){const source=assetUrl(project.media.find(m=>m.id===music.media_id));if(musicPlayer.getAttribute("src")!==source){musicPlayer.src=source;musicPlayer.load();}}
@@ -283,14 +283,19 @@ function voiceGain(n,time,duration){
   const envelope=Math.max(0,Math.min(1,n.fade_in?time/n.fade_in:1,n.fade_out?(duration-time)/n.fade_out:1));
   return Math.min(1,n.volume*envelope);
 }
+function audioRange(track,duration){
+  const start=track?.start??0,end=track?.end??duration;
+  return {start,end,length:Math.max(0,end-start)};
+}
 function syncVoice(){
   const n=typeof audioPreviewTrack==="function"?audioPreviewTrack("narration"):project?.narration;
   if(!n||!playing||playerLoading||player.seeking||player.paused){voice.pause();return;}
   const time=cursor-n.offset;
   const asset=project.media.find(m=>m.id===project.narration.media_id);
-  voice.volume=voiceGain(n,time,asset.duration);
-  if(time<0||time>=asset.duration){voice.pause();return;}
-  if(voice.readyState>=1&&Math.abs(voice.currentTime-time)>.12) voice.currentTime=time;
+  const range=audioRange(n,asset.duration);
+  voice.volume=voiceGain(n,time,range.length);
+  if(time<0||time>=range.length){voice.pause();return;}
+  if(voice.readyState>=1&&Math.abs(voice.currentTime-(range.start+time))>.12) voice.currentTime=range.start+time;
   if(voice.paused) voice.play().catch(()=>{});
 }
 function musicGain(m,time,narration,narrationDuration=0){
@@ -304,7 +309,8 @@ function syncMusic(){
   const m=typeof audioPreviewTrack==="function"?audioPreviewTrack("music"):project?.music;
   if(!m||!playing||playerLoading||player.seeking||player.paused){musicPlayer.pause();return;}
   const voiceAsset=project.media.find(a=>a.id===project.narration?.media_id);
-  musicPlayer.volume=musicGain(m,cursor,typeof audioPreviewTrack==="function"?audioPreviewTrack("narration"):project.narration,voiceAsset?.duration||0);
+  const narration=typeof audioPreviewTrack==="function"?audioPreviewTrack("narration"):project.narration;
+  musicPlayer.volume=musicGain(m,cursor,narration,voiceAsset?audioRange(narration,voiceAsset.duration).length:0);
   const local=cursor-m.offset;
   if(local<0||local>=m.end-m.start){musicPlayer.pause();return;}
   const time=m.start+local;
@@ -687,7 +693,7 @@ function exportReadiness(p){
   const unavailable=[...used].filter(id=>{const a=media.get(id);return !a||a.deleted_at||a.status!=="ready";});
   if(unavailable.length)add("error",`${unavailable.length} arquivo(s) usado(s) na montagem ainda não estão prontos ou disponíveis. Confira a biblioteca.`,"library");
   const n=p.narration,voice=n&&media.get(n.media_id);
-  if(n&&voice){if(n.offset>=duration)add("warning","A narração começa depois do fim do vídeo e não será ouvida.","voice");else if(n.offset+voice.duration>duration+.001)add("warning",`A narração ultrapassa o vídeo em ${precise(n.offset+voice.duration-duration)}. Parte da fala ficará de fora.`,"voice");}
+  if(n&&voice){if(n.offset>=duration)add("warning","A narração começa depois do fim do vídeo e não será ouvida.","voice");else if(n.offset+audioRange(n,voice.duration).length>duration+.001)add("warning",`A narração ultrapassa o vídeo em ${precise(n.offset+audioRange(n,voice.duration).length-duration)}. Parte da fala ficará de fora.`,"voice");}
   const m=p.music;
   if(m){if(m.offset>=duration)add("warning","A música começa depois do fim do vídeo e não será ouvida.","music");else if(m.fade_out>0&&m.offset+m.end-m.start>duration+.001)add("warning","O vídeo termina antes do fim da música: a saída suave escolhida não termina dentro da entrega.","music");}
   const outside=(p.captions||[]).filter(c=>c.end>duration+.001).length;

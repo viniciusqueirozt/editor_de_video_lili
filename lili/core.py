@@ -495,11 +495,16 @@ class Store:
                     if asset.get("deleted_at") or asset.get("status") != "ready" or not asset.get("has_audio"):
                         raise EditorError("Escolha um arquivo importado que contenha áudio.")
                     values = {**(p["narration"] if p["narration"] and p["narration"]["media_id"] == media_id else {}), **args}
-                    fade_in = number(values.get("fade_in", 0), 0, asset["duration"])
-                    fade_out = number(values.get("fade_out", 0), 0, asset["duration"])
-                    if fade_in + fade_out > asset["duration"]:
-                        raise EditorError("As suavizações juntas não podem ultrapassar a duração da narração.")
-                    p["narration"] = {"media_id": media_id, "volume": number(values.get("volume", 1), 0, 2),
+                    start = number(values.get("start", 0), 0, asset["duration"])
+                    end = number(values.get("end", asset["duration"]), start, asset["duration"])
+                    length = round(end - start, 4)
+                    if length < .1:
+                        raise EditorError("Deixe pelo menos 0,1 segundo de narração.")
+                    fade_in = number(values.get("fade_in", 0), 0, length)
+                    fade_out = number(values.get("fade_out", 0), 0, length)
+                    if fade_in + fade_out > length + .000001:
+                        raise EditorError("As suavizações juntas não podem ultrapassar a duração do trecho de narração.")
+                    p["narration"] = {"media_id": media_id, "start": start, "end": end, "volume": number(values.get("volume", 1), 0, 2),
                                       "offset": number(values.get("offset", 0), 0, 3600),
                                       "fade_in": fade_in, "fade_out": fade_out}
             elif operation == "request_add":

@@ -132,6 +132,42 @@ class IntegrationTests(unittest.TestCase):
         self.assertLess(amplitude(2.9, 3.1), normal*.02)
         self.assertAlmostEqual(probe(output)["duration"], 3.2, delta=.1)
 
+    def test_narration_source_trim_fades_duck_and_legacy_export(self):
+        import array, math
+        voice_file,music_file=self.root/'voice-markers.wav',self.root/'trim-music.wav'
+        run(['-f','lavfi','-i','sine=frequency=220:duration=1','-f','lavfi','-i','sine=frequency=440:duration=2','-f','lavfi','-i','sine=frequency=880:duration=1','-filter_complex','[0:a][1:a][2:a]concat=n=3:v=0:a=1[a]','-map','[a]',voice_file])
+        run(['-f','lavfi','-i','sine=frequency=1000:duration=4',music_file])
+        original=voice_file.read_bytes();p=self.client.call('POST','/api/projects',{'name':'Narration trim synthetic'})
+        ids=[]
+        for path in (self.source,voice_file,music_file):
+            up=self.client.upload(p['id'],path);self.wait_job(up['job']['id']);ids.append(up['media_id'])
+        p=self.store.get(p['id'])
+        for op,args in [('timeline_replace',{'clips':[{'media_id':ids[0],'start':0,'end':1.6,'volume':0}]*2}),('narration_set',{'media_id':ids[1],'start':1,'end':3,'offset':.5,'volume':.5,'fade_in':.2,'fade_out':.2}),('music_set',{'media_id':ids[2],'volume':.8})]:
+            p=self.store.apply(p['id'],op,args,p['revision'])
+        baseline=p['timeline']
+        def render_samples():
+            job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+            output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+            raw=subprocess.run([executable(),'-v','error','-i',str(output),'-f','f32le','-ac','1','-ar','16000','pipe:1'],capture_output=True,check=True).stdout
+            return array.array('f',raw),probe(output)['duration']
+        def tone(samples,freq,a,b):
+            values=samples[int(a*16000):int(b*16000)]
+            return 2*abs(sum(v*complex(math.cos(2*math.pi*freq*i/16000),math.sin(2*math.pi*freq*i/16000)) for i,v in enumerate(values)))/len(values)
+        samples,length=render_samples();voice=tone(samples,440,1.2,1.4)
+        self.assertGreater(voice,.03);self.assertLess(tone(samples,220,1.2,1.4),voice*.08);self.assertLess(tone(samples,880,1.2,1.4),voice*.08)
+        self.assertLess(tone(samples,440,.52,.56),voice*.5);self.assertLess(tone(samples,440,2.44,2.48),voice*.5)
+        self.assertLess(tone(samples,440,.2,.4),voice*.03)
+        self.assertLess(tone(samples,440,2.8,3),voice*.03)
+        music=tone(samples,1000,.2,.4);self.assertGreater(music,.04)
+        self.assertAlmostEqual(tone(samples,1000,1.2,1.4)/music,.25,delta=.06)
+        self.assertAlmostEqual(tone(samples,1000,2.8,3)/music,1,delta=.1)
+        self.assertAlmostEqual(length,3.2,delta=.1);self.assertEqual(self.store.get(p['id'])['timeline'],baseline)
+        # A project from before source intervals has no start/end keys at all.
+        legacy=self.store._read(p['id']);legacy['narration'].pop('start');legacy['narration'].pop('end');self.store._write(legacy)
+        samples,length=render_samples();self.assertGreater(tone(samples,220,.8,1),.02)
+        self.assertAlmostEqual(tone(samples,1000,2.8,3)/music,.25,delta=.06)
+        self.assertEqual(voice_file.read_bytes(),original);self.assertAlmostEqual(length,3.2,delta=.1)
+
     def test_narration_fades_in_export_with_offset(self):
         import array
         import math

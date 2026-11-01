@@ -99,6 +99,22 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(self.p["music"], original)
         self.assertEqual(len(self.p["media"]), 1)
 
+    def test_narration_trim_partial_updates_and_atomic_history(self):
+        self.add()
+        self.apply('narration_set',{'media_id':self.asset['id'],'offset':.5})
+        original=self.p['narration'].copy()
+        self.assertEqual((original['start'],original['end']),(0,10))
+        self.apply('narration_set',{'start':2,'end':5,'fade_in':.2,'fade_out':.3})
+        trimmed=self.p['narration'].copy();self.assertEqual(trimmed['offset'],.5)
+        self.apply('narration_set',{'volume':.7});self.assertEqual(self.p['narration']['start'],2);self.assertEqual(self.p['narration']['end'],5)
+        before=self.p['narration'].copy();revision=self.p['revision']
+        for patch in ({'start':True},{'start':-1},{'end':11},{'start':4.96},{'end':2.2},{'fade_in':2,'fade_out':2}):
+            with self.assertRaises(EditorError):self.apply('narration_set',patch)
+            self.refresh();self.assertEqual(self.p['revision'],revision);self.assertEqual(self.p['narration'],before)
+        self.apply('undo',{});self.assertEqual(self.p['narration'],trimmed)
+        self.apply('undo',{});self.assertEqual(self.p['narration'],original)
+        self.apply('redo',{});self.assertEqual(self.p['narration'],trimmed)
+
     def test_narration_fades_validate_atomically_and_undo(self):
         self.apply("narration_set", {"media_id": self.asset["id"]})
         original = self.p["narration"].copy()

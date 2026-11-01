@@ -5,12 +5,14 @@ const navigation=[];
 const original={id:'a',revision:7,duration:4,timeline:[{media_id:'v',volume:1}],media:[{id:'v',status:'ready',has_audio:true,duration:4}],captions:[]};
 const ctx=vm.createContext({project:structuredClone(original),$:node,precise:n=>n.toFixed(2)+' s',esc:s=>String(s).replaceAll('<','&lt;'),queue:Promise.resolve(),toast:(s)=>messages.push(s),pause(){navigation.push('pause');},openInspector:name=>navigation.push(name),openLibraryTab:name=>navigation.push(name),renderAIJobs(){},renderExportJobs:j=>rendered.push(j),
  async api(path,opt){calls.push({path,opt});if(opt){if(failPost)throw new Error('request failed');if(postGate)await postGate;return{id:'job'};}if(jobGate)return await jobGate;if(failJobs)throw new Error('offline');return[];}});
+vm.runInContext(fs.readFileSync('web/app.js','utf8').slice(fs.readFileSync('web/app.js','utf8').indexOf('function audioRange('),fs.readFileSync('web/app.js','utf8').indexOf('function syncVoice(')),ctx);
 vm.runInContext(app.slice(app.indexOf('let exportSubmitting='),app.indexOf('function exportProfile(')),ctx);vm.runInContext(app.slice(app.indexOf('async function refreshJobs('),app.indexOf('setInterval(',app.indexOf('async function refreshJobs('))),ctx);
 const copy=structuredClone,ev=s=>vm.runInContext(s,ctx),tick=()=>new Promise(r=>setImmediate(r));
 (async()=>{
  const review=[{dataset:{exportReview:'library'},addEventListener(type,fn){this.click=fn;}},{dataset:{exportReview:'voice'},addEventListener(type,fn){this.click=fn;}}];node('#export-readiness').querySelectorAll=()=>review;node('#export-dialog').close=()=>navigation.push('close');ctx.renderExportReadiness();review[0].click();review[1].click();assert.deepEqual(navigation,['pause','close','media','pause','close','voice']);
  assert.deepEqual(copy(ctx.exportReadiness(original)),[]);
  let p=copy(original);p.narration={media_id:'n',offset:3,volume:1};p.media.push({id:'n',status:'ready',duration:2});assert.match(ctx.exportReadiness(p)[0].text,/Parte da fala/);p.narration.offset=4;assert.match(ctx.exportReadiness(p)[0].text,/não será ouvida/);
+ p=copy(original);p.narration={media_id:'n',offset:3,start:2,end:2.5,volume:1};p.media.push({id:'n',status:'ready',duration:6});assert.equal(ctx.exportReadiness(p).length,0,'voice warning uses trimmed duration');
  p=copy(original);p.music={media_id:'v',start:0,end:5,offset:0,volume:1,fade_out:1};p.captions=[{start:3,end:5}];assert.equal(ctx.exportReadiness(p).filter(n=>n.level==='warning').length,2);
  p=copy(original);p.timeline[0].volume=0;assert.match(ctx.exportReadiness(p)[0].text,/não tem áudio audível/);p.media[0].status='processing';assert.ok(ctx.exportReadiness(p).some(n=>n.level==='error'));assert.deepEqual(copy(p),p);
  let releaseQueue;ctx.queue=new Promise(r=>releaseQueue=r);const first=ctx.submitExport();await ctx.submitExport();assert.equal(calls.length,0);ctx.project.revision=8;node('#export-quality').value='preview';releaseQueue();await first;

@@ -347,12 +347,16 @@ class MediaService:
             if narration:
                 asset = self.store.find(project["media"], narration["media_id"], "Arquivo")
                 delay = round(narration["offset"] * 1000)
-                voice_filters = [f"volume={narration['volume']}"]
+                voice_start = narration.get("start", 0)
+                voice_end = narration.get("end", asset["duration"])
+                voice_length = voice_end - voice_start
+                voice_filters = [f"atrim=start={voice_start}:end={voice_end}", "asetpts=PTS-STARTPTS", f"volume={narration['volume']}"]
                 if narration.get("fade_in", 0):
                     voice_filters.append(f"afade=t=in:st=0:d={narration['fade_in']}")
                 if narration.get("fade_out", 0):
-                    voice_filters.append(f"afade=t=out:st={max(0, asset['duration'] - narration['fade_out'])}:d={narration['fade_out']}")
-                voice_filters.append(f"adelay={delay}:all=1")
+                    voice_filters.append(f"afade=t=out:st={max(0, voice_length - narration['fade_out'])}:d={narration['fade_out']}")
+                # Count the inserted silence too, so mixing retains the requested offset.
+                voice_filters.extend([f"adelay={delay}:all=1", "asetpts=N/SR/TB"])
                 voice_filter = ",".join(voice_filters)
                 inputs += ["-i", self.source(project_id, asset)]
                 filters.append(f"[1:a]{voice_filter},apad,atrim=duration={duration(project)}[voice]")
@@ -364,14 +368,14 @@ class MediaService:
                 gain = str(music["volume"])
                 if narration and music.get("duck", True):
                     voice_asset = self.store.find(project["media"], narration["media_id"], "Arquivo")
-                    gain += f"*if(gte(t+{music['offset']},{narration['offset']})*lt(t+{music['offset']},{narration['offset']+voice_asset['duration']}),0.25,1)"
+                    gain += f"*if(gte(t+{music['offset']},{narration['offset']})*lt(t+{music['offset']},{narration['offset']+narration.get('end',voice_asset['duration'])-narration.get('start',0)}),0.25,1)"
                 length = music["end"] - music["start"]
                 chain = [f"atrim=start={music['start']}:end={music['end']}", "asetpts=PTS-STARTPTS", f"volume='{gain}':eval=frame"]
                 if music.get("fade_in", 0):
                     chain.append(f"afade=t=in:st=0:d={music['fade_in']}")
                 if music.get("fade_out", 0):
                     chain.append(f"afade=t=out:st={length-music['fade_out']}:d={music['fade_out']}")
-                chain += [f"adelay={round(music['offset']*1000)}:all=1", "apad", f"atrim=duration={duration(project)}"]
+                chain += [f"adelay={round(music['offset']*1000)}:all=1", "asetpts=N/SR/TB", "apad", f"atrim=duration={duration(project)}"]
                 filters.append(f"[{source_index}:a]{','.join(chain)}[music]")
                 labels.append("[music]")
             if len(labels) > 1:

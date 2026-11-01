@@ -13,7 +13,7 @@ function timelineSnapTargets(p){
   for(const [i,c] of p.timeline.entries()){at+=(c.end-c.start)/(c.speed||1);targets.push({time:at,label:i===p.timeline.length-1?"Fim da montagem":`Corte ${i+1} → ${i+2}`});}
   for(const [kind,label] of [["narration","Narração"],["music","Música"]]){
     const track=p[kind],asset=(p.media||[]).find(a=>a.id===track?.media_id);
-    if(track&&asset){const length=kind==="music"?track.end-track.start:asset.duration;targets.push({time:track.offset,label:label+" · início"},{time:track.offset+length,label:label+" · fim"});}
+    if(track&&asset){const length=audioRange(track,asset.duration).length;targets.push({time:track.offset,label:label+" · início"},{time:track.offset+length,label:label+" · fim"});}
   }
   for(const [i,c]of(p.captions||[]).entries())targets.push({time:c.start,label:`Legenda ${i+1} · entrada`},{time:c.end,label:`Legenda ${i+1} · saída`});
   return targets.filter(t=>Number.isFinite(t.time)&&t.time>=0&&t.time<=p.duration);
@@ -118,12 +118,12 @@ function renderCaptionTrack(){
 function renderAudioTrack(){renderSoundTrack("narration",$("#audio-track"));}
 function renderSoundTrack(kind,track){
   const sound=project[kind],asset=project.media.find(a=>a.id===sound?.media_id),name=kind==="music"?"música":"narração";
-  const length=sound&&asset?Math.max(0,Math.min(kind==="music"?sound.end-sound.start:asset.duration,project.duration-sound.offset)):0;
+  const length=sound&&asset?Math.max(0,Math.min(audioRange(sound,asset.duration).length,project.duration-sound.offset)):0;
   track.innerHTML=length>0?`<button class="audio-region ${kind==="music"?"music-region":""}" id="${kind}-region" style="left:${sound.offset*timelineScale}px;width:${length*timelineScale}px" aria-label="Editar ${name}: ${esc(asset.name)}"><svg id="${kind}-waveform" preserveAspectRatio="none" aria-hidden="true"></svg><span>${icon(kind==="music"?"music":"mic")}${esc(asset.name)}</span></button>`:`<button class="add-voice-track">${sound?name+" após o fim · ajustar":"+ Adicionar "+name}</button>`;
   track.querySelector("button").addEventListener("click",()=>sound?openAudioEdit(kind):openInspector(kind==="music"?"music":"voice"));
   if(length>0){const pid=project.id;getAudioWaveform(asset).then(data=>{
     const node=$("#"+kind+"-waveform");if(project?.id!==pid||project[kind]?.media_id!==asset.id||!node)return;
-    drawAudioWaveform(node,data,kind==="music"?sound.start:0,length);
+    drawAudioWaveform(node,data,audioRange(sound,asset.duration).start,length);
   }).catch(()=>{});}
 }
 function getAudioWaveform(asset){
@@ -578,9 +578,9 @@ let audioDraft=null,audioSaving=false;
 function validAudioDraft(){return !!audioDraft&&project?.id===audioDraft.projectId&&project.revision===audioDraft.revision&&project[audioDraft.kind]?.media_id===audioDraft.baseline.media_id;}
 function audioDraftProblem(){
   if(!validAudioDraft())return "O projeto mudou. Cancele e abra o áudio novamente.";
-  const d=audioDraft.values,a=audioDraft.asset,music=audioDraft.kind==="music",length=music?d.end-d.start:a.duration;
+  const d=audioDraft.values,a=audioDraft.asset,music=audioDraft.kind==="music",length=audioRange(d,a.duration).length;
   if(!Number.isFinite(d.offset)||d.offset<0||d.offset>(music?1800:3600))return "Confira o início na montagem: de 0 até "+(music?1800:3600)+" segundos.";
-  if(music&&(!Number.isFinite(d.start)||!Number.isFinite(d.end)||d.start<0||d.end>a.duration||Math.round(length*10000)<1000))return "Escolha pelo menos 0,1 s dentro do arquivo de música.";
+  if((music||editorFeatures.narration_trim)&&(!Number.isFinite(d.start)||!Number.isFinite(d.end)||d.start<0||d.end>a.duration||Math.round(length*10000)<1000))return "Escolha pelo menos 0,1 s dentro do arquivo de áudio.";
   if(!Number.isFinite(d.volume)||d.volume<0||d.volume>(music?1:2))return "Confira o volume.";
   if(!Number.isFinite(d.fade_in)||!Number.isFinite(d.fade_out)||d.fade_in<0||d.fade_out<0||d.fade_in+d.fade_out>length+1e-9)return "As entradas e saídas suaves juntas devem caber no trecho. Reduza os fades ou aumente o trecho.";
   return "";
@@ -597,7 +597,7 @@ function writeAudioFields(){
 }
 function updateAudioControls(){
   if(!audioDraft)return;
-  const problem=audioDraftProblem(),d=audioDraft.values,music=audioDraft.kind==="music",length=music?d.end-d.start:audioDraft.asset.duration;
+  const problem=audioDraftProblem(),d=audioDraft.values,music=audioDraft.kind==="music",length=audioRange(d,audioDraft.asset.duration).length;
   $("#audio-edit-error").hidden=!problem;$("#audio-edit-error").textContent=problem;
   $("#audio-edit-apply").disabled=!!problem||audioSaving||!audioEditChanged();
   $("#audio-edit-status").textContent=audioSaving?"Salvando…":"Aplicar salva os ajustes de uma vez. Cancelar descarta a prévia.";
@@ -607,15 +607,15 @@ function updateAudioControls(){
   $("#audio-mix-summary").textContent=`Volume ${Math.round(d.volume*100)}% · fades ${d.fade_in} / ${d.fade_out} s`;
   $("#audio-edit-volume-value").textContent=Math.round(d.volume*100)+"%";$("#audio-volume-note").hidden=d.volume<=1;
   for(const key of ["fade_in","fade_out"])$("#audio-edit-"+key).max=Math.max(0,length);
-  $("#audio-edit-summary").textContent=problem?"A prévia usa o áudio salvo até corrigir os valores.":`Trecho ${precise(length)} · início ${montageTime(d.offset)} · fim ${montageTime(d.offset+length)}. `+(d.offset>=project.duration?"Começa após o fim da montagem; não será ouvido na saída.":d.offset+length>project.duration?"A exportação termina com a montagem; o fim deste áudio e seu fade podem ficar fora.":music?"A música pode abaixar para 25% durante a voz.":"A narração usa o arquivo inteiro; não é aparada neste painel.");
+  $("#audio-edit-summary").textContent=problem?"A prévia usa o áudio salvo até corrigir os valores.":`Trecho ${precise(length)} · início ${montageTime(d.offset)} · fim ${montageTime(d.offset+length)}. `+(d.offset>=project.duration?"Começa após o fim da montagem; não será ouvido na saída.":d.offset+length>project.duration?"A exportação termina com a montagem; o fim deste áudio e seu fade podem ficar fora.":music?"A música pode abaixar para 25% durante a voz.":editorFeatures.narration_trim?"A narração usa apenas o trecho escolhido; o original é preservado.":"Este servidor ainda usa o arquivo inteiro da narração.");
   for(const node of $("#audio-edit-dialog").querySelectorAll("input,button"))if(node.id!=="audio-edit-apply"&&node.id!=="audio-edit-play")node.disabled=audioSaving;
   for(const edge of ["start","end"])$("#audio-trim-"+edge).disabled=audioSaving||!audioTrimAtCursor(edge);
-  const start=music?d.start:0,span=music?length:audioDraft.asset.duration,total=audioDraft.asset.duration;
+  const start=d.start??0,span=length,total=audioDraft.asset.duration;
   const window=$("#audio-edit-window");window.hidden=!!problem;window.style.left=`${start/total*100}%`;window.style.width=`${span/total*100}%`;
   const position=cursor-d.offset+start,head=$("#audio-edit-cursor");head.hidden=!!problem||position<start||position>start+span;head.style.left=`${clamp(position/total*100,0,100)}%`;
 }
 function audioTrimAtCursor(edge){
-  if(!validAudioDraft()||audioDraft.kind!=="music"||audioDraftProblem())return null;
+  if(!validAudioDraft()||(audioDraft.kind!=="music"&&!editorFeatures.narration_trim)||audioDraftProblem())return null;
   const d=audioDraft.values,delta=cursor-d.offset;
   if(delta<=0||delta>=d.end-d.start)return null;
   const patch=edge==="start"?{start:roundTime(d.start+delta),offset:roundTime(cursor)}:{end:roundTime(d.start+delta)};
@@ -626,11 +626,12 @@ async function openAudioEdit(kind){
   await queue;if(audioSaving||!project?.[kind]||!(kind==="narration"||kind==="music"))return;
   pause();closeSheet();const baseline={...project[kind]},asset=project.media.find(a=>a.id===baseline.media_id);
   if(!asset)return;
+  if(kind==="narration"&&editorFeatures.narration_trim)Object.assign(baseline,{start:baseline.start??0,end:baseline.end??asset.duration});
   audioDraft={projectId:project.id,revision:project.revision,kind,baseline,values:{fade_in:0,fade_out:0,...baseline},asset,originalCursor:cursor};
   // Old projects may omit fades; avoid reporting a default as an edit.
   audioDraft.baseline={...audioDraft.values};
   $("#audio-edit-title").textContent=kind==="music"?"Música no tempo certo":"Narração no tempo certo";$("#audio-edit-name").textContent=asset.name;
-  $("#audio-music-trim").hidden=kind!=="music";$("#audio-duck-label").hidden=kind!=="music";$("#audio-edit-volume").max=kind==="music"?100:200;
+  $("#audio-music-trim").hidden=kind!=="music"&&!editorFeatures.narration_trim;$("#audio-trim-note").textContent="Aparar início mantém o restante do áudio sincronizado. Não desloca vídeo, outras faixas ou legendas.";$("#audio-duck-label").hidden=kind!=="music";$("#audio-edit-volume").max=kind==="music"?100:200;
   $("#audio-seek-error").hidden=true;$("#audio-seek-time").value=montageTime(cursor);
   $("#audio-wave-note").textContent="Carregando forma de onda…";$("#audio-edit-wave").innerHTML="";writeAudioFields();$("#audio-edit-dialog").showModal();updateAudioControls();
   const draft=audioDraft;getAudioWaveform(asset).then(data=>{if(audioDraft!==draft)return;drawAudioWaveform($("#audio-edit-wave"),data,0,asset.duration);$("#audio-wave-note").textContent="Arquivo inteiro · área verde = trecho utilizado · linha = cursor.";}).catch(()=>{if(audioDraft===draft)$("#audio-wave-note").textContent="Forma de onda indisponível. Os ajustes de tempo continuam funcionando.";});
@@ -754,3 +755,8 @@ async function saveCaptionDraft(remove=false){
 }
 $("#caption-edit-apply").addEventListener("click",()=>saveCaptionDraft());
 $("#caption-edit-remove").addEventListener("click",()=>saveCaptionDraft(true));
+
+$("#audio-reset-range").addEventListener("click",()=>{
+  if(!validAudioDraft()||audioSaving||(audioDraft.kind!=="music"&&!editorFeatures.narration_trim))return;
+  pause();audioDraft.values.start=0;audioDraft.values.end=audioDraft.asset.duration;writeAudioFields();updateTime();
+});
