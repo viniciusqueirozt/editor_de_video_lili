@@ -414,6 +414,24 @@ class IntegrationTests(unittest.TestCase):
         self.assertGreater(len(upper),5);self.assertLess(max(upper),960*.3)
         self.assertGreater(len(lower),len(upper));self.assertAlmostEqual(probe(output)['duration'],1.6,delta=.1)
 
+    def test_export_unavailable_used_sources_fail_before_job_creation(self):
+        p=self.client.call("POST","/api/projects",{"name":"Export preflight synthetic"})
+        uploaded=self.client.upload(p['id'],self.source);self.wait_job(uploaded['job']['id'])
+        p=self.client.call('GET','/api/projects/'+p['id'])
+        p=self.client.call('POST',f"/api/projects/{p['id']}/commands",{'operation':'clip_add','args':{'media_id':uploaded['media_id']},'expected_revision':p['revision']})
+        before=set(self.server.media.jobs)
+        for changes in ({'status':'processing'},{'status':'error'},{'status':'ready','deleted_at':'synthetic'}):
+            self.store.update_media(p['id'],uploaded['media_id'],changes);p=self.store.get(p['id'])
+            with self.assertRaises(HTTPError) as denied:
+                urlopen(Request(self.base+f"/api/projects/{p['id']}/exports",data=json.dumps({'expected_revision':p['revision'],'quality':'preview'}).encode(),headers={'Content-Type':'application/json'},method='POST'))
+            self.assertEqual(denied.exception.code,409);self.assertEqual(set(self.server.media.jobs),before)
+        self.store.update_media(p['id'],uploaded['media_id'],{'status':'ready','deleted_at':None});p=self.store.get(p['id'])
+        with patch.object(self.server.media,'source',return_value=self.root/'absent-synthetic.mp4'):
+            with self.assertRaises(HTTPError) as denied:
+                urlopen(Request(self.base+f"/api/projects/{p['id']}/exports",data=json.dumps({'expected_revision':p['revision'],'quality':'preview'}).encode(),headers={'Content-Type':'application/json'},method='POST'))
+            self.assertEqual(denied.exception.code,409)
+        self.assertEqual(set(self.server.media.jobs),before);self.assertEqual(self.store.get(p['id'])['revision'],p['revision'])
+
     def test_export_presets_render_square_landscape_and_balanced(self):
         p=self.client.call("POST","/api/projects",{"name":"Formats synthetic"})
         imported=self.client.upload(p["id"],self.source);self.wait_job(imported["job"]["id"]);p=self.store.get(p["id"])

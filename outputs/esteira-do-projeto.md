@@ -211,3 +211,8 @@ Implementado painel de música/voz com rascunho, início preciso, alinhamento ao
 ## Legendas — rodada 1 da noite de 28/10
 
 Código/testes preparados para painel de rascunho de texto, tempo e estilo, criação sem placeholder gravado, movimento/aparo precisos, padronização opcional da tipografia em lote e aplicação reversível. Reutiliza caption_add/update/remove e captions_replace, sem backend novo. Testes de prévia e exportação sintética passaram; revisão visual bloqueada pela inicialização do navegador, sem validação de Safari. Editor real 8765 não respondeu: ativação pendente, sem alteração dos serviços reais. Relatório/pendências: outputs/rodada-noturna-2026-10-28-01-legendas.md. Priorizar retomar a revisão visual e conferir ativação ao fechar a noite; depois entrega/exportação, arraste/divisão de legendas e fontes licenciadas. Não contar os três checkpoints ainda locais do ciclo anterior como publicados.
+
+
+## Entrega/exportação — rodada 1 da noite de 31/10
+
+Implementados avisos concretos com atalhos de revisão, bloqueio de fontes indisponíveis antes de gerar job e envio mais robusto contra cliques duplicados, trocas de projeto e respostas incertas da rede. Frontend já servido; pré-validação nova do backend preparada para ativação segura no fechamento. Sem reinício de serviços. Suíte final de 137 testes Python e 18 arquivos JavaScript aprovados; detalhes de tentativas/limites em outputs/rodada-noturna-2026-10-31-01-exportacao.md. Pendentes: revisão visual desktop/Safari, estimativa/checagem de espaço para saída, nome de arquivo e tratamento HDR/SDR. Quatro checkpoints anteriores continuam preservados e sem sincronização; publicar junto ao fechar a extra/segurança desta noite.

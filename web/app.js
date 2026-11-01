@@ -75,7 +75,7 @@ async function listProjects() {
 async function openProject(id) {
   await queue; pause();
   selectingMedia=false;selectedMedia.clear();selectedCaption=null;
-  project = await api(`/api/projects/${id}`); selected = project.timeline[0]?.id || null; loadedSource = ""; cursor = 0;
+  project = await api(`/api/projects/${id}`); exportJobRunning=false; selected = project.timeline[0]?.id || null; loadedSource = ""; cursor = 0;
   localStorage.setItem("lili-project",id);history.replaceState(null,"",`/editor?project=${id}`); render(); await refreshJobs();
 }
 function render() {
@@ -678,6 +678,53 @@ $("#project-select").addEventListener("change",e=>openProject(e.target.value).ca
 $("#new-project").addEventListener("click",()=>$("#new-dialog").showModal());
 $("#new-form").addEventListener("submit",async e=>{e.preventDefault();try{const p=await api("/api/projects",{method:"POST",body:JSON.stringify({name:$("#new-name").value,script:$("#new-script").value})});$("#new-dialog").close();$("#new-form").reset();await listProjects();await openProject(p.id);}catch(e){toast(e.message,true);}});
 document.querySelectorAll(".close-dialog").forEach(b=>b.addEventListener("click",()=>b.closest("dialog").close()));
+let exportSubmitting=false,exportBusyProject=null,exportJobRunning=false;
+function exportReadiness(p){
+  const notes=[],media=new Map((p.media||[]).map(a=>[a.id,a])),duration=p.duration||0;
+  const add=(level,text,target)=>notes.push({level,text,target});
+  if(!p.timeline.length)add("error","Adicione uma cena à montagem antes de gerar o vídeo.","scene");
+  const used=new Set(p.timeline.map(c=>c.media_id));for(const track of [p.narration,p.music])if(track)used.add(track.media_id);
+  const unavailable=[...used].filter(id=>{const a=media.get(id);return !a||a.deleted_at||a.status!=="ready";});
+  if(unavailable.length)add("error",`${unavailable.length} arquivo(s) usado(s) na montagem ainda não estão prontos ou disponíveis. Confira a biblioteca.`,"library");
+  const n=p.narration,voice=n&&media.get(n.media_id);
+  if(n&&voice){if(n.offset>=duration)add("warning","A narração começa depois do fim do vídeo e não será ouvida.","voice");else if(n.offset+voice.duration>duration+.001)add("warning",`A narração ultrapassa o vídeo em ${precise(n.offset+voice.duration-duration)}. Parte da fala ficará de fora.`,"voice");}
+  const m=p.music;
+  if(m){if(m.offset>=duration)add("warning","A música começa depois do fim do vídeo e não será ouvida.","music");else if(m.fade_out>0&&m.offset+m.end-m.start>duration+.001)add("warning","O vídeo termina antes do fim da música: a saída suave escolhida não termina dentro da entrega.","music");}
+  const outside=(p.captions||[]).filter(c=>c.end>duration+.001).length;
+  if(outside)add("warning",`${outside} legenda(s) ultrapassam a duração da montagem. Só o trecho dentro do vídeo aparece.`,"captions");
+  const sceneSound=p.timeline.some(c=>media.get(c.media_id)?.has_audio&&(c.volume??1)>0);
+  const extraSound=!!(n&&voice&&n.volume>0&&n.offset<duration)||!!(m&&media.get(m.media_id)&&m.volume>0&&m.offset<duration);
+  if(p.timeline.length&&!sceneSound&&!extraSound)add("warning","Esta montagem não tem áudio audível. Se o silêncio foi intencional, pode gerar o vídeo assim.","voice");
+  return notes;
+}
+function updateExportAction(){
+  if(!project)return;
+  $("#start-export").disabled=exportSubmitting||exportBusyProject===project.id||exportJobRunning||exportReadiness(project).some(n=>n.level==="error");
+  $("#export-request-status").textContent=exportSubmitting?"Enviando a exportação…":exportBusyProject===project.id?"Confirmando o andamento. Aguarde a atualização da fila.":exportJobRunning?"Aguarde a exportação em andamento terminar.":"";
+}
+function renderExportReadiness(){
+  const notes=exportReadiness(project),root=$("#export-readiness");
+  root.innerHTML=notes.length?`<h3>Antes de entregar</h3>${notes.map(n=>`<div class="export-review-note ${n.level}"><p>${esc(n.text)}</p><button type="button" class="button secondary" data-export-review="${n.target}">Revisar ${({library:"arquivos",scene:"cenas",voice:"narração",music:"música",captions:"legendas"})[n.target]}</button></div>`).join("")}<p class="help">Avisos permitem gerar mesmo assim. Arquivos indisponíveis precisam ser resolvidos primeiro.</p>`:'<p class="help">Sem pendências detectadas nos tempos e no cadastro dos arquivos. Confira também a prévia antes de entregar.</p>';
+  root.querySelectorAll("[data-export-review]").forEach(b=>b.addEventListener("click",()=>{pause();$("#export-dialog").close();if(b.dataset.exportReview==="library")openLibraryTab("media");else openInspector(b.dataset.exportReview);}));
+  updateExportAction();
+}
+async function submitExport(){
+  if(exportSubmitting||!project||exportBusyProject===project.id||exportJobRunning)return;
+  const intended={id:project.id,quality:$("#export-quality").value};exportSubmitting=true;updateExportAction();
+  try{
+    await queue;
+    if(project?.id!==intended.id){toast("O projeto selecionado mudou. Abra a exportação do projeto desejado.",true);return;}
+    if(exportReadiness(project).some(n=>n.level==="error")){renderExportReadiness();return;}
+    exportBusyProject=intended.id;
+    await api(`/api/projects/${intended.id}/exports`,{method:"POST",body:JSON.stringify({expected_revision:project.revision,quality:intended.quality})});
+    toast("Exportação enviada. Você pode acompanhar a fila abaixo.");
+  }catch(e){toast(e.message+" Confira a fila antes de tentar novamente.",true);}
+  finally{
+    exportSubmitting=false;
+    if(project?.id===intended.id){try{await refreshJobs();}catch{toast("Não foi possível atualizar a fila. A exportação pode ter sido recebida; aguarde a reconexão antes de tentar novamente.",true);}updateExportAction();}
+    else updateExportAction();
+  }
+}
 function exportProfile(settings,quality){
   const scales={preview:.5,balanced:2/3,full:1,high:1},scale=scales[quality]||1;
   return {width:Math.max(2,Math.round(settings.width*scale/2)*2),height:Math.max(2,Math.round(settings.height*scale/2)*2)};
@@ -700,13 +747,14 @@ function updateExportSummary(){
   $("#export-glance").innerHTML=`<span><small>Tela</small><strong>${ratio}</strong></span><span><small>Resolução</small><strong>${size.width} × ${size.height}</strong></span><span><small>Arquivo</small><strong>MP4</strong></span>`;
   $("#export-profile-note").textContent={preview:"Para conferir a montagem e compartilhar uma prévia leve.",balanced:"Para aprovação e envio rápido, com resolução reduzida.",full:"Para a entrega do dia a dia, usando os arquivos originais.",high:"Menos compressão e arquivo maior. Mantém a resolução da entrega final."}[$("#export-quality").value];
   $("#export-summary").textContent=`${project.timeline.length} cenas · ${precise(project.duration)} · versão ${project.revision}. O tamanho final depende do conteúdo.`;
+  renderExportReadiness();
 }
 $("#apply-watermark").addEventListener("click",()=>mutate("watermark_set",{text:$("#watermark-text").value,position:$("#watermark-position").value,opacity:Number($("#watermark-opacity").value)/100},"Marca d'água atualizada. Confira a prévia."));
 $("#project-format").addEventListener("change",e=>mutate("settings_update",{format:e.target.value},"Formato da montagem atualizado."));
 $("#export-quality").addEventListener("change",updateExportSummary);
 async function showExports(){pause();$("#export-dialog").showModal();await refreshJobs();}
 $("#export-button").addEventListener("click",showExports);$("#step-export").addEventListener("click",showExports);
-$("#start-export").addEventListener("click",async()=>{await queue;try{await api(`/api/projects/${project.id}/exports`,{method:"POST",body:JSON.stringify({expected_revision:project.revision,quality:$("#export-quality").value})});toast("Exportação iniciada. Você pode continuar revisando o projeto.");await refreshJobs();}catch(e){toast(e.message,true);}});
+$("#start-export").addEventListener("click",submitExport);
 function exportJobCard(job){
   const done=job.status==="done"&&job.result,failed=job.status==="error",result=job.result;
   const stale=done&&result.revision!==project.revision;
@@ -722,9 +770,11 @@ function renderExportJobs(jobs){
   root.innerHTML=jobs.length?exportJobCard(jobs[0])+(jobs.length>1?`<details class="export-history" ${expanded?"open":""}><summary>Exportações anteriores (${jobs.length-1})</summary>${jobs.slice(1).map(exportJobCard).join("")}</details>`:""):'<p class="export-empty">Seu vídeo final aparecerá aqui. Escolha a saída e toque em Gerar vídeo.</p>';
 }
 async function refreshJobs(){
-  if(!project)return;const jobs=await api(`/api/projects/${project.id}/jobs`),exports=jobs.filter(j=>j.kind==="export").reverse();
-  renderAIJobs(jobs);const running=exports.some(j=>["queued","running"].includes(j.status));
-  $("#start-export").disabled=running||!project.timeline.length;renderExportJobs(exports);
+  if(!project)return;const id=project.id,jobs=await api(`/api/projects/${id}/jobs`);if(project?.id!==id)return;
+  const exports=jobs.filter(j=>j.kind==="export").reverse();renderAIJobs(jobs);
+  exportJobRunning=exports.some(j=>["queued","running"].includes(j.status));
+  if(exportBusyProject===id)exportBusyProject=null;
+  updateExportAction();renderExportJobs(exports);
 }
 
 setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture&&!$("#transition-dialog").open&&!$("#effects-dialog").open&&!$("#audio-edit-dialog").open&&!$("#caption-edit-dialog").open){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);

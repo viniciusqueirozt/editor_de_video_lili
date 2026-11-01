@@ -257,6 +257,16 @@ class MediaService:
         if not project["timeline"]:
             raise EditorError("Adicione cenas à montagem antes de exportar.")
         render_profile(project["settings"], quality)
+        # Reject unavailable sources before reserving the single export worker.
+        used = {clip["media_id"] for clip in project["timeline"]}
+        used.update(track["media_id"] for track in (project.get("narration"), project.get("music")) if track)
+        assets = {asset["id"]: asset for asset in project["media"]}
+        for media_id in used:
+            asset = assets.get(media_id)
+            if not asset or asset.get("deleted_at") or asset.get("status") != "ready":
+                raise EditorError("Um arquivo usado na montagem ainda não está pronto ou foi removido. Confira a biblioteca antes de exportar.", 409)
+            if not self.source(project_id, asset).is_file() or (asset.get("is_still") and not self.visual_source(project_id, asset).is_file()):
+                raise EditorError("Um arquivo usado na montagem não foi encontrado no armazenamento local. Restaure o arquivo ou ajuste a montagem antes de exportar.", 409)
         with self.lock:
             if any(j["kind"] == "export" and j["status"] in ("queued", "running") for j in self.jobs.values()):
                 raise EditorError("Já existe uma exportação em andamento.", 409)
