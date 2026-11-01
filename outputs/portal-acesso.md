@@ -79,3 +79,8 @@ O acesso externo antigo permanece funcionando enquanto o portal é preparado. N�
 - APIs, configuração inicial, arquivos e POST externos continuam rejeitados. Login segue exigindo origem válida nas alterações. X-Frame-Options DENY e CSP continuam protegendo o formulário contra incorporação.
 - Seis testes passaram, cobrindo metadados ausentes, iframe, cors, cookie válido e bloqueios externos. No endereço real, requisições apenas com Sec-Fetch-Site: cross-site confirmaram / -> 303, /auth/login -> 200 com formulário e /api/projects -> 403.
 - Aplicado com reinício exclusivo do gateway; sessões em memória encerradas, senha preservada. Editor, mídias e túnel mantidos. Não houve captura dos cabeçalhos reais do iPhone: sua ausência era uma hipótese de compatibilidade. Reteste no iPhone necessário; não declarar Safari real validado.
+
+
+## Verificação mais rápida e recuperável — 01/11/2026
+
+Versão 3 do portal publicada, fonte c921d7f294a855c56821bca78be3a75a8bca1ebb, deployment appgdep_6ae7cd0cf8508191a4f23441835df9aa. Endereço, público, banco, segredos e contas preservados. Presença do conector separada das tarefas lentas, ciclo de três segundos, rechecagem de links inativos, cooldown de probes, timeout, fila única e interface sem consultas concorrentes. Tempos da última resposta e texto Conector sem resposta evitam inferir que o notebook esteja desligado. Ativado reiniciando somente o conector; editor/gateway/sessões mantidos. Estado real voltou a healthy=1 com heartbeat recente. 27 testes Python focados, 20 do portal/poller, TypeScript e build aprovados. Detalhes e limites: outputs/correcao-conexao-portal-01-11-2026.md. Safari real permanece pendente; inicialização automática do Windows ainda não configurada.

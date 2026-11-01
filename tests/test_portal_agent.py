@@ -3,6 +3,8 @@ import unittest
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
+from concurrent.futures import Future
+from urllib.error import HTTPError
 
 from lili.portal_agent import Agent, PortalClient, TunnelController, tunnel_url
 
@@ -54,3 +56,55 @@ class PortalAgentTests(unittest.TestCase):
         opener.open.assert_not_called()
         for url in ("http://localhost","https://evil.test","https://good.trycloudflare.com/evil"):
             self.assertIsNone(tunnel_url(url))
+
+    def test_heartbeat_continues_while_probe_and_reconnect_are_pending(self):
+        client=Mock();client.call.return_value={"job":None}
+        controller=Mock();executor=Mock();probe=Future();reconnect=Future()
+        executor.submit.side_effect=[probe,reconnect]
+        clock=[0];agent=Agent(client,controller,clock=lambda:clock[0])
+        agent.step(executor)
+        job={"id":"b"*48,"action":"reconnect"}
+        client.call.return_value={"job":job};agent.step(executor)
+        client.call.return_value={"job":None};agent.step(executor)
+        self.assertEqual(executor.submit.call_count,1)
+        probe.set_result({"url":"https://still-live.trycloudflare.com","healthy":True})
+        agent.step(executor)
+        self.assertEqual(executor.submit.call_args.args,(controller.reconnect,))
+        reports=[call for call in client.call.call_args_list if call.args[0]=="report"]
+        self.assertEqual(reports,[],"A stale probe cannot finish a claimed reconnection")
+        for _ in range(4):clock[0]+=3;agent.step(executor)
+        self.assertEqual(executor.submit.call_count,2,"Only one local task runs at a time")
+        reconnect.set_result({"url":"https://still-live.trycloudflare.com","healthy":True})
+        agent.step(executor)
+        client.call.assert_called_with("report",{"url":"https://still-live.trycloudflare.com","healthy":True,"jobId":"b"*48})
+        self.assertGreaterEqual(sum(call.args[0]=="poll" for call in client.call.call_args_list),8)
+
+    def test_completed_report_retries_network_failure_without_repeating_reconnect(self):
+        client=Mock();job={"id":"c"*48,"action":"reconnect"}
+        client.call.return_value={"job":job};executor=Mock();task=Future();executor.submit.return_value=task
+        agent=Agent(client,Mock(),clock=lambda:0);agent.step(executor)
+        task.set_result({"url":"https://kept-link.trycloudflare.com","healthy":True})
+        def call(action,data=None):
+            if action=="report":raise OSError("simulated offline")
+            return {"job":None}
+        client.call.side_effect=call
+        with self.assertRaises(OSError):agent.step(executor)
+        self.assertIs(agent.future,task);executor.submit.assert_called_once()
+        client.call.side_effect=lambda action,data=None:{"job":None} if action=="poll" else {"ok":True}
+        agent.step(executor);self.assertIsNone(agent.future);executor.submit.assert_called_once()
+
+    def test_expired_job_report_is_discarded_and_heartbeat_recovers(self):
+        client=Mock();client.call.return_value={"job":{"id":"d"*48,"action":"reconnect"}}
+        executor=Mock();task=Future();executor.submit.return_value=task
+        agent=Agent(client,Mock(),clock=lambda:0);agent.step(executor);task.set_exception(RuntimeError("synthetic failure"))
+        def call(action,data=None):
+            if action=="report":raise HTTPError("https://portal.owner.chatgpt.site",409,"Expired",{},None)
+            return {"job":None}
+        client.call.side_effect=call;agent.step(executor)
+        self.assertIsNone(agent.future);self.assertIsNone(agent.job_id)
+
+    def test_polling_worker_rejects_unknown_actions_before_scheduling(self):
+        client=Mock();client.call.return_value={"job":{"id":"e"*48,"action":"execute"}}
+        executor=Mock()
+        with self.assertRaises(ValueError):Agent(client,Mock()).step(executor)
+        executor.submit.assert_not_called()

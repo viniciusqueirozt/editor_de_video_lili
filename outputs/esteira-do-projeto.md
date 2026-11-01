@@ -231,3 +231,8 @@ Aparo não destrutivo da fonte de voz preparado no modelo, painel, prévia, wave
 ## Movimento de áudio — rodada 4 da noite de 31/10
 
 Movimentação direta de música/narração implementada por alça de toque, com encaixe de ambas as extremidades, cancelamento, comando único e proteção da fila por projeto/revisão. Usa a API já existente, frontend servido e disponível ao recarregar. Testes: 20 arquivos JavaScript e seis Python focados passaram; produção saudável, sem reinício. Detalhes: outputs/rodada-noturna-2026-10-31-04-mover-audio.md. Revisão visual desktop e Safari permanecem pendentes por bloqueio do runtime de controle. Não há rolagem automática nas bordas nem divisão/múltiplos blocos de áudio; trechos longos podem terminar fora da montagem com aviso. Publicação acumulada e ativação do aparo de voz/pré-validação de fontes continuam reservadas ao fechamento desta noite. Prioridade seguinte: segurança/acesso/contas e publicação.
+
+
+## Correção direta de conexão — 01/11/2026
+
+Portal versão 3 publicado e conector atualizado: presença independente da reconexão, recuperação de estado inativo, limites de espera, consultas serializadas e indicação de última comunicação. Estado saudável e heartbeat recente confirmados no banco real. Editor/gateway preservados, sem ativar backend de edição pendente. Relatório em outputs/correcao-conexao-portal-01-11-2026.md. Testes de servidor/poller e build passaram; Safari real e inicialização automática do conector continuam pendentes. Não conta como rodada noturna de segurança/extra.

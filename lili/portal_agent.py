@@ -1,6 +1,8 @@
 """Outbound-only connector: reports tunnel health and accepts only reconnect jobs."""
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor
+from urllib.error import HTTPError
 import json
 import re
 import subprocess
@@ -48,11 +50,14 @@ class PortalClient:
                       data=json.dumps(data).encode() if data is not None else None,
                       headers={"Authorization": "Bearer " + self.key, "Content-Type": "application/json",
                                "User-Agent": "Lili-Portal-Connector/1.0", "Accept": "application/json"})
-        with self.opener.open(req, timeout=15) as response:
+        with self.opener.open(req, timeout=5) as response:
             raw = response.read(16385)
             if len(raw) > 16384:
                 raise ValueError("Resposta do portal muito grande.")
-            return json.loads(raw)
+            result = json.loads(raw)
+            if not isinstance(result, dict):
+                raise ValueError("Resposta do portal inválida.")
+            return result
 
 
 class TunnelController:
@@ -69,7 +74,7 @@ class TunnelController:
             return False
         try:
             req = Request(url + "/auth/login", headers={"User-Agent": "Lili-Portal-Connector"})
-            with build_opener(NoRedirect()).open(req, timeout=8) as response:
+            with build_opener(NoRedirect()).open(req, timeout=4) as response:
                 return response.status == 200 and "Entre no seu estúdio" in response.read(65536).decode("utf-8", errors="replace")
         except (OSError, ValueError):
             return False
@@ -100,15 +105,54 @@ class TunnelController:
 
 
 class Agent:
-    def __init__(self, client, controller):
-        self.client, self.controller = client, controller
+    def __init__(self, client, controller, clock=time.monotonic):
+        self.client, self.controller, self.clock = client, controller, clock
+        self.future = None
+        self.job_id = None
+        self.pending_job = None
+        self.next_check = 0
+
+    @staticmethod
+    def validate_job(job):
+        if job is not None and (not isinstance(job, dict) or job.get("action") != "reconnect"
+                or not isinstance(job.get("id"), str) or not re.fullmatch(r"[a-f0-9]{48}", job["id"])):
+            raise ValueError("O portal retornou uma ação não permitida.")
+        return job
+
+    def step(self, executor):
+        # Presence is independent of slow external probes and reconnection work.
+        job = self.validate_job(self.client.call("poll").get("job"))
+        if job:
+            self.pending_job = job
+        if self.future is not None and self.future.done():
+            try:
+                state = self.future.result()
+            except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired):
+                state = {"url": None, "healthy": False}
+            if self.job_id:
+                state = {**state, "jobId": self.job_id}
+            try:
+                # A normal probe may have finished after a reconnect was claimed.
+                if self.job_id or self.pending_job is None:
+                    self.client.call("report", state)
+            except HTTPError as error:
+                if error.code != 409 or not self.job_id:
+                    raise
+                # The lease expired: never retry that result over a newer job.
+            self.future = None
+            self.job_id = None
+            self.next_check = self.clock() + 15
+        if self.future is None:
+            if self.pending_job:
+                self.job_id = self.pending_job["id"]
+                self.pending_job = None
+                self.future = executor.submit(self.controller.reconnect)
+            elif self.clock() >= self.next_check:
+                self.future = executor.submit(self.controller.current)
 
     def once(self):
-        job = self.client.call("poll").get("job")
+        job = self.validate_job(self.client.call("poll").get("job"))
         if job:
-            if (not isinstance(job, dict) or job.get("action") != "reconnect"
-                    or not isinstance(job.get("id"), str) or not re.fullmatch(r"[a-f0-9]{48}", job["id"])):
-                raise ValueError("O portal retornou uma ação não permitida.")
             try:
                 state = self.controller.reconnect()
             except (OSError, ValueError, RuntimeError, subprocess.TimeoutExpired):
@@ -139,17 +183,25 @@ def main():
             msvcrt.locking(lock.fileno(), msvcrt.LK_NBLCK, 1)
         except OSError:
             raise SystemExit("O conector da Lili já está em execução.") from None
-        while True:
+        if args.once:
             try:
                 agent.once()
-                if args.once:
-                    break
             except (OSError, ValueError, RuntimeError):
-                if args.once:
-                    raise SystemExit("O portal não respondeu. Verifique a ativação do portal e a conexão do notebook.") from None
-                # Never print tokens, passwords, response bodies or credential headers.
-                print("Conector aguardando o portal ou a internet.", flush=True)
-            time.sleep(15)
+                raise SystemExit("O portal não respondeu. Verifique a ativação do portal e a conexão do notebook.") from None
+            return
+        disconnected = False
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="lili-tunnel") as executor:
+            while True:
+                try:
+                    agent.step(executor)
+                    if disconnected:
+                        print("Comunicação com o portal restabelecida.", flush=True)
+                    disconnected = False
+                except (OSError, ValueError, RuntimeError):
+                    if not disconnected:
+                        print("Conector aguardando o portal ou a internet.", flush=True)
+                    disconnected = True
+                time.sleep(3)
 
 
 if __name__ == "__main__":
