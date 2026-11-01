@@ -6,9 +6,48 @@ const waveforms=new Map();
 const trackScroll=$("#timeline-scroll"), trackCanvas=$("#timeline");
 const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const roundTime=value=>Math.round(value*1000)/1000;
+let timelineSnapEnabled=false;
+try{timelineSnapEnabled=localStorage.getItem("lili-timeline-snap")==="on";}catch{}
+function timelineSnapTargets(p){
+  const targets=[{time:0,label:"Início da montagem"},{time:p.duration,label:"Fim da montagem"}];let at=0;
+  for(const [i,c] of p.timeline.entries()){at+=(c.end-c.start)/(c.speed||1);targets.push({time:at,label:i===p.timeline.length-1?"Fim da montagem":`Corte ${i+1} → ${i+2}`});}
+  for(const [kind,label] of [["narration","Narração"],["music","Música"]]){
+    const track=p[kind],asset=(p.media||[]).find(a=>a.id===track?.media_id);
+    if(track&&asset){const length=kind==="music"?track.end-track.start:asset.duration;targets.push({time:track.offset,label:label+" · início"},{time:track.offset+length,label:label+" · fim"});}
+  }
+  for(const [i,c]of(p.captions||[]).entries())targets.push({time:c.start,label:`Legenda ${i+1} · entrada`},{time:c.end,label:`Legenda ${i+1} · saída`});
+  return targets.filter(t=>Number.isFinite(t.time)&&t.time>=0&&t.time<=p.duration);
+}
+function nearestTimelineSnap(time,targets,scale,enabled,bypass=false){
+  if(!enabled||bypass||!Number.isFinite(time)||!(scale>0))return null;
+  const threshold=Math.min(8/scale,.15);let best=null,distance=Infinity;
+  for(const target of targets){const delta=Math.abs(target.time-time);if(delta<=threshold+1e-9&&delta<distance){best=target;distance=delta;}}
+  return best;
+}
+function showTimelineSnap(target){
+  const guide=$("#timeline-snap-guide");guide.hidden=!target;
+  if(target){guide.style.left=`${target.time*timelineScale}px`;guide.querySelector("span").textContent=target.label;}
+}
+function updateSnapControls(){
+  const button=$("#timeline-snap-toggle");button.textContent=timelineSnapEnabled?"Ímã: ligado":"Ímã: desligado";button.setAttribute("aria-pressed",String(timelineSnapEnabled));
+}
+function snappedTrim(c,edge,delta,offset,assetDuration,targets,scale,enabled,bypass=false){
+  const speed=c.speed||1,minimum=minimumClipLength(c)*speed;
+  const lower=edge==="start"?0:c.start+minimum,upper=edge==="start"?c.end-minimum:assetDuration;
+  let value=clamp(roundTime(clamp(c[edge]+delta,lower,upper)),lower,upper);
+  const target=nearestTimelineSnap(offset+(value-c.start)/speed,targets,scale,enabled,bypass);
+  if(target){const candidate=c.start+(target.time-offset)*speed;if(candidate>=lower-1e-9&&candidate<=upper+1e-9){value=clamp(roundTime(candidate),lower,upper);return {value,target};}}
+  return {value,target:null};
+}
+$("#timeline-snap-toggle").addEventListener("click",()=>{
+  timelineSnapEnabled=!timelineSnapEnabled;try{localStorage.setItem("lili-timeline-snap",timelineSnapEnabled?"on":"off");}catch{}
+  showTimelineSnap(null);updateSnapControls();
+});
+
 
 function renderTimeline(){
   if(!project) return;
+  updateSnapControls();if(!timelineGesture)showTimelineSnap(null);
   const clips=project.timeline, available=Math.max(200,trackScroll.clientWidth-24);
   timelineScale=Math.max(3,Math.min(100,available/Math.max(project.duration,10)))*timelineZoom;
   const width=Math.max(available,project.duration*timelineScale)+24;
@@ -16,7 +55,7 @@ function renderTimeline(){
   $("#clip-count").textContent=`${clips.length} ${clips.length===1?"cena":"cenas"}`;
   $("#total-duration").textContent=`Duração ${precise(project.duration)}`;
   $("#timeline-subtitle").textContent=clips.length?"Selecione • apare pelas bordas • divida no cursor":"Adicione um vídeo para começar.";
-  if(!timelineGesture)$("#timeline-hint").textContent="Régua: posicione ou use dois dedos para ampliar. Precisão: avance por quadro e apare no cursor.";
+  if(!timelineGesture)$("#timeline-hint").textContent="Régua: posicione ou use dois dedos para ampliar. Precisão: quadros, cortes e ímã opcional.";
   $("#timeline-zoom").value=timelineZoom;
   const step=[.1,.25,.5,1,2,5,10,15,30,60,120,300,600].find(s=>s*timelineScale>=65)||600;
   const ticks=[];
@@ -118,7 +157,10 @@ function updatePlayhead(time){
   }
 }
 
-function pointerTime(e){return clamp((e.clientX-trackCanvas.getBoundingClientRect().left)/timelineScale,0,project.duration);}
+function pointerTime(e){
+  const time=clamp((e.clientX-trackCanvas.getBoundingClientRect().left)/timelineScale,0,project.duration);
+  const snap=nearestTimelineSnap(time,timelineSnapTargets(project),timelineScale,timelineSnapEnabled,e.shiftKey);showTimelineSnap(snap);return snap?snap.time:time;
+}
 const rulerPointers=new Map();
 let rulerFrame=0;
 function pinchGeometry(points){
@@ -126,7 +168,7 @@ function pinchGeometry(points){
   return {distance:Math.abs(a-b),center:(a+b)/2};
 }
 function moveRulerPinch(){
-  rulerFrame=0;
+  showTimelineSnap(null);rulerFrame=0;
   const gesture=timelineGesture;if(gesture?.type!=="pinch"||rulerPointers.size!==2)return;
   const geometry=pinchGeometry([...rulerPointers.values()]);
   timelineZoom=clamp(gesture.zoom*geometry.distance/gesture.distance,.5,8);
@@ -143,7 +185,7 @@ trackCanvas.addEventListener("pointerdown",e=>{
       const geometry=pinchGeometry([...rulerPointers.values()]);
       if(geometry.distance<8){rulerPointers.delete(e.pointerId);return;}
       const original=timelineGesture?.originalCursor??cursor;
-      timelineGesture={type:"pinch",distance:geometry.distance,zoom:timelineZoom,anchor:(geometry.center-trackCanvas.getBoundingClientRect().left)/timelineScale};
+      showTimelineSnap(null);timelineGesture={type:"pinch",distance:geometry.distance,zoom:timelineZoom,anchor:(geometry.center-trackCanvas.getBoundingClientRect().left)/timelineScale};
       trackCanvas.setPointerCapture(e.pointerId);seekTo(original);return;
     }
   }
@@ -159,6 +201,7 @@ trackCanvas.addEventListener("pointermove",e=>{
   if(timelineGesture?.type==="seek"&&e.pointerId===timelineGesture.pointerId)seekTo(pointerTime(e));
 });
 function endScrub(e){
+  showTimelineSnap(null);
   if((timelineGesture?.type==="pinch"||timelineGesture?.type==="drain")&&!rulerPointers.has(e.pointerId))return;
   rulerPointers.delete(e.pointerId);
   if(trackCanvas.hasPointerCapture(e.pointerId))trackCanvas.releasePointerCapture(e.pointerId);
@@ -188,8 +231,8 @@ function moveTrim(e){
   const gesture=timelineGesture;
   if(gesture?.type!=="trim"||gesture.pointerId!==e.pointerId)return;
   const c=gesture.clip, edge=gesture.edge, speed=c.speed||1, delta=(e.clientX-gesture.x)/timelineScale*speed;
-  const minimum=minimumClipLength(c)*speed;
-  const asset=assetFor(c), value=roundTime(edge==="start"?clamp(c.start+delta,0,c.end-minimum):clamp(c.end+delta,c.start+minimum,asset.duration));
+  const asset=assetFor(c),snap=snappedTrim(c,edge,delta,before(),asset.duration,timelineSnapTargets(project),timelineScale,timelineSnapEnabled,e.shiftKey),value=snap.value;
+  showTimelineSnap(snap.target);
   gesture.changed={[edge]:value};
   const start=edge==="start"?value:c.start, end=edge==="end"?value:c.end;
   const width=(end-start)/speed*timelineScale;
@@ -204,6 +247,7 @@ function moveTrim(e){
   }
 }
 function clearTrim(handle){
+  showTimelineSnap(null);
   handle.removeEventListener("pointermove",moveTrim);handle.removeEventListener("pointerup",finishTrim);handle.removeEventListener("pointercancel",cancelTrim);
   if(timelineGesture&&handle.hasPointerCapture(timelineGesture.pointerId))handle.releasePointerCapture(timelineGesture.pointerId);
 }
@@ -268,6 +312,7 @@ function updatePrecisionControls(){
 }
 function openPrecision(){
   if(!currentClip())return;
+  updateSnapControls();
   pause();$("#precision-error").hidden=true;$("#precision-time").removeAttribute("aria-invalid");$("#precision-dialog").showModal();updatePrecisionControls();
   $("#precision-time").value=montageTime(cursor);
 }

@@ -216,3 +216,8 @@ Código/testes preparados para painel de rascunho de texto, tempo e estilo, cria
 ## Entrega/exportação — rodada 1 da noite de 31/10
 
 Implementados avisos concretos com atalhos de revisão, bloqueio de fontes indisponíveis antes de gerar job e envio mais robusto contra cliques duplicados, trocas de projeto e respostas incertas da rede. Frontend já servido; pré-validação nova do backend preparada para ativação segura no fechamento. Sem reinício de serviços. Suíte final de 137 testes Python e 18 arquivos JavaScript aprovados; detalhes de tentativas/limites em outputs/rodada-noturna-2026-10-31-01-exportacao.md. Pendentes: revisão visual desktop/Safari, estimativa/checagem de espaço para saída, nome de arquivo e tratamento HDR/SDR. Quatro checkpoints anteriores continuam preservados e sem sincronização; publicar junto ao fechar a extra/segurança desta noite.
+
+
+## Precisão — rodada 2 da noite de 31/10
+
+Implementado ímã opcional em Precisão para régua e bordas de vídeo, com alvos dos cortes/áudios/legendas, guia, limites de distância, Shift e preferência local. Digitação e passos por quadro livres. Proteções de fades/velocidade preservadas e arredondamento na duração fracionária corrigido. Frontend servido; 19 arquivos JavaScript e quatro testes Python focados aprovados. Revisão visual não concluída por falha do runtime de controle desktop; Safari real pendente. Detalhes: outputs/rodada-noturna-2026-10-31-02-ima.md. Permanecem pendentes arraste de faixas, batidas/marcadores e aparo da narração. Não se alterou a ativação pendente do backend de exportação nem a publicação acumulada do ciclo.
