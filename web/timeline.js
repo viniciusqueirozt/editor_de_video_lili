@@ -8,12 +8,12 @@ const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
 const roundTime=value=>Math.round(value*1000)/1000;
 let timelineSnapEnabled=false;
 try{timelineSnapEnabled=localStorage.getItem("lili-timeline-snap")==="on";}catch{}
-function timelineSnapTargets(p){
+function timelineSnapTargets(p,excludeAudio=null){
   const targets=[{time:0,label:"Início da montagem"},{time:p.duration,label:"Fim da montagem"}];let at=0;
   for(const [i,c] of p.timeline.entries()){at+=(c.end-c.start)/(c.speed||1);targets.push({time:at,label:i===p.timeline.length-1?"Fim da montagem":`Corte ${i+1} → ${i+2}`});}
   for(const [kind,label] of [["narration","Narração"],["music","Música"]]){
     const track=p[kind],asset=(p.media||[]).find(a=>a.id===track?.media_id);
-    if(track&&asset){const length=audioRange(track,asset.duration).length;targets.push({time:track.offset,label:label+" · início"},{time:track.offset+length,label:label+" · fim"});}
+    if(kind!==excludeAudio&&track&&asset){const length=audioRange(track,asset.duration).length;targets.push({time:track.offset,label:label+" · início"},{time:track.offset+length,label:label+" · fim"});}
   }
   for(const [i,c]of(p.captions||[]).entries())targets.push({time:c.start,label:`Legenda ${i+1} · entrada`},{time:c.end,label:`Legenda ${i+1} · saída`});
   return targets.filter(t=>Number.isFinite(t.time)&&t.time>=0&&t.time<=p.duration);
@@ -47,6 +47,7 @@ $("#timeline-snap-toggle").addEventListener("click",()=>{
 
 function renderTimeline(){
   if(!project) return;
+  if(timelineGesture?.type==="audio-move")cancelAudioMove(null,false);
   updateSnapControls();if(!timelineGesture)showTimelineSnap(null);
   const clips=project.timeline, available=Math.max(200,trackScroll.clientWidth-24);
   timelineScale=Math.max(3,Math.min(100,available/Math.max(project.duration,10)))*timelineZoom;
@@ -55,7 +56,7 @@ function renderTimeline(){
   $("#clip-count").textContent=`${clips.length} ${clips.length===1?"cena":"cenas"}`;
   $("#total-duration").textContent=`Duração ${precise(project.duration)}`;
   $("#timeline-subtitle").textContent=clips.length?"Selecione • apare pelas bordas • divida no cursor":"Adicione um vídeo para começar.";
-  if(!timelineGesture)$("#timeline-hint").textContent="Régua: posicione ou use dois dedos para ampliar. Precisão: quadros, cortes e ímã opcional.";
+  if(!timelineGesture)$("#timeline-hint").textContent="Régua: cursor e zoom com dois dedos. Áudio: arraste ↔ para mover ou toque para ajustar.";
   $("#timeline-zoom").value=timelineZoom;
   const step=[.1,.25,.5,1,2,5,10,15,30,60,120,300,600].find(s=>s*timelineScale>=65)||600;
   const ticks=[];
@@ -119,13 +120,84 @@ function renderAudioTrack(){renderSoundTrack("narration",$("#audio-track"));}
 function renderSoundTrack(kind,track){
   const sound=project[kind],asset=project.media.find(a=>a.id===sound?.media_id),name=kind==="music"?"música":"narração";
   const length=sound&&asset?Math.max(0,Math.min(audioRange(sound,asset.duration).length,project.duration-sound.offset)):0;
-  track.innerHTML=length>0?`<button class="audio-region ${kind==="music"?"music-region":""}" id="${kind}-region" style="left:${sound.offset*timelineScale}px;width:${length*timelineScale}px" aria-label="Editar ${name}: ${esc(asset.name)}"><svg id="${kind}-waveform" preserveAspectRatio="none" aria-hidden="true"></svg><span>${icon(kind==="music"?"music":"mic")}${esc(asset.name)}</span></button>`:`<button class="add-voice-track">${sound?name+" após o fim · ajustar":"+ Adicionar "+name}</button>`;
-  track.querySelector("button").addEventListener("click",()=>sound?openAudioEdit(kind):openInspector(kind==="music"?"music":"voice"));
+  track.innerHTML=length>0?`<button class="audio-region has-move ${kind==="music"?"music-region":""}" id="${kind}-region" style="left:${sound.offset*timelineScale}px;width:${length*timelineScale}px" aria-label="Editar ${name}: ${esc(asset.name)}"><svg id="${kind}-waveform" preserveAspectRatio="none" aria-hidden="true"></svg><span>${icon(kind==="music"?"music":"mic")}${esc(asset.name)}</span></button><button type="button" class="audio-move-handle ${kind==="music"?"music-move-handle":""}" id="${kind}-move" style="left:${sound.offset*timelineScale}px" aria-label="Mover ${name}. Arraste para posicionar ou toque para ajustar os tempos." title="Arraste para mover ${name}; toque para ajustes" ${audioMoveSaving?"disabled":""}>↔</button>`:`<button class="add-voice-track">${sound?name+" após o fim · ajustar":"+ Adicionar "+name}</button>`;
+  const open=()=>{if(!suppressAudioClick&&!audioMoveSaving&&!timelineGesture)sound?openAudioEdit(kind):openInspector(kind==="music"?"music":"voice");};
+  track.querySelector("button").addEventListener("click",open);
+  if(length>0){const handle=$("#"+kind+"-move");handle.addEventListener("click",open);handle.addEventListener("pointerdown",e=>beginAudioMove(e,kind));handle.addEventListener("pointermove",moveAudio);handle.addEventListener("pointerup",finishAudioMove);handle.addEventListener("pointercancel",cancelAudioMove);handle.addEventListener("lostpointercapture",cancelAudioMove);}
   if(length>0){const pid=project.id;getAudioWaveform(asset).then(data=>{
     const node=$("#"+kind+"-waveform");if(project?.id!==pid||project[kind]?.media_id!==asset.id||!node)return;
     drawAudioWaveform(node,data,audioRange(sound,asset.duration).start,length);
   }).catch(()=>{});}
 }
+// Only the 44px handle owns the drag; the waveform and empty track keep native scrolling.
+let audioMoveSaving=false,suppressAudioClick=false;
+function snappedAudioOffset(offset,length,maximum,targets,scale,enabled,bypass=false){
+  const value=clamp(roundTime(offset),0,maximum);let best=null;
+  for(const edge of [0,length]){
+    const target=nearestTimelineSnap(value+edge,targets,scale,enabled,bypass);
+    if(!target)continue;const candidate=target.time-edge;
+    if(candidate<0||candidate>maximum)continue;
+    const distance=Math.abs(candidate-value);
+    if(!best||distance<best.distance)best={offset:clamp(roundTime(candidate),0,maximum),target,distance};
+  }
+  return best||{offset:value,target:null};
+}
+function validAudioMove(g){return project?.id===g.projectId&&project.revision===g.revision&&project[g.kind]?.media_id===g.baseline.media_id;}
+function paintAudioMove(g,offset){
+  g.node.style.left=`${offset*g.scale}px`;g.region.style.left=`${offset*g.scale}px`;
+  const visible=Math.max(0,Math.min(g.length,project.duration-offset));
+  g.region.style.width=`${visible*g.scale}px`;
+  if(g.waveformData)drawAudioWaveform(g.waveform,g.waveformData,g.baseline.start??0,visible);
+}
+function beginAudioMove(e,kind){
+  if(e.button!==0||timelineGesture||audioMoveSaving||!project?.timeline.length||!e.currentTarget.isConnected)return;
+  const sound=project[kind],asset=project.media.find(a=>a.id===sound?.media_id);
+  if(!asset||!sound)return;
+  e.preventDefault();e.stopPropagation();pause();
+  const node=e.currentTarget,region=$("#"+kind+"-region");
+  timelineGesture={type:"audio-move",projectId:project.id,revision:project.revision,kind,baseline:{...sound},length:audioRange(sound,asset.duration).length,maximum:Math.min(kind==="music"?1800:3600,Math.max(0,project.duration-.1)),x:e.clientX,scroll:trackScroll.scrollLeft,scale:timelineScale,pointerId:e.pointerId,node,region,offset:sound.offset,moved:false};
+  const gesture=timelineGesture;gesture.waveform=$("#"+kind+"-waveform");
+  getAudioWaveform(asset).then(data=>{if(timelineGesture===gesture){gesture.waveformData=data;paintAudioMove(gesture,gesture.offset);}}).catch(()=>{});
+  try{node.setPointerCapture(e.pointerId);}catch{cancelAudioMove();return;}
+  node.classList.add("moving");region.classList.add("moving");
+  $("#timeline-hint").textContent="Arraste ↔ para mover o áudio. Solte para salvar. Esc cancela. Toque abre ajustes.";
+}
+function moveAudio(e){
+  const g=timelineGesture;if(g?.type!=="audio-move"||g.pointerId!==e.pointerId)return;
+  e.stopPropagation();
+  if(!validAudioMove(g)){cancelAudioMove();return;}
+  const delta=e.clientX-g.x+trackScroll.scrollLeft-g.scroll;
+  if(!g.moved&&Math.abs(delta)<6)return;g.moved=true;
+  const snap=snappedAudioOffset(g.baseline.offset+delta/g.scale,g.length,g.maximum,timelineSnapTargets(project,g.kind),g.scale,timelineSnapEnabled,e.shiftKey);
+  g.offset=snap.offset;showTimelineSnap(snap.target);paintAudioMove(g,g.offset);
+  const overrun=g.offset+g.length>project.duration+.001;
+  $("#timeline-hint").textContent=`${g.kind==="music"?"Música":"Narração"} · início ${montageTime(g.offset)} · fim ${montageTime(g.offset+g.length)}. ${overrun?"O fim ultrapassa o vídeo. ":""}Solte para salvar · Esc cancela.`;
+}
+function clearAudioMove(g,suppress){
+  timelineGesture=null;showTimelineSnap(null);g.node.classList.remove("moving");g.region.classList.remove("moving");
+  if(g.node.hasPointerCapture(g.pointerId))g.node.releasePointerCapture(g.pointerId);
+  if(suppress){suppressAudioClick=true;setTimeout(()=>{suppressAudioClick=false;},0);}
+}
+async function finishAudioMove(e){
+  const g=timelineGesture;if(g?.type!=="audio-move"||g.pointerId!==e.pointerId)return;
+  // The release can be newer than the last delivered move event.
+  moveAudio(e);if(timelineGesture!==g)return;
+  const valid=validAudioMove(g);clearAudioMove(g,g.moved);
+  if(!g.moved||g.offset===g.baseline.offset||!valid){paintAudioMove(g,g.baseline.offset);if(g.moved)renderTimeline();return;}
+  audioMoveSaving=true;g.node.disabled=true;
+  try{await mutate(g.kind==="music"?"music_set":"narration_set",{media_id:g.baseline.media_id,offset:g.offset},"Áudio movido. Você pode desfazer.",{projectId:g.projectId,revision:g.revision});}
+  finally{audioMoveSaving=false;if(project){renderTimeline();if(project.id===g.projectId)$("#"+g.kind+"-move")?.focus({preventScroll:true});}}
+}
+function cancelAudioMove(e=null,redraw=true){
+  const g=timelineGesture;if(g?.type!=="audio-move"||(e?.pointerId!==undefined&&e.pointerId!==g.pointerId))return;
+  e?.stopPropagation?.();clearAudioMove(g,true);
+  if(validAudioMove(g))paintAudioMove(g,g.baseline.offset);
+  if(redraw&&project)renderTimeline();
+}
+document.addEventListener("pointerdown",e=>{if(timelineGesture?.type==="audio-move"&&e.pointerId!==timelineGesture.pointerId)cancelAudioMove();},true);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)cancelAudioMove();});
+globalThis.addEventListener?.("blur",()=>cancelAudioMove());
+
 function getAudioWaveform(asset){
   const key=`${project.id}/${asset.id}`;
   if(!waveforms.has(key))waveforms.set(key,api(assetUrl(asset,"waveform.json")).catch(error=>{waveforms.delete(key);throw error;}));
@@ -177,7 +249,7 @@ function moveRulerPinch(){
 }
 trackCanvas.addEventListener("pointerdown",e=>{
   if(e.button!==0||!project?.timeline.length||e.target.closest("button")) return;
-  if(timelineGesture?.type==="trim"||timelineGesture?.type==="drain")return;
+  if(["trim","drain","audio-move"].includes(timelineGesture?.type))return;
   if(e.pointerType==="touch"&&e.target.closest("#time-ruler")){
     if(rulerPointers.size>=2)return;
     rulerPointers.set(e.pointerId,e.clientX);
@@ -363,6 +435,7 @@ trackScroll.addEventListener("keydown",e=>{
   else if(e.key==="End"){e.preventDefault();seekTo(project.duration);}
 });
 document.addEventListener("keydown",e=>{
+  if(timelineGesture?.type==="audio-move"){if(e.key==="Escape"){e.preventDefault();cancelAudioMove();}return;}
   if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)||document.querySelector("dialog[open]"))return;
   if(e.key.toLowerCase()==="s"&&!e.ctrlKey&&!e.metaKey){e.preventDefault();$("#split-button").click();}
   if((e.ctrlKey||e.metaKey)&&["z","y"].includes(e.key.toLowerCase())){e.preventDefault();const redo=e.shiftKey||e.key.toLowerCase()==="y";if(redo?project?.redo_available:project?.undo_available)mutate(redo?"redo":"undo",{},redo?"Alteração refeita.":"Última alteração desfeita.");}

@@ -52,9 +52,12 @@ function clipDuration(clip){return (clip.end-clip.start)/(clip.speed||1);}
 function before(i = index()) { return project.timeline.slice(0, Math.max(0,i)).reduce((a,c) => a + clipDuration(c), 0); }
 function elapsed() { return cursor; }
 
-function mutate(operation, args, message) {
+function mutate(operation, args, message, expected=null) {
   queue = queue.then(async () => {
     if (!project) return;
+    if(expected&&(project.id!==expected.projectId||project.revision!==expected.revision)){
+      toast("O projeto mudou. O movimento do áudio foi cancelado; tente novamente.",true);render();return false;
+    }
     pause(); $("#save-status").textContent = "Salvando…";
     const id = project.id;
     try {
