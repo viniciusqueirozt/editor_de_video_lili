@@ -66,7 +66,7 @@ def duration(project):
 
 
 class Store:
-    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings", "captions", "music", "transitions")
+    SNAPSHOT_FIELDS = ("name", "description", "script", "timeline", "narration", "settings", "captions", "music", "transitions", "audio_clips")
 
     def __init__(self, root):
         self.root = Path(root).resolve()
@@ -137,6 +137,7 @@ class Store:
         result = copy.deepcopy(project)
         result.setdefault("captions", [])
         result.setdefault("music", None)
+        result.setdefault("audio_clips", [])
         from .transitions import clean_transitions
         result["transitions"] = clean_transitions(result)
         result.pop("access", None)  # Sharing metadata has a separate owner-only API.
@@ -301,7 +302,8 @@ class Store:
         audio_fade_out = number(data.get("audio_fade_out", 0), 0, length)
         if audio_fade_in + audio_fade_out > length + .00001:
             raise EditorError("Os fades de áudio não podem ultrapassar a duração da cena.")
-        return {"id": clip_id, "media_id": asset["id"], "start": start, "end": end,
+        if not isinstance(data.get("audio_detached",False),bool):raise EditorError("Separação de áudio inválida.")
+        return {**({"audio_detached":True} if data.get("audio_detached") else {}), "id": clip_id, "media_id": asset["id"], "start": start, "end": end,
                 "fade_in": fade_in, "fade_out": fade_out, "speed": speed, **title_style,
                 "audio_fade_in": audio_fade_in, "audio_fade_out": audio_fade_out,
                 "framing": framing, "mirror": data.get("mirror", False), "pan_x": pan_x, "pan_y": pan_y,
@@ -325,6 +327,7 @@ class Store:
             p.setdefault("music", None)
             p.setdefault("future", [])
             p.setdefault("transitions", [])
+            p.setdefault("audio_clips", [])
             snapshot = {k: copy.deepcopy(p[k]) for k in self.SNAPSHOT_FIELDS}
             snapshot["media_visibility"] = {m["id"]: m.get("deleted_at") for m in p["media"]}
             if operation == "script_update":
@@ -384,11 +387,14 @@ class Store:
                 clips = [c for c in p["timeline"] if c["media_id"] in ids]
                 narration = p["narration"] and p["narration"]["media_id"] in ids
                 music = p["music"] and p["music"]["media_id"] in ids
+                audio_clips=[a for a in p["audio_clips"] if a["media_id"] in ids]
+                if any(a["locked"] for a in audio_clips):raise EditorError("Desproteja os áudios deste arquivo antes de excluir.",409)
                 if any(c["locked"] for c in clips):
                     raise EditorError("Desproteja as cenas deste arquivo antes de excluir.", 409)
-                if (clips or narration or music) and args.get("remove_usage") is not True:
+                if (clips or narration or music or audio_clips) and args.get("remove_usage") is not True:
                     raise EditorError("Confirme também a remoção das cenas e faixas de áudio que usam este arquivo.", 409)
                 p["timeline"] = [c for c in p["timeline"] if c["media_id"] not in ids]
+                p["audio_clips"] = [a for a in p["audio_clips"] if a["media_id"] not in ids]
                 if narration:
                     p["narration"] = None
                 if music:
@@ -420,11 +426,18 @@ class Store:
                 p["transitions"] = [t for t in p["transitions"] if (t["left"], t["right"]) != (left["id"], right["id"])]
                 if kind != "none":
                     p["transitions"].append({"left":left["id"], "right":right["id"], "kind":kind, "duration":value})
+            elif operation in ("audio_detach","audio_clip_add","audio_clip_update","audio_clip_remove","audio_clip_split","audio_clip_duplicate"):
+                from .source_audio import apply_audio_operation
+                apply_audio_operation(self,p,operation,args)
             elif operation == "clip_add":
-                p["timeline"].append(self.validate_clip(p, args))
+                clip=self.validate_clip(p,args);p["timeline"].append(clip)
+                if args.get("separate_audio") is True:
+                    from .source_audio import separate_new
+                    separate_new(self,p,{clip["id"]})
             elif operation == "clip_update":
                 clip = self.find(p["timeline"], args.get("clip_id"))
                 changes = {k: v for k, v in args.items() if k not in ("clip_id", "id")}
+                if "audio_detached" in changes and changes["audio_detached"]!=clip.get("audio_detached",False):raise EditorError("Use a separação de áudio para alterar a ligação com a cena.")
                 if clip["locked"] and any(k != "locked" and clip.get(k) != v for k, v in changes.items()):
                     raise EditorError("Desproteja esta cena antes de alterar a tomada ou a duração.", 409)
                 clip.update(self.validate_clip(p, {**clip, **changes}))
@@ -463,9 +476,20 @@ class Store:
                 if len({c["id"] for c in proposed}) != len(proposed):
                     raise EditorError("Cada cena precisa ter um identificador diferente.")
                 for old in p["timeline"]:
+                    replacement=next((c for c in proposed if c["id"]==old["id"]),None)
+                    if replacement and replacement.get("audio_detached",False)!=old.get("audio_detached",False):
+                        raise EditorError("Mantenha a separação de áudio das cenas existentes.",409)
                     if old["locked"] and self.validate_clip(p, old) not in proposed:
                         raise EditorError("A nova montagem precisa preservar as cenas protegidas, incluindo seus identificadores.", 409)
+                old_ids={c["id"] for c in p["timeline"]}
                 p["timeline"] = proposed
+                if args.get("separate_audio") is True:
+                    from .source_audio import separate_new
+                    separate_new(self,p,{c["id"] for c in proposed}-old_ids)
+                if args.get("original_audio") == "mute":
+                    for sound in p["audio_clips"]:
+                        if not sound["locked"]:sound["volume"]=0
+                elif args.get("original_audio","keep")!="keep":raise EditorError("Ajuste do som original inválido.")
                 if "transition_style" in args:
                     from .transitions import apply_style
                     apply_style(p, args["transition_style"])
@@ -537,12 +561,15 @@ class Store:
                         else:
                             asset.pop("deleted_at", None)
                 p["transitions"] = previous.get("transitions", [])
+                p["audio_clips"] = previous.get("audio_clips", [])
                 p.update(previous)
             else:
                 raise EditorError("Operação desconhecida.")
             if operation not in ("undo", "redo", "media_annotate", "request_add", "request_complete"):
                 p["history"] = (p["history"] + [snapshot])[-30:]
                 p["future"] = []
+            if len(p["audio_clips"])>200:raise EditorError("Use até 200 blocos de áudio independente.")
+            if len({a["id"] for a in p["audio_clips"]})!=len(p["audio_clips"]):raise EditorError("Cada áudio precisa ter um identificador diferente.")
             if len(p["timeline"]) > 100 or duration(p) > 1800:
                 raise EditorError("O piloto aceita até 100 cenas e 30 minutos por montagem.")
             from .transitions import clean_transitions
@@ -558,7 +585,7 @@ class Store:
             self._write(p)
             return self.public(p)
 
-    def draft(self, project_id, expected_revision):
+    def draft(self, project_id, expected_revision, separate_audio=False):
         p = self.get(project_id)
         if expected_revision != p["revision"]:
             raise EditorError("O projeto mudou. Atualize antes de montar.", 409)
@@ -581,5 +608,7 @@ class Store:
             clips.append({"media_id": asset["id"], "start": start, "end": start + length,
                           "label": block["text"][:70], "block_id": block["id"], "volume": 0 if p["narration"] else 1})
             usage[asset["id"]] = used + 1
-        result = self.apply(project_id, "timeline_replace", {"clips": clips}, expected_revision, "rascunho por etiquetas")
+        if separate_audio and p.get("audio_clips"):
+            for clip in clips:clip["audio_detached"]=True
+        result = self.apply(project_id, "timeline_replace", {"clips": clips,"separate_audio":separate_audio is True}, expected_revision, "rascunho por etiquetas")
         return {"project": result, "warnings": warnings, "method": "tags_and_script_length"}

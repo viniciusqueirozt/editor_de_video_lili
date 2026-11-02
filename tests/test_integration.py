@@ -54,6 +54,14 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.08)
         self.fail("Tempo excedido no processamento")
 
+    def test_concat_http_missing_engine_is_read_only(self):
+        with patch('lili.concat_bridge.find_concat',return_value=None), patch('lili.concat_bridge.subprocess.Popen') as spawn:
+            status=self.client.call('GET','/api/concat/status')
+            self.assertFalse(status['installed']);self.assertFalse(status['editing_ready'])
+            result=self.client.call('POST','/api/concat/inspect',{'name':'edit_apply','arguments':{'command':'ignored'}})
+            self.assertEqual(result,status);spawn.assert_not_called()
+            self.assertTrue(self.client.call('GET','/api/health')['features']['source_audio_clips'])
+
     def test_scene_audio_fades_after_speed_and_peak_limiter(self):
         import array, math
         source=self.root/'loud-scene.mp4'
@@ -368,6 +376,35 @@ class IntegrationTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as error:
             urlopen(Request(self.base + "/api/projects", data=b"[]", headers={"Content-Type": "application/json"}))
         self.assertEqual(error.exception.code, 400)
+
+    def test_source_audio_separation_independent_timing_and_no_double_sound(self):
+        import array,math
+        source=self.root/'source-with-independent-sound.mp4'
+        run(['-f','lavfi','-i','color=c=red:s=160x90:r=30:d=4','-f','lavfi','-i','sine=frequency=440:duration=4','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',source])
+        original=source.read_bytes();p=self.client.call('POST','/api/projects',{'name':'Independent source audio'})
+        up=self.client.upload(p['id'],source);self.wait_job(up['job']['id'])
+        filler=self.client.upload(p['id'],self.source);self.wait_job(filler['job']['id']);p=self.store.get(p['id'])
+        p=self.store.apply(p['id'],'clip_add',{'media_id':up['media_id'],'start':0,'end':2,'speed':2,'volume':.7,'separate_audio':True},p['revision'])
+        sound=p['audio_clips'][0];self.assertEqual(sound['speed'],2);self.assertTrue(p['timeline'][0]['audio_detached'])
+        for _ in range(2):p=self.store.apply(p['id'],'clip_add',{'media_id':filler['media_id'],'start':0,'end':1.6},p['revision'])
+        p=self.store.apply(p['id'],'audio_clip_update',{'audio_id':sound['id'],'start':1,'end':3,'speed':1,'offset':.5,'volume':.5,'fade_in':.2,'fade_out':.2},p['revision'])
+        separate=copy.deepcopy(p['audio_clips']);p=self.store.apply(p['id'],'clip_update',{'clip_id':p['timeline'][0]['id'],'start':.5,'end':1.5,'speed':1},p['revision']);self.assertEqual(p['audio_clips'],separate)
+        def render():
+            job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+            output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+            samples=array.array('f',subprocess.run([executable(),'-v','error','-i',str(output),'-f','f32le','-ac','1','-ar','16000','pipe:1'],capture_output=True,check=True).stdout)
+            return samples,probe(output)['duration']
+        def tone(samples,a,b):
+            values=samples[int(a*16000):int(b*16000)];return 2*abs(sum(v*complex(math.cos(2*math.pi*440*i/16000),math.sin(2*math.pi*440*i/16000)) for i,v in enumerate(values)))/len(values)
+        samples,length=render();self.assertAlmostEqual(length,4.2,delta=.1)
+        self.assertLess(tone(samples,.1,.3),.002,'Embedded original audio must stay muted')
+        level=tone(samples,1.1,1.3);self.assertGreater(level,.05);self.assertLess(level,.085,'No doubled original sound')
+        self.assertLess(tone(samples,2.8,3),.002)
+        p=self.store.apply(p['id'],'audio_clip_split',{'audio_id':sound['id'],'at':2},p['revision']);left,right=p['audio_clips']
+        p=self.store.apply(p['id'],'audio_clip_duplicate',{'audio_id':right['id']},p['revision'])
+        p=self.store.apply(p['id'],'audio_clip_remove',{'audio_id':left['id']},p['revision'])
+        samples,length=render();self.assertLess(tone(samples,.8,1),.002);self.assertGreater(tone(samples,1.8,2),.05);self.assertGreater(tone(samples,2.8,3),.05)
+        self.assertEqual(source.read_bytes(),original)
 
     def test_dissolve_mix_pixels_audio_timing_and_draft_preview(self):
         import array,math

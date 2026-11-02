@@ -10,6 +10,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -90,7 +91,15 @@ class MediaService:
     def _save_jobs(self):
         temp = self.jobs_file.with_suffix(".tmp")
         temp.write_text(json.dumps(self.jobs, ensure_ascii=False, indent=2), encoding="utf-8")
-        temp.replace(self.jobs_file)
+        # Windows can temporarily deny replacement while another reader/scanner
+        # has the destination open. Keep the old complete file until it succeeds.
+        for attempt in range(5):
+            try:
+                temp.replace(self.jobs_file)
+                break
+            except PermissionError:
+                if attempt == 4:raise
+                time.sleep(.01 * 2**attempt)
 
     def job_update(self, job_id, **changes):
         with self.lock:
@@ -260,6 +269,7 @@ class MediaService:
         # Reject unavailable sources before reserving the single export worker.
         used = {clip["media_id"] for clip in project["timeline"]}
         used.update(track["media_id"] for track in (project.get("narration"), project.get("music")) if track)
+        used.update(a["media_id"] for a in project.get("audio_clips",[]))
         assets = {asset["id"]: asset for asset in project["media"]}
         for media_id in used:
             asset = assets.get(media_id)
@@ -296,7 +306,7 @@ class MediaService:
             right["end"] = min(right["end"],right["start"]+max(value,1.5)*right.get("speed",1))
         project["preview_seek"] = max(0,clip_duration(left)-max(value,1.5))
         project["preview_stop"] = clip_duration(left)+min(clip_duration(right),max(value,1.5))
-        project.update(narration=None,music=None,captions=[],transitions=[] if kind=="none" else [{"left":left["id"],"right":right["id"],"kind":kind,"duration":value}])
+        project.update(narration=None,music=None,captions=[],audio_clips=[],transitions=[] if kind=="none" else [{"left":left["id"],"right":right["id"],"kind":kind,"duration":value}])
         with self.lock:
             if any(j["kind"] in ("export","transition_preview") and j["status"] in ("queued","running") for j in self.jobs.values()):
                 raise EditorError("Aguarde a prévia/exportação em andamento.",409)
@@ -355,7 +365,7 @@ class MediaService:
                     mark_x = "w-text_w-w*0.04" if right else "w*0.04"
                     mark_y = "h-text_h-h*0.04" if bottom else "h*0.04"
                     filters += f",drawtext=fontfile='{escape_path(font)}':textfile='{escape_path(watermark_file)}':expansion=none:fontsize={max(8, round(width*.025))}:fontcolor=white@{watermark['opacity']}:shadowcolor=black@0.5:shadowx=1:shadowy=1:x={mark_x}:y={mark_y}"
-                audio_filters = [f"atrim=duration={raw_duration}", "asetpts=PTS-STARTPTS", *tempo_filters(speed), f"volume={clip['volume']}"]
+                audio_filters = [f"atrim=duration={raw_duration}", "asetpts=PTS-STARTPTS", *tempo_filters(speed), f"volume={0 if clip.get('audio_detached') else clip['volume']}"]
                 if clip.get("audio_fade_in", 0):
                     audio_filters.append(f"afade=t=in:st=0:d={clip['audio_fade_in']}")
                 if clip.get("audio_fade_out", 0):
@@ -420,6 +430,15 @@ class MediaService:
                 chain += [f"adelay={round(music['offset']*1000)}:all=1", "asetpts=N/SR/TB", "apad", f"atrim=duration={duration(project)}"]
                 filters.append(f"[{source_index}:a]{','.join(chain)}[music]")
                 labels.append("[music]")
+            for sound in project.get("audio_clips",[]):
+                asset=self.store.find(project["media"],sound["media_id"],"Arquivo")
+                source_index=len(inputs)//2;inputs += ["-i",self.source(project_id,asset)]
+                length=(sound["end"]-sound["start"])/sound["speed"]
+                chain=[f"atrim=start={sound['start']}:end={sound['end']}","asetpts=PTS-STARTPTS",*tempo_filters(sound["speed"]),f"volume={sound['volume']}"]
+                if sound.get("fade_in",0):chain.append(f"afade=t=in:st=0:d={sound['fade_in']}")
+                if sound.get("fade_out",0):chain.append(f"afade=t=out:st={length-sound['fade_out']}:d={sound['fade_out']}")
+                chain += [f"adelay={round(sound['offset']*1000)}:all=1","asetpts=N/SR/TB","apad",f"atrim=duration={duration(project)}"]
+                label=f"source{source_index}";filters.append(f"[{source_index}:a]{','.join(chain)}[{label}]");labels.append(f"[{label}]")
             if len(labels) > 1:
                 filters.append(f"{''.join(labels)}amix=inputs={len(labels)}:duration=first:normalize=0,alimiter=limit=0.95:level=0:latency=1[a]")
                 run([*inputs, "-filter_complex", ";".join(filters),

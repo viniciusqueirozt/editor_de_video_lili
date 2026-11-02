@@ -101,7 +101,7 @@ function render() {
   $("#media-list").querySelectorAll("[data-add]").forEach(button=>button.addEventListener("click",()=>{
     const m = project.media.find(a=>a.id===button.dataset.add);
     if(m.kind==="audio") { mutate("narration_set",{media_id:m.id},"Narração adicionada. Revise os volumes e a duração.").then(ok=>{if(ok)openInspector("voice");}); }
-    else mutate("clip_add",{media_id:m.id,start:0,end:Math.min(4,m.duration)},"Cena adicionada à sequência.").then(ok=>{if(ok)closeSheet();});
+    else mutate("clip_add",{media_id:m.id,start:0,end:Math.min(4,m.duration),...(editorFeatures.source_audio_clips?{separate_audio:true}:{})},"Cena adicionada à sequência.").then(ok=>{if(ok)closeSheet();});
   }));
   $("#media-list").querySelectorAll("[data-use-music]").forEach(button=>button.addEventListener("click",()=>mutate("music_set",{media_id:button.dataset.useMusic},"Música adicionada. Revise o volume.").then(ok=>{if(ok)openInspector("music");})));
   $("#media-list").querySelectorAll("[data-tags]").forEach(input=>input.addEventListener("change",()=>mutate("media_annotate",{media_id:input.dataset.tags,tags:input.value.split(",").map(s=>s.trim()).filter(Boolean)},"Etiquetas salvas.")));
@@ -132,6 +132,10 @@ function renderInspector() {
     const m=assetFor(c), i=index();
     $("#scene-inspector").innerHTML = `<span class="scene-chip">${icon("film")} CENA ${String(i+1).padStart(2,"0")}</span><label class="field-label" for="scene-source">Tomada</label><select id="scene-source" ${c.locked?"disabled":""}>${project.media.filter(m=>m.kind==="video"&&m.status==="ready").map(a=>`<option value="${a.id}" ${a.id===c.media_id?"selected":""}>${esc(a.name)}</option>`).join("")}</select><label class="field-label" for="scene-label">Nome da cena</label><input id="scene-label" maxlength="160" value="${esc(c.label)}" ${c.locked?"disabled":""}><div class="trim-fields"><div><label class="field-label" for="clip-start">Entrada · segundos</label><input id="clip-start" type="number" inputmode="decimal" min="0" max="${m.duration}" step="0.1" value="${c.start}" ${c.locked?"disabled":""}></div><div><label class="field-label" for="clip-end">Saída · segundos</label><input id="clip-end" type="number" inputmode="decimal" min="0.1" max="${m.duration}" step="0.1" value="${c.end}" ${c.locked?"disabled":""}></div></div>${editorFeatures.framing_watermark?`<fieldset class="effect-fields"><legend>Enquadramento</legend><label class="field-label" for="scene-framing">Ajuste à tela</label><select id="scene-framing" ${c.locked?"disabled":""}><option value="contain" ${(c.framing||"contain")==="contain"?"selected":""}>Mostrar vídeo inteiro</option><option value="cover" ${c.framing==="cover"?"selected":""}>Preencher tela · recorta bordas</option></select>${["x","y"].map(axis=>`<label class="field-label" for="scene-pan-${axis}">Posição ${axis==="x"?"horizontal":"vertical"}</label><input id="scene-pan-${axis}" type="range" min="0" max="100" value="${Math.round((c["pan_"+axis]??.5)*100)}" ${c.locked?"disabled":""}>`).join("")}<label class="mirror-control"><input id="scene-mirror" type="checkbox" ${c.mirror?"checked":""} ${c.locked?"disabled":""}> Espelhar horizontalmente</label></fieldset>`:""}<p class="selected-duration">Duração na montagem: ${precise(clipDuration(c))}</p>${editorFeatures.clip_speed?`<label class="field-label" for="scene-speed">Velocidade</label><select id="scene-speed" ${c.locked?"disabled":""}>${[.25,.5,.75,1,1.25,1.5,2,3,4].map(value=>`<option value="${value}" ${(c.speed||1)===value?"selected":""}>${value}×${value===1?" · normal":""}</option>`).join("")}</select><p class="help">Altera a duração da cena. Confira a narração e os fades após mudar.</p>`:""}${editorFeatures.visual_fades?`<fieldset class="effect-fields"><legend>Entrada e saída para preto</legend><div class="trim-fields">${["in","out"].map((side)=>`<div><label class="field-label" for="scene-fade-${side}">${side==="in"?"Entrada":"Saída"} · segundos</label><input id="scene-fade-${side}" type="number" min="0" max="${clipDuration(c)}" step="0.1" value="${c["fade_"+side]||0}" ${c.locked?"disabled":""}></div>`).join("")}</div><p class="help">0 desativa. Mantém a duração e o sincronismo da montagem.</p></fieldset>`:""}${editorFeatures.color_adjustments?`<fieldset class="effect-fields"><legend>Luz e cor</legend>${[["brightness","Brilho",50,150],["contrast","Contraste",50,150],["saturation","Saturação",0,200]].map(([key,label,min,max])=>`<label class="field-label" for="scene-${key}">${label} · <output id="${key}-value">${Math.round((c[key]??1)*100)}%</output></label><input id="scene-${key}" type="range" min="${min}" max="${max}" value="${Math.round((c[key]??1)*100)}" ${c.locked?"disabled":""}>`).join("")}<button id="reset-color" class="button secondary full" ${c.locked?"disabled":""}>Restaurar cor original</button></fieldset>`:""}<label class="field-label" for="scene-title">Texto sobre a cena</label><textarea id="scene-title" rows="2" maxlength="160" placeholder="Um título breve, se fizer sentido." ${c.locked?"disabled":""}>${esc(c.title)}</textarea>${editorFeatures.caption_styles?`<div class="caption-controls">${[["font","Fonte",[["sans","Simples · Arial"],["serif","Editorial · Georgia"],["mono","Monoespaçada · Consolas"]],"sans"],["size","Tamanho",[["small","Pequeno"],["medium","Médio"],["large","Grande"]],"medium"],["position","Posição",[["legacy","Clássica"],["top","Parte superior"],["center","Centro"],["bottom","Parte inferior"]],"legacy"]].map(([key,label,options,defaultValue])=>`<label class="field-label" for="title-${key}">${label}</label><select id="title-${key}" ${c.locked?"disabled":""}>${options.map(([value,name])=>`<option value="${value}" ${(c["title_"+key]||defaultValue)===value?"selected":""}>${name}</option>`).join("")}</select>`).join("")}<p class="help">Texto manual por cena. Fontes locais, sem download ou assinatura.</p></div>`:""}<label class="field-label" for="clip-volume">Som original</label><div class="range-row"><input id="clip-volume" type="range" min="0" max="100" value="${Math.round(c.volume*100)}" ${c.locked?"disabled":""}><output id="clip-volume-value">${Math.round(c.volume*100)}%</output></div>${editorFeatures.scene_audio_fades?`<fieldset class="effect-fields"><legend>Fades do som original</legend><div class="trim-fields">${["in","out"].map(side=>`<div><label class="field-label" for="audio-fade-${side}">${side==="in"?"Entrada":"Saída"} · segundos</label><input id="audio-fade-${side}" type="number" min="0" max="${clipDuration(c)}" step="0.1" value="${c["audio_fade_"+side]||0}" ${c.locked?"disabled":""}></div>`).join("")}</div><p class="help">Suaviza o som da cena sem mudar a imagem. A exportação limita picos.</p></fieldset>`:""}<hr class="divider"><button class="lock-control ${c.locked?"locked":""}" id="lock-clip" aria-pressed="${c.locked}">${icon("lock")}<span><strong>${c.locked?"Cena protegida":"Proteger esta escolha"}</strong><small>Preserva a tomada e seus ajustes.</small></span></button><div class="reorder-buttons"><button class="button secondary" id="move-left" ${i===0?"disabled":""}>${icon("left")}Antes</button><button class="button secondary" id="move-right" ${i===project.timeline.length-1?"disabled":""}>Depois${icon("right")}</button></div><button class="danger-button" id="remove-clip" ${c.locked?"disabled":""}>${icon("trash")}Remover da sequência</button>`;
     const update=changes=>mutate("clip_update",{clip_id:c.id,...changes});
+    if(c.audio_detached){
+      for(const id of ["#clip-volume","#audio-fade-in","#audio-fade-out"]){const input=$(id);if(input){input.disabled=true;input.title="Edite na faixa Som original.";}}
+      const note=document.createElement("button");note.type="button";note.className="button secondary full";note.textContent=sourceAudioTracks(project).some(a=>a.source_clip_id===c.id)?"Editar som original separado":"Adicionar som desta cena";note.addEventListener("click",()=>{const sound=sourceAudioTracks(project).find(a=>a.source_clip_id===c.id);if(sound)openAudioEdit("source",sound.id);else mutate("audio_clip_add",{media_id:c.media_id,source_clip_id:c.id,start:c.start,end:c.end,speed:c.speed||1,offset:before(i),volume:c.volume,fade_in:c.audio_fade_in||0,fade_out:c.audio_fade_out||0,label:c.label},"Som original adicionado em bloco independente.");});$("#scene-inspector").append(note);
+    }
     for(const key of ["brightness","contrast","saturation"]){
       $("#scene-"+key)?.addEventListener("input",e=>{$("#"+key+"-value").value=e.target.value+"%";updatePreviewGrade({...c,[key]:Number(e.target.value)/100});});
       $("#scene-"+key)?.addEventListener("change",e=>update({[key]:Number(e.target.value)/100}));
@@ -149,7 +153,7 @@ function renderInspector() {
     for(const key of ["font","size","position"])$("#title-"+key)?.addEventListener("change",e=>update({["title_"+key]:e.target.value}));
     $("#scene-title").addEventListener("change",e=>update({title:e.target.value}));
     $("#scene-source").addEventListener("change",e=>{const a=project.media.find(m=>m.id===e.target.value);update({media_id:a.id,start:0,end:Math.min(c.end-c.start,a.duration)});});
-    $("#clip-volume").addEventListener("input",e=>{$("#clip-volume-value").value=`${e.target.value}%`;player.volume=Number(e.target.value)/100;});
+    $("#clip-volume").addEventListener("input",e=>{$("#clip-volume-value").value=`${e.target.value}%`;player.volume=c.audio_detached?0:Number(e.target.value)/100;});
     $("#clip-volume").addEventListener("change",e=>update({volume:Number(e.target.value)/100}));
     $("#lock-clip").addEventListener("click",()=>update({locked:!c.locked}));
     $("#move-left").addEventListener("click",()=>mutate("clip_move",{clip_id:c.id,index:i-1}));
@@ -188,7 +192,7 @@ function updatePreviewSubtitle(time){
 function renderRequests(){const pending=project.requests.filter(r=>r.status==="pending").length;$("#request-count").textContent=pending?`(${pending})`:"";$("#requests-list").innerHTML=[...project.requests].reverse().map(r=>`<article class="request-card ${r.status==="done"?"done":""}"><small>${r.status==="done"?"CONCLUÍDO":"AGUARDANDO O CODEX"}</small><p>${esc(r.text)}</p>${r.result?`<p class="help">${esc(r.result)}</p>`:""}</article>`).join("");}
 function setInspector(name){$("#music-inspector").hidden=name!=="music";$("#captions-inspector").hidden=name!=="captions";document.querySelectorAll("[data-inspector]").forEach(b=>b.classList.toggle("active",b.dataset.inspector===name));$("#scene-inspector").hidden=name!=="scene";$("#voice-inspector").hidden=name!=="voice";$("#step-visual").classList.toggle("active",name==="scene");$("#step-voice").classList.toggle("active",name==="voice");}
 function pause(){
-  playing=false; playTicket++; player.pause(); voice.pause();musicPlayer.pause();
+  playing=false; playTicket++; player.pause(); voice.pause();musicPlayer.pause();if(typeof pauseSourceAudio==="function")pauseSourceAudio();
   cancelAnimationFrame(playbackFrame); playbackFrame=0;
   $("#play-button").innerHTML=icon("play");
   $("#play-button").setAttribute("aria-label","Reproduzir montagem");
@@ -266,7 +270,7 @@ function updatePlayer(resume=false, time=before()){
   player.playbackRate=c.speed||1;
   player.preservesPitch=true;
   player.onloadedmetadata=flushPreviewSeek;
-  player.poster=frameUrl(c); player.volume=Math.min(1,c.volume);
+  player.poster=frameUrl(c); player.volume=originalGain(c,Math.max(0,cursor-before()));
   if(loadedSource!==source){
     playerLoading=true; voice.pause();musicPlayer.pause(); player.src=source; loadedSource=source; player.load();
   } else flushPreviewSeek();
@@ -289,7 +293,7 @@ function voiceGain(n,time,duration){
 }
 function audioRange(track,duration){
   const start=track?.start??0,end=track?.end??duration;
-  return {start,end,length:Math.max(0,end-start)};
+  return {start,end,length:Math.max(0,(end-start)/(track?.speed||1))};
 }
 function syncVoice(){
   const n=typeof audioPreviewTrack==="function"?audioPreviewTrack("narration"):project?.narration;
@@ -310,6 +314,7 @@ function musicGain(m,time,narration,narrationDuration=0){
   return Math.min(1,m.volume*envelope*duck);
 }
 function syncMusic(){
+  if(typeof syncSourceAudio==="function")syncSourceAudio();
   const m=typeof audioPreviewTrack==="function"?audioPreviewTrack("music"):project?.music;
   if(!m||!playing||playerLoading||player.seeking||player.paused){musicPlayer.pause();return;}
   const voiceAsset=project.media.find(a=>a.id===project.narration?.media_id);
@@ -383,7 +388,7 @@ function updatePreviewGrade(clip){
   const gain=clip?sceneFadeGain(clip,cursor-before()):1;
   player.style.filter=`${grade.active?"url(#lili-color-grade) ":""}brightness(${gain})`;
 }
-function originalGain(clip,time){return voiceGain({volume:clip.volume,fade_in:clip.audio_fade_in||0,fade_out:clip.audio_fade_out||0},time,clipDuration(clip));}
+function originalGain(clip,time){if(clip.audio_detached||(typeof sourceDraftMutesVideo==="function"&&sourceDraftMutesVideo(clip.id)))return 0;return voiceGain({volume:clip.volume,fade_in:clip.audio_fade_in||0,fade_out:clip.audio_fade_out||0},time,clipDuration(clip));}
 function sceneFadeGain(clip,time){
   const length=clipDuration(clip);
   return Math.max(0,Math.min(1,clip.fade_in?time/clip.fade_in:1,clip.fade_out?(length-time)/clip.fade_out:1));
@@ -590,7 +595,7 @@ $("#ai-instructions").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrl
 let smoothTicket=0;
 const smoothJobs=new Map();
 function needsSmoothPlayback(){
-  return editorFeatures.dissolve_transitions&&project?.transitions?.some(t=>t.kind==="dissolve")&&
+  return ((editorFeatures.dissolve_transitions&&project?.transitions?.some(t=>t.kind==="dissolve"))||(editorFeatures.source_audio_clips&&project?.audio_clips?.length>0))&&
     !(typeof audioDraft!=="undefined"&&audioDraft)&&!(typeof captionDraft!=="undefined"&&captionDraft)&&!(typeof effectDraft!=="undefined"&&effectDraft)&&!(typeof transitionDraft!=="undefined"&&transitionDraft);
 }
 async function openSmoothPlayback(draft=null){
@@ -667,10 +672,10 @@ function confirmMediaRemoval(value){
   const ids=Array.isArray(value)?value:[value], assets=ids.map(id=>project.media.find(a=>a.id===id));
   if(!ids.length||assets.some(a=>!a))return;
   pause();pendingRemoval={projectId:project.id,mediaIds:ids,revision:project.revision};
-  const clips=project.timeline.filter(c=>ids.includes(c.media_id)), narration=ids.includes(project.narration?.media_id), music=ids.includes(project.music?.media_id), locked=clips.some(c=>c.locked);
+  const clips=project.timeline.filter(c=>ids.includes(c.media_id)), narration=ids.includes(project.narration?.media_id), music=ids.includes(project.music?.media_id), source=(project.audio_clips||[]).filter(a=>ids.includes(a.media_id)), locked=clips.some(c=>c.locked)||source.some(a=>a.locked);
   $("#delete-media-title").textContent=ids.length>1?`Excluir ${ids.length} arquivos?`:"Excluir arquivo?";
   $("#delete-media-name").textContent=ids.length>1?assets.slice(0,4).map(a=>a.name).join(", ")+(ids.length>4?` e mais ${ids.length-4}`:""):assets[0].name;
-  $("#delete-media-impact").textContent=locked?"A seleção contém cenas protegidas. Desproteja-as ou retire esses arquivos da seleção antes de excluir.":clips.length||narration||music?`Também serão removidas ${clips.length} cena(s) da linha do tempo${narration?" e a faixa de narração":""}${music?" e a faixa de música":""}. Você pode recuperar tudo com um único Desfazer.`:"Os arquivos selecionados não estão em uso na montagem.";
+  $("#delete-media-impact").textContent=locked?"A seleção contém cenas protegidas. Desproteja-as ou retire esses arquivos da seleção antes de excluir.":clips.length||narration||music||source.length?`Também serão removidas ${clips.length} cena(s) da linha do tempo${narration?" e a faixa de narração":""}${music?" e a faixa de música":""}${source.length?` e ${source.length} bloco(s) de áudio original`:""}. Você pode recuperar tudo com um único Desfazer.`:"Os arquivos selecionados não estão em uso na montagem.";
   $("#confirm-delete-media").disabled=locked;
   $("#delete-media-dialog").showModal();
 }
@@ -724,7 +729,7 @@ $("#save-script").addEventListener("click",()=>mutate("script_update",{script:$(
 $("#request-form").addEventListener("submit",async e=>{e.preventDefault();const input=$("#request-input");if(!input.value.trim())return;if(await mutate("request_add",{text:input.value},"Pedido salvo para o Codex. A execução depende de uma sessão do agente."))input.value="";});
 $("#redo-button").addEventListener("click",()=>mutate("redo",{},"Alteração refeita."));
 $("#undo-button").addEventListener("click",()=>mutate("undo",{},"Última alteração desfeita."));
-$("#draft-button").addEventListener("click",async()=>{await queue;if(!project)return;if(project.timeline.length&&!confirm("Substituir a sequência pelo rascunho baseado no roteiro e nas etiquetas? Você poderá desfazer."))return;pause();try{const data=await api(`/api/projects/${project.id}/draft`,{method:"POST",body:JSON.stringify({expected_revision:project.revision})});project=data.project;selected=project.timeline[0]?.id;render();toast(data.warnings.length?`Rascunho montado. ${data.warnings.length} blocos sem correspondência de etiquetas precisam de revisão.`:"Rascunho montado pelas etiquetas. Revise a seleção das tomadas.");}catch(e){toast(e.message,true);}});
+$("#draft-button").addEventListener("click",async()=>{await queue;if(!project)return;if(project.timeline.length&&!confirm("Substituir a sequência pelo rascunho baseado no roteiro e nas etiquetas? Você poderá desfazer."))return;pause();try{const data=await api(`/api/projects/${project.id}/draft`,{method:"POST",body:JSON.stringify({expected_revision:project.revision,separate_audio:!!editorFeatures.source_audio_clips})});project=data.project;selected=project.timeline[0]?.id;render();toast(data.warnings.length?`Rascunho montado. ${data.warnings.length} blocos sem correspondência de etiquetas precisam de revisão.`:"Rascunho montado pelas etiquetas. Revise a seleção das tomadas.");}catch(e){toast(e.message,true);}});
 $("#project-select").addEventListener("change",e=>openProject(e.target.value).catch(e=>toast(e.message,true)));
 $("#new-project").addEventListener("click",()=>$("#new-dialog").showModal());
 $("#new-form").addEventListener("submit",async e=>{e.preventDefault();try{const p=await api("/api/projects",{method:"POST",body:JSON.stringify({name:$("#new-name").value,script:$("#new-script").value})});$("#new-dialog").close();$("#new-form").reset();await listProjects();await openProject(p.id);}catch(e){toast(e.message,true);}});
@@ -735,15 +740,18 @@ function exportReadiness(p){
   const add=(level,text,target)=>notes.push({level,text,target});
   if(!p.timeline.length)add("error","Adicione uma cena à montagem antes de gerar o vídeo.","scene");
   const used=new Set(p.timeline.map(c=>c.media_id));for(const track of [p.narration,p.music])if(track)used.add(track.media_id);
+  for(const sound of p.audio_clips||[])used.add(sound.media_id);
   const unavailable=[...used].filter(id=>{const a=media.get(id);return !a||a.deleted_at||a.status!=="ready";});
   if(unavailable.length)add("error",`${unavailable.length} arquivo(s) usado(s) na montagem ainda não estão prontos ou disponíveis. Confira a biblioteca.`,"library");
   const n=p.narration,voice=n&&media.get(n.media_id);
   if(n&&voice){if(n.offset>=duration)add("warning","A narração começa depois do fim do vídeo e não será ouvida.","voice");else if(n.offset+audioRange(n,voice.duration).length>duration+.001)add("warning",`A narração ultrapassa o vídeo em ${precise(n.offset+audioRange(n,voice.duration).length-duration)}. Parte da fala ficará de fora.`,"voice");}
   const m=p.music;
   if(m){if(m.offset>=duration)add("warning","A música começa depois do fim do vídeo e não será ouvida.","music");else if(m.fade_out>0&&m.offset+m.end-m.start>duration+.001)add("warning","O vídeo termina antes do fim da música: a saída suave escolhida não termina dentro da entrega.","music");}
+  const sourceOutside=(p.audio_clips||[]).filter(a=>a.offset+audioRange(a,0).length>duration+.001).length;
+  if(sourceOutside)add("warning",`${sourceOutside} bloco(s) de som original ultrapassam o vídeo. Revise seus tempos antes de exportar.`,"source");
   const outside=(p.captions||[]).filter(c=>c.end>duration+.001).length;
   if(outside)add("warning",`${outside} legenda(s) ultrapassam a duração da montagem. Só o trecho dentro do vídeo aparece.`,"captions");
-  const sceneSound=p.timeline.some(c=>media.get(c.media_id)?.has_audio&&(c.volume??1)>0);
+  const sceneSound=p.timeline.some(c=>!c.audio_detached&&media.get(c.media_id)?.has_audio&&(c.volume??1)>0)||(p.audio_clips||[]).some(a=>a.volume>0&&a.offset<duration);
   const extraSound=!!(n&&voice&&n.volume>0&&n.offset<duration)||!!(m&&media.get(m.media_id)&&m.volume>0&&m.offset<duration);
   if(p.timeline.length&&!sceneSound&&!extraSound)add("warning","Esta montagem não tem áudio audível. Se o silêncio foi intencional, pode gerar o vídeo assim.","voice");
   return notes;
@@ -755,8 +763,8 @@ function updateExportAction(){
 }
 function renderExportReadiness(){
   const notes=exportReadiness(project),root=$("#export-readiness");
-  root.innerHTML=notes.length?`<h3>Antes de entregar</h3>${notes.map(n=>`<div class="export-review-note ${n.level}"><p>${esc(n.text)}</p><button type="button" class="button secondary" data-export-review="${n.target}">Revisar ${({library:"arquivos",scene:"cenas",voice:"narração",music:"música",captions:"legendas"})[n.target]}</button></div>`).join("")}<p class="help">Avisos permitem gerar mesmo assim. Arquivos indisponíveis precisam ser resolvidos primeiro.</p>`:'<p class="help">Sem pendências detectadas nos tempos e no cadastro dos arquivos. Confira também a prévia antes de entregar.</p>';
-  root.querySelectorAll("[data-export-review]").forEach(b=>b.addEventListener("click",()=>{pause();$("#export-dialog").close();if(b.dataset.exportReview==="library")openLibraryTab("media");else openInspector(b.dataset.exportReview);}));
+  root.innerHTML=notes.length?`<h3>Antes de entregar</h3>${notes.map(n=>`<div class="export-review-note ${n.level}"><p>${esc(n.text)}</p><button type="button" class="button secondary" data-export-review="${n.target}">Revisar ${({library:"arquivos",scene:"cenas",voice:"narração",music:"música",source:"som original",captions:"legendas"})[n.target]}</button></div>`).join("")}<p class="help">Avisos permitem gerar mesmo assim. Arquivos indisponíveis precisam ser resolvidos primeiro.</p>`:'<p class="help">Sem pendências detectadas nos tempos e no cadastro dos arquivos. Confira também a prévia antes de entregar.</p>';
+  root.querySelectorAll("[data-export-review]").forEach(b=>b.addEventListener("click",()=>{pause();$("#export-dialog").close();if(b.dataset.exportReview==="library")openLibraryTab("media");else if(b.dataset.exportReview==="source"){const sound=(project.audio_clips||[]).find(a=>a.offset+audioRange(a,0).length>project.duration+.001);if(sound)openAudioEdit("source",sound.id);}else openInspector(b.dataset.exportReview);}));
   updateExportAction();
 }
 async function submitExport(){

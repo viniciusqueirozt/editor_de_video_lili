@@ -125,7 +125,10 @@ class Handler(BaseHTTPRequestHandler):
         store, media = self.server.store, self.server.media
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
-                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "ai_chat": True, "dissolve_transitions": True, "pair_transitions": True}})
+                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "ai_chat": True, "source_audio_clips": True, "dissolve_transitions": True, "pair_transitions": True}})
+            if path == "/api/concat/status":
+                from .concat_bridge import ConcatBridge
+                return self.json(ConcatBridge().availability())
             if path == "/auth/status":
                 return self.json({"authenticated": self.server.identity_resolver is not None})
             if path == "/api/projects":
@@ -194,9 +197,15 @@ class Handler(BaseHTTPRequestHandler):
                         raise EditorError("Esta exportação não está disponível.", 404)
                     self.require_project(project_id,"download_exports")
                     return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True)
-            if path in ("/", "/editor", "/home.js", "/home.css", "/studio.css", "/app.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
+            if path in ("/", "/editor", "/home.js", "/home.css", "/studio.css", "/app.js", "/source-audio.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
                 return self.file(WEB / ({"/": "home.html", "/editor": "index.html"}.get(path, path[1:])))
             raise EditorError("Página não encontrada.", 404)
+        if path == "/api/concat/inspect" and self.command == "POST":
+            self.read_json()
+            with media.lock:
+                if any(j["status"] in ("queued","running") for j in media.jobs.values()):raise EditorError("Aguarde os processamentos antes de verificar outro motor.",409)
+            from .concat_bridge import ConcatBridge
+            return self.json(ConcatBridge().inspect())
         if path == "/api/projects" and self.command == "POST":
             data = self.read_json()
             return self.json(store.create(data.get("name", "Novo projeto"), data.get("script", ""), data.get("description", ""), owner_id=self.principal.subject if self.principal else None), 201)
@@ -271,7 +280,7 @@ class Handler(BaseHTTPRequestHandler):
                 if operation == "commands":
                     return self.json(store.apply(project_id, data.get("operation"), data.get("args", {}), data.get("expected_revision"), "user:"+self.principal.subject if self.principal else data.get("actor", "editor")))
                 if operation == "draft":
-                    return self.json(store.draft(project_id, data.get("expected_revision")))
+                    return self.json(store.draft(project_id, data.get("expected_revision"),data.get("separate_audio") is True))
                 if operation == "ai-edit":
                     return self.json(self.server.ai.start(project_id, data.get("expected_revision"), data.get("instructions", "")), 202)
                 if operation == "transition-preview":

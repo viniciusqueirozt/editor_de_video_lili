@@ -32,6 +32,7 @@ const ctx=vm.createContext({project:{duration:8,timeline:[{id:'a',media_id:'x',s
  currentClip(){return ctx.project.timeline.find(c=>c.id===ctx.selected);},assetFor:()=>({id:'x'}),assetUrl:m=>'/'+m.id,frameUrl:()=>'/frame',before:()=>ctx.selected==='a'?0:4,index:()=>0,
  renderPreviewCaption(){},renderPreviewFraming(){},updateTime(){},voice:{pause(){},hasAttribute(){return false;}},musicPlayer:{pause(){},hasAttribute(){return false;}},play(){ctx.plays=(ctx.plays||0)+1;}});
 vm.runInContext(app.slice(app.indexOf('function flushPreviewSeek('),app.indexOf('function voiceGain(')),ctx);
+vm.runInContext(app.slice(app.indexOf('function voiceGain('),app.indexOf('function syncVoice(')),ctx);ctx.clipDuration=c=>(c.end-c.start)/(c.speed||1);vm.runInContext(app.slice(app.indexOf('function originalGain('),app.indexOf('function sceneFadeGain(')),ctx);
 ctx.updatePlayer(false,1);ctx.updatePlayer(false,2);ctx.updatePlayer(false,3);
 assert.deepEqual(writes,[1]);assert.equal(ctx.playerLoading,true);
 sourceTime=1;player.seeking=false;ctx.flushPreviewSeek();assert.deepEqual(writes,[1,3]);assert.equal(ctx.playerLoading,true);

@@ -52,6 +52,29 @@ class AIEditorTests(unittest.TestCase):
         p = self.store.apply(p["id"], "undo", {}, p["revision"])
         self.assertEqual(p["timeline"], [])
 
+    def test_generated_montage_separates_audio_and_visual_replacement_preserves_it(self):
+        self.assertEqual(self.wait_job(self.ai.start(self.p["id"],self.p["revision"]))["status"],"done")
+        p=self.store.get(self.p["id"]);self.assertTrue(p["timeline"][0]["audio_detached"])
+        self.assertEqual(len(p["audio_clips"]),1);sound=copy.deepcopy(p["audio_clips"])
+        self.plan["clips"][0].update(start=2,end=4)
+        self.assertEqual(self.wait_job(self.ai.start(p["id"],p["revision"],"Troque somente as imagens"))["status"],"done")
+        current=self.store.get(p["id"]);self.assertEqual(current["audio_clips"],sound)
+        self.assertTrue(current["timeline"][0]["audio_detached"])
+
+    def test_local_mute_changes_independent_audio_and_respects_audio_locks(self):
+        for start,end in ((0,2),(2,4)):
+            self.p=self.store.apply(self.p["id"],"clip_add",{"media_id":self.asset["id"],"start":start,"end":end,"separate_audio":True},self.p["revision"])
+        locked=self.p["audio_clips"][0]["id"]
+        self.p=self.store.apply(self.p["id"],"audio_clip_update",{"audio_id":locked,"locked":True},self.p["revision"])
+        sounds=copy.deepcopy(self.p["audio_clips"])
+        for clip in list(self.p["timeline"]):
+            self.p=self.store.apply(self.p["id"],"clip_update",{"clip_id":clip["id"],"locked":True},self.p["revision"])
+        action=next(a["instructions"] for a in QUICK_ACTIONS if a["kind"]=="mute")
+        self.ai.runner=lambda *_:self.fail("Local mute must not call AI")
+        job=self.wait_job(self.ai.start(self.p["id"],self.p["revision"],action));self.assertEqual(job["status"],"done",job)
+        current=self.store.get(self.p["id"]);self.assertEqual(current["audio_clips"][0],sounds[0]);self.assertEqual(current["audio_clips"][1]["volume"],0)
+        self.assertEqual(current["timeline"],self.p["timeline"])
+
     def test_conversation_refines_existing_edits_and_preserves_history(self):
         for start,end in ((0,2),(2,4)):
             self.p=self.store.apply(self.p["id"],"clip_add",{"media_id":self.asset["id"],"start":start,"end":end,"brightness":1.2,"speed":1.25},self.p["revision"])

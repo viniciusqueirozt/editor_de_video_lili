@@ -15,6 +15,7 @@
   <link rel="stylesheet" href="/timeline.css">
   <link rel="stylesheet" href="/editor.css"><link rel="stylesheet" href="/studio.css">
   <script src="/app.js" defer></script>
+  <script src="/source-audio.js" defer></script>
   <script src="/timeline.js" defer></script>
 </head>
 <body>
@@ -91,12 +92,12 @@
         </div>
       </div>
       <div class="timeline-body">
-        <div class="track-labels" aria-hidden="true"><span class="ruler-label">TEMPO</span><span class="video-label"><svg><use href="#i-film"/></svg>Vídeo</span><span class="audio-label"><svg><use href="#i-mic"/></svg>Áudio</span><span class="music-label" id="music-track-label" hidden>Música</span><span class="caption-label" id="caption-track-label" hidden>Legendas</span></div>
+        <div class="track-labels" aria-hidden="true"><span class="ruler-label">TEMPO</span><span class="video-label"><svg><use href="#i-film"/></svg>Vídeo</span><span class="source-audio-label" id="source-audio-label" hidden>Som original</span><span class="audio-label"><svg><use href="#i-mic"/></svg>Áudio</span><span class="music-label" id="music-track-label" hidden>Música</span><span class="caption-label" id="caption-track-label" hidden>Legendas</span></div>
         <div id="timeline-scroll" class="timeline-scroll" tabindex="0" aria-label="Trilhas de vídeo e áudio; use as setas para mover o cursor">
           <div id="timeline" class="timeline">
             <div id="time-ruler" class="time-ruler" aria-label="Régua de tempo"></div>
             <div id="video-track" class="video-track" aria-label="Clipes de vídeo"></div>
-            <div id="audio-track" class="audio-track" aria-label="Faixa de narração"></div><div id="music-track" class="music-track" aria-label="Faixa de música" hidden></div><div id="caption-track" class="caption-track" aria-label="Faixa de legendas" hidden></div>
+            <div id="source-audio-track" class="source-audio-track" aria-label="Sons originais independentes" hidden></div><div id="audio-track" class="audio-track" aria-label="Faixa de narração"></div><div id="music-track" class="music-track" aria-label="Faixa de música" hidden></div><div id="caption-track" class="caption-track" aria-label="Faixa de legendas" hidden></div>
             <div id="timeline-snap-guide" class="timeline-snap-guide" aria-hidden="true" hidden><span></span></div>
             <div id="timeline-playhead" class="timeline-playhead" role="slider" tabindex="0" aria-label="Cursor da linha do tempo" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0"><span></span></div>
           </div>
@@ -147,6 +148,7 @@
       <label class="field-label" for="audio-montage-seek">Cursor na montagem · <output id="audio-montage-time"></output></label><input id="audio-montage-seek" type="range" min="0" step="0.001" value="0">
       <label class="field-label" for="audio-seek-time">Ir para um instante</label><div class="audio-seek-position"><input id="audio-seek-time" type="text" inputmode="decimal" autocomplete="off" aria-describedby="audio-seek-error" placeholder="00:01.500"><button id="audio-seek-go" type="button" class="button secondary">Ir</button></div><p id="audio-seek-error" class="precision-error" role="alert" hidden></p>
       <div class="audio-edit-pair"><button id="audio-cursor-back" type="button" class="button secondary">−1 quadro</button><button id="audio-cursor-forward" type="button" class="button secondary">+1 quadro</button></div>
+      <div id="source-audio-options" hidden><label class="field-label" for="source-audio-picker">Bloco de som original</label><select id="source-audio-picker"></select><label class="field-label" for="source-audio-speed">Velocidade do áudio</label><input id="source-audio-speed" type="number" inputmode="decimal" min="0.25" max="4" step="0.05"><label class="mirror-control" id="source-audio-lock-label"><input id="source-audio-lock" type="checkbox"> Proteger este áudio</label><p id="source-audio-note" class="help"></p><div class="source-audio-actions"><button type="button" class="button secondary" id="source-audio-split">Dividir no cursor</button><button type="button" class="button secondary" id="source-audio-duplicate">Duplicar áudio</button><button type="button" class="button destructive" id="source-audio-remove">Remover áudio</button></div></div>
       <div id="audio-music-trim"><div class="audio-edit-pair"><div><label class="field-label" for="audio-edit-start">Entrada no arquivo</label><input id="audio-edit-start" type="text" inputmode="decimal" autocomplete="off"></div><div><label class="field-label" for="audio-edit-end">Saída no arquivo</label><input id="audio-edit-end" type="text" inputmode="decimal" autocomplete="off"></div></div><div class="audio-edit-pair"><button id="audio-trim-start" type="button" class="button secondary">Aparar início aqui</button><button id="audio-trim-end" type="button" class="button secondary">Aparar fim aqui</button></div><button id="audio-reset-range" type="button" class="button secondary full">Usar arquivo inteiro</button><p id="audio-trim-note" class="help">Aparar início mantém o restante do áudio sincronizado. Não desloca vídeo, outras faixas ou legendas.</p></div>
       <details class="audio-mix-details"><summary id="audio-mix-summary">Volume e suavização</summary><label class="field-label" for="audio-edit-volume">Volume · <output id="audio-edit-volume-value"></output></label><input id="audio-edit-volume" type="range" min="0" max="100" step="1"><p class="help" id="audio-volume-note" hidden>Acima de 100%, a exportação amplifica a voz; a prévia do navegador fica limitada a 100%.</p>
       <div class="audio-edit-pair"><div><label class="field-label" for="audio-edit-fade_in">Entrada suave · s</label><input id="audio-edit-fade_in" type="number" min="0" step="0.01"></div><div><label class="field-label" for="audio-edit-fade_out">Saída suave · s</label><input id="audio-edit-fade_out" type="number" min="0" step="0.01"></div></div>
