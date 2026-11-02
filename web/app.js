@@ -854,7 +854,23 @@ async function refreshJobs(){
 }
 
 setInterval(async()=>{if(!project||document.hidden||timelineGesture)return;try{const fresh=await api(`/api/projects/${project.id}`);updateImportStatus(fresh);const editing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);if(fresh.revision!==project.revision&&!editing&&!playing&&!timelineGesture&&!$("#transition-dialog").open&&!$("#effects-dialog").open&&!$("#audio-edit-dialog").open&&!$("#caption-edit-dialog").open){project=fresh;render();}await refreshJobs();}catch(error){if(error.status===404){location.replace("/");return;}$("#save-status").textContent="Servidor desconectado";}},2500);
-(async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}document.body.classList.toggle("has-subtitles",Boolean(editorFeatures.subtitles));document.body.classList.toggle("has-music",Boolean(editorFeatures.music_track));if(editorFeatures.still_images)$("#file-input").accept+=",.jpg,.jpeg,.png,.webp";await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const showAI=new URLSearchParams(location.search).get("panel")==="ai";await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);if(showAI)await openAIEditor();}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
+(async()=>{try{try{editorFeatures=(await api("/api/health")).features||{};}catch{}document.body.classList.toggle("has-subtitles",Boolean(editorFeatures.subtitles));document.body.classList.toggle("has-music",Boolean(editorFeatures.music_track));if(editorFeatures.still_images)$("#file-input").accept+=",.jpg,.jpeg,.png,.webp";await listProjects();if(!projects.length){location.replace("/");return;}const requested=new URLSearchParams(location.search).get("project"),saved=requested||localStorage.getItem("lili-project");if(requested&&!projects.some(p=>p.id===requested)){location.replace("/");return;}const entryPanel=new URLSearchParams(location.search).get("panel");await openProject(projects.some(p=>p.id===saved)?saved:projects[0].id);await openEditorPanel(entryPanel);}catch(e){toast("Não foi possível abrir o estúdio. "+e.message,true);}})();
+
+// URL intents only open existing tools; they never execute an edit or export.
+async function openEditorPanel(panel){
+  if(!["ai","media","transitions","captions","export"].includes(panel)||!project)return false;
+  const id=project.id;await queue;if(project?.id!==id)return false;pause();
+  if(panel==="ai"){await openAIEditor();return true;}
+  if(panel==="media"){openLibraryTab("media");return true;}
+  if(panel==="captions"){openInspector("captions");return true;}
+  if(panel==="transitions"){
+    if(!editorFeatures.pair_transitions||project.timeline.length<2){openLibraryTab("media");toast("Adicione duas cenas para escolher uma transição.");}
+    else await openTransition();
+    return true;
+  }
+  if(!project.timeline.length){openLibraryTab("media");toast("Adicione cenas antes de preparar a entrega.");return true;}
+  $("#export-button").click();return true;
+}
 
 if("serviceWorker" in navigator&&window.isSecureContext)navigator.serviceWorker.register("/sw.js").catch(()=>{});
 $("#phone-help").addEventListener("click",()=>{

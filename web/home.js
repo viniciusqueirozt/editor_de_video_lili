@@ -17,6 +17,23 @@ function message(text,error=false){clearTimeout(messageTimer);$("#home-message")
 function editorUrl(p,ai=false){return `/editor?project=${encodeURIComponent(p.id)}${ai?"&panel=ai":""}`;}
 function stamp(p){return new Date(p.updated_at).toLocaleDateString("pt-BR",{day:"2-digit",month:"short"});}
 function length(seconds){return `${Math.floor(seconds/60)}:${String(Math.floor(seconds%60)).padStart(2,"0")}`;}
+const QUICK_ACTIONS=[
+ {panel:"media",title:"Importar arquivos",description:"Traga vídeos, fotos e sons para a biblioteca.",symbol:"+"},
+ {panel:"transitions",title:"Ajustar transições",description:"Escolha o corte e experimente o encontro das cenas.",symbol:"⋈"},
+ {panel:"captions",title:"Revisar legendas",description:"Ajuste textos e tempos ou importe um arquivo SRT.",symbol:"T"},
+ {panel:"export",title:"Preparar entrega",description:"Confira qualidade, avisos e vídeos já exportados.",symbol:"↗"}
+];
+let quickProjectId="";
+function renderQuickActions(fallback=null){
+ const target=active.find(p=>p.id===quickProjectId)||fallback||active.find(p=>p.id===readPref("lili-project",""))||active[0];
+ const section=$("#quick-actions");section.hidden=!target;
+ if(!target){quickProjectId="";$("#quick-action-grid").innerHTML="";$("#quick-project").innerHTML="";return;}
+ quickProjectId=target.id;
+ $("#quick-project").innerHTML=active.map(p=>`<option value="${esc(p.id)}" ${p.id===target.id?"selected":""}>${esc(p.name)}</option>`).join("");
+ $("#quick-project-note").textContent=`Ferramentas para ${target.name}. Abrir um atalho não altera a montagem.`;
+ $("#quick-action-grid").innerHTML=QUICK_ACTIONS.map(action=>`<a class="quick-action" href="${editorUrl(target)}&panel=${action.panel}"><span aria-hidden="true">${action.symbol}</span><strong>${action.title}</strong><small>${action.description}</small></a>`).join("");
+}
+$("#quick-project").addEventListener("change",e=>{quickProjectId=e.target.value;renderQuickActions();});
 function renderProjects(){
  $("#project-total").textContent=active.length;
  $("#project-trash-count").textContent=trashed.length?`(${trashed.length})`:"";
@@ -44,6 +61,7 @@ function renderProjects(){
   $("#purge-confirmation").value="";$("#purge-project-submit").disabled=true;$("#purge-project-dialog").showModal();
  }));
  const saved=readPref("lili-project","");const last=active.find(p=>p.id===saved)||active[0];
+ renderQuickActions(last);
  for(const id of ["continue-project","ai-last-project"]){const a=$("#"+id);a.hidden=!last;if(last)a.href=editorUrl(last,id==="ai-last-project");}
 }
 async function loadProjects(){[active,trashed]=await Promise.all([api("/api/projects"),api("/api/projects?trash=1")]);renderProjects();}

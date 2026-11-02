@@ -285,3 +285,8 @@ Preparados nomes de download pelo snapshot do projeto/revisão/perfil/resoluçã
 ## Noite de 01 para 02/11 — rodada 5, segurança de comandos
 
 Reproduzida e corrigida aceitação de corpo JSON truncado; pedidos diretos ou encaminhados não aplicam ação antes de confirmar tamanho completo. Parser recusa campos duplicados/não finitos/Unicode inválido; tratamento de timeout JSON e overflow numérico. Revisados acesso, cookies, prova de identidade e permissões existentes, com identidades sintéticas; contas individuais reais continuam inativas. Suíte final: 182 testes Python e 24 arquivos JavaScript, sem somar repetições. Código preparado para ativação apenas do editor; sem mexer em gateway/sessões reais. Relatório: [segurança](rodada-noturna-2026-11-01-05-seguranca.md). Fechamento: extra condicional de visual/pesquisa, publicação e ativação até antes das 5h.
+
+
+## Noite de 01 para 02/11 — extra, atalhos e amostra de mercado
+
+Inicial com escolha de projeto e quatro atalhos aos painéis de arquivos, transições, legendas e entrega, sem iniciar mutações/inferência/export por link. Layout móvel e foco ajustados; ausência/exclusão de projetos e intenções desconhecidas tratados. Passaram 25 arquivos JavaScript e três testes HTTP existentes; suíte completa mais recente é a de 182 casos da segurança. Consulta oficial de Clipchamp/CapCut/DaVinci documenta formas de cobrança anunciadas, sem alegar receita ou demanda comprovadas e sem definir planos da Lili. Controle desktop falhou ao inicializar o runtime; visual/Safari pendentes. Relatório: [extra de atalhos/mercado](rodada-noturna-2026-11-01-extra-atalhos-mercado.md). Fechamento imediato: publicar e ativar com segurança, sem ultrapassar 5h.
