@@ -18,6 +18,7 @@ from .text_render import text_filters, escape_path
 from .profiles import render_profile
 from .visuals import color_filter, tempo_filters
 from .stills import IMAGE_SUFFIXES, prepare_still
+from .delivery import export_name, job_delivery
 from .core import EditorError, clip_duration, duration, now, number, uid
 
 ALLOWED = {".mp4", ".mov", ".m4v", ".mkv", ".webm", ".avi", ".wav", ".mp3", ".m4a", ".aac"} | IMAGE_SUFFIXES
@@ -110,11 +111,13 @@ class MediaService:
         with self.lock:
             if job_id not in self.jobs:
                 raise EditorError("Trabalho não encontrado.", 404)
-            return copy.deepcopy(self.jobs[job_id])
+            job=copy.deepcopy(self.jobs[job_id])
+        return job_delivery(job,self.store)
 
     def list_jobs(self, project_id):
         with self.lock:
-            return [copy.deepcopy(j) for j in self.jobs.values() if j["project_id"] == project_id]
+            jobs=[copy.deepcopy(j) for j in self.jobs.values() if j["project_id"] == project_id]
+        return [job_delivery(job,self.store) for job in jobs]
 
     def submit(self, project_id, kind, function, *args):
         job_id = uid()
@@ -446,7 +449,8 @@ class MediaService:
             else:
                 base.replace(output)
             details = probe(output)
-            return {"revision": project["revision"], "duration": details["duration"], "width": width, "height": height,
+            return {"project_name": project["name"], "download_name": export_name(project["name"],project["revision"],quality,width,height,job_id),
+                    "revision": project["revision"], "duration": details["duration"], "width": width, "height": height,
                     "preview_seek":project.get("preview_seek",0), "preview_stop":project.get("preview_stop"),
                     "preview_scope": "transition" if self.job(job_id)["kind"] == "transition_preview" else "montage",
                     "quality": quality, "crf": profile["crf"], "bytes": output.stat().st_size, "container": "mp4", "codec": details["codec"],

@@ -16,6 +16,7 @@ from .uploads import Uploads
 from .ai import AIEditor
 from .access import Principal, ProjectAccess
 from .httpguard import validate_headers
+from .delivery import content_disposition
 
 WEB = Path(__file__).resolve().parent.parent / "web"
 
@@ -125,7 +126,7 @@ class Handler(BaseHTTPRequestHandler):
         store, media = self.server.store, self.server.media
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
-                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "ai_chat": True, "source_audio_clips": True, "library_sounds": True, "dissolve_transitions": True, "spatial_transitions": True, "pair_transitions": True}})
+                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "export_delivery": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "ai_chat": True, "source_audio_clips": True, "library_sounds": True, "dissolve_transitions": True, "spatial_transitions": True, "pair_transitions": True}})
             if path == "/api/concat/status":
                 from .concat_bridge import ConcatBridge
                 return self.json(ConcatBridge().availability())
@@ -193,10 +194,12 @@ class Handler(BaseHTTPRequestHandler):
                     return self.file(store.folder(project_id) / "media" / filename)
                 if len(parts) == 6 and parts[3] == "exports" and parts[5] == "video.mp4":
                     job = media.job(parts[4])
-                    if job["project_id"] != project_id or job["status"] != "done":
+                    if job["project_id"] != project_id or job["status"] != "done" or job["kind"] not in ("export","transition_preview"):
                         raise EditorError("Esta exportação não está disponível.", 404)
                     self.require_project(project_id,"download_exports")
-                    return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True)
+                    if not isinstance(job.get("result"),dict) or job["result"].get("download_available") is False:
+                        raise EditorError("Este arquivo de exportação não está mais disponível ou foi alterado. Gere um novo vídeo da versão atual.",410)
+                    return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True, download_name=job.get("result",{}).get("download_name"))
             if path in ("/", "/editor", "/home.js", "/home.css", "/studio.css", "/app.js", "/source-audio.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
                 return self.file(WEB / ({"/": "home.html", "/editor": "index.html"}.get(path, path[1:])))
             raise EditorError("Página não encontrada.", 404)
@@ -289,7 +292,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.json(media.export(project_id, data.get("expected_revision"), data.get("quality", "full")), 202)
         raise EditorError("Operação não encontrada.", 404)
 
-    def file(self, path, download=False):
+    def file(self, path, download=False, download_name=None):
         if not path.is_file():
             raise EditorError("Arquivo não encontrado.", 404)
         size, start, end = path.stat().st_size, 0, path.stat().st_size - 1
@@ -323,7 +326,7 @@ class Handler(BaseHTTPRequestHandler):
         if partial:
             self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         if download:
-            self.send_header("Content-Disposition", 'attachment; filename="lili-video.mp4"')
+            self.send_header("Content-Disposition", content_disposition(download_name or "lili-video.mp4"))
         self.end_headers()
         if self.command == "HEAD":
             return

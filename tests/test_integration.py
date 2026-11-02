@@ -54,6 +54,35 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.08)
         self.fail("Tempo excedido no processamento")
 
+    def test_export_delivery_names_snapshot_headers_ranges_and_missing_artifacts(self):
+        from urllib.parse import unquote
+        name='Ensaio Ágata / "Noite"'
+        original=self.source.read_bytes();p=self.client.call('POST','/api/projects',{'name':name})
+        upload=self.client.upload(p['id'],self.source);self.wait_job(upload['job']['id']);p=self.store.get(p['id'])
+        p=self.store.apply(p['id'],'clip_add',{'media_id':upload['media_id'],'start':0,'end':.6},p['revision'])
+        job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'balanced'});result=self.wait_job(job['id'])['result']
+        self.assertTrue(result['download_available']);self.assertEqual(result['project_name'],name);self.assertIn('-equilibrada-720x1280-',result['download_name'])
+        route=f"/api/projects/{p['id']}/exports/{job['id']}/video.mp4"
+        self.store.apply(p['id'],'script_update',{'name':'Renamed after export'},p['revision'])
+        after=self.client.call('GET','/api/jobs/'+job['id']);self.assertEqual(after['result']['download_name'],result['download_name'])
+        with urlopen(Request(self.base+route,method='HEAD')) as response:
+            self.assertEqual(response.status,200);header=response.headers['Content-Disposition'];self.assertEqual(response.read(),b'')
+            self.assertEqual(unquote(header.split("filename*=UTF-8''",1)[1]),result['download_name']);header.encode('ascii')
+        output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4';saved=output.read_bytes()
+        with urlopen(Request(self.base+route,headers={'Range':'bytes=0-15'})) as response:
+            self.assertEqual(response.status,206);self.assertEqual(response.read(),saved[:16]);self.assertEqual(response.headers['Content-Disposition'],header)
+        for payload,state in ((b'','empty'),(saved[:20],'changed')):
+            output.write_bytes(payload);listed=self.client.call('GET',f"/api/projects/{p['id']}/jobs")
+            self.assertEqual(next(j for j in listed if j['id']==job['id'])['result']['artifact_state'],state)
+            with self.assertRaises(HTTPError) as denied:urlopen(self.base+route)
+            self.assertEqual(denied.exception.code,410)
+        output.unlink();self.assertFalse(self.client.call('GET','/api/jobs/'+job['id'])['result']['download_available'])
+        with self.server.media.lock:
+            record=self.server.media.jobs[job['id']]['result'];record.pop('download_name');record.pop('project_name');self.server.media._save_jobs()
+        legacy=self.client.call('GET','/api/jobs/'+job['id'])['result'];self.assertTrue(legacy['download_name'].startswith('lili-v'));self.assertEqual(legacy['artifact_state'],'missing')
+        with self.assertRaises(HTTPError) as wrong_kind:urlopen(self.base+f"/api/projects/{p['id']}/exports/{upload['job']['id']}/video.mp4")
+        self.assertEqual(wrong_kind.exception.code,404);self.assertEqual(self.source.read_bytes(),original)
+
     def test_concat_http_missing_engine_is_read_only(self):
         with patch('lili.concat_bridge.find_concat',return_value=None), patch('lili.concat_bridge.subprocess.Popen') as spawn:
             status=self.client.call('GET','/api/concat/status')

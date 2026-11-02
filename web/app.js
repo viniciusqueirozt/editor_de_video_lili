@@ -608,24 +608,30 @@ async function openSmoothPlayback(draft=null){
   try{
     await queue;if(project?.id!==id||project.revision!==revision)throw new Error("O projeto mudou. Reabra a prévia.");
     let job=smoothJobs.get(key);
+    if(job?.status==="done"){
+      job=await api(`/api/jobs/${job.id}`);
+      if(ticket!==smoothTicket||!dialog.open||project?.id!==id||project.revision!==revision)return;
+      if(job.result?.download_available===false){smoothJobs.delete(key);job=null;}
+    }
     if(!job){
-      if(!draft){const jobs=await api(`/api/projects/${id}/jobs`);job=jobs.findLast(j=>j.kind==="export"&&j.status==="done"&&j.result?.quality==="preview"&&j.result?.revision===revision&&j.result?.preview_scope!=="transition");}
+      if(!draft){const jobs=await api(`/api/projects/${id}/jobs`);job=jobs.findLast(j=>j.kind==="export"&&j.status==="done"&&j.result?.quality==="preview"&&j.result?.revision===revision&&j.result?.preview_scope!=="transition"&&j.result?.download_available!==false);}
       if(!job){job=await api(`/api/projects/${id}/${draft?"transition-preview":"exports"}`,{method:"POST",body:JSON.stringify({expected_revision:revision,quality:"preview",...(draft?{left:draft.left,right:draft.right,kind:draft.kind,duration:draft.duration}:{})})});}
       smoothJobs.set(key,job);
     }
     while(ticket===smoothTicket&&dialog.open&&!["done","error"].includes(job.status)){
       status.textContent=job.stage||`Preparando prévia · ${job.progress||0}%`;
-      await new Promise(resolve=>setTimeout(resolve,800));if(ticket!==smoothTicket||!dialog.open)return;
+      await new Promise(resolve=>setTimeout(resolve,800));if(ticket!==smoothTicket||!dialog.open||project?.id!==id||project.revision!==revision)return;
       job=await api(`/api/jobs/${job.id}`);smoothJobs.set(key,job);
     }
-    if(ticket!==smoothTicket||!dialog.open)return;
+    if(ticket!==smoothTicket||!dialog.open||project?.id!==id||project.revision!==revision)return;
     if(job.status==="error"){smoothJobs.delete(key);throw new Error(job.error||"Não foi possível preparar a prévia.");}
+    video.onerror=()=>{if(ticket===smoothTicket&&dialog.open){smoothJobs.delete(key);video.hidden=true;status.textContent="Não foi possível abrir o vídeo. Confira a conexão e reabra a prévia para tentar novamente.";}};
     video.onloadedmetadata=()=>{if(ticket===smoothTicket){video.currentTime=Math.max(0,Math.min(draft?(job.result.preview_seek||0):start,video.duration-.05));video.play().catch(()=>{});}};
     video.ontimeupdate=()=>{if(draft&&job.result.preview_stop&&video.currentTime>=job.result.preview_stop)video.pause();};
     video.src=job.result.url;video.hidden=false;video.load();status.textContent=draft?"Prévia das duas cenas, sem narração, música ou legendas. Toque em reproduzir se necessário.":`Prévia pronta · versão ${revision}. Toque em reproduzir se necessário.`;
   }catch(error){if(ticket===smoothTicket&&dialog.open)status.textContent=error.message;}
 }
-$("#smooth-preview-dialog").addEventListener("close",()=>{smoothTicket++;const video=$("#smooth-preview-video");video.pause();video.onloadedmetadata=null;video.ontimeupdate=null;video.removeAttribute("src");video.load();});
+$("#smooth-preview-dialog").addEventListener("close",()=>{smoothTicket++;const video=$("#smooth-preview-video");video.pause();video.onloadedmetadata=null;video.ontimeupdate=null;video.onerror=null;video.removeAttribute("src");video.load();});
 
 function updateImportStatus(snapshot){
   const status=$("#upload-progress");
@@ -816,18 +822,28 @@ async function showExports(){pause();$("#export-dialog").showModal();await refre
 $("#export-button").addEventListener("click",showExports);$("#step-export").addEventListener("click",showExports);
 $("#start-export").addEventListener("click",submitExport);
 function exportJobCard(job){
-  const done=job.status==="done"&&job.result,failed=job.status==="error",result=job.result;
-  const stale=done&&result.revision!==project.revision;
-  const heading=done?"Pronto para baixar":failed?"A exportação não terminou":"Preparando seu vídeo";
-  const badge=done?(stale?"Versão anterior":"Versão atual"):failed?"Revisar":"Em andamento";
+  const done=job.status==="done"&&job.result,failed=job.status==="error",result=job.result,missing=done&&result.download_available===false;
+  const stale=done&&Number.isFinite(result.revision)&&result.revision!==project.revision;
+  const heading=missing?"Arquivo indisponível":done?(result.quality==="preview"?"Prévia pronta para baixar":"Pronto para baixar"):failed?"A exportação não terminou":"Preparando seu vídeo";
+  const badge=missing?"Gerar novamente":done?(!Number.isFinite(result.revision)?"Exportação salva":stale?"Versão anterior":"Versão atual"):failed?"Revisar":"Em andamento";
   const quality={preview:"Prévia",balanced:"Equilibrada",full:"Entrega final",high:"Alta qualidade"}[result?.quality]||"MP4";
   const safeId=typeof job.id==="string"&&/^[a-f0-9]{32}$/.test(job.id);
+  const name=typeof result?.download_name==="string"?result.download_name.slice(0,240):"";
+  const repeatQuality=["preview","balanced","full","high"].includes(result?.quality)?result.quality:"full";
   const progress=Math.max(0,Math.min(100,Number(job.progress)||0));
-  return `<article class="export-card"><div class="export-card-heading"><strong>${heading}</strong><span class="export-badge ${failed?"failed":stale?"older":""}">${badge}</span></div>${done?`<p class="export-facts">${esc(quality)} · ${esc(result.width)} × ${esc(result.height)} · ${precise(result.duration)}${result.bytes?` · ${(result.bytes/1024/1024).toFixed(1)} MB`:""}</p><p class="help">Versão ${esc(result.revision)}${stale?` · projeto agora na versão ${project.revision}`:""}</p>${safeId?`<a class="button primary export-download" href="/api/projects/${project.id}/exports/${job.id}/video.mp4" download>Baixar vídeo MP4 ${icon("down")}</a>`:""}`:failed?`<p class="help">${esc(job.error||"Tente novamente após conferir os arquivos.")}</p>`:`<progress max="100" value="${progress}" aria-label="Andamento da exportação"></progress><p class="help">${progress}% · você pode fechar esta janela.</p>`}</article>`;
+  const facts=done&&[result.width,result.height,result.duration].every(Number.isFinite)?`<p class="export-facts">${esc(quality)} · ${esc(result.width)} × ${esc(result.height)} · ${precise(result.duration)}${result.bytes?` · ${(result.bytes/1024/1024).toFixed(1)} MB`:""}</p>`:'<p class="help">Detalhes desta exportação legada não foram registrados.</p>';
+  const action=missing?`<p class="help">O arquivo foi removido, está incompleto ou não pôde ser verificado. Você pode gerar a montagem atual; isso não restaura uma versão antiga.</p><button type="button" class="button secondary" data-export-again="${repeatQuality}">Preparar nova exportação</button>`:safeId?`<a class="button primary export-download" href="/api/projects/${project.id}/exports/${job.id}/video.mp4" download="${esc(name)}">Baixar vídeo MP4 ${icon("down")}</a>`:"";
+  return `<article class="export-card"><div class="export-card-heading"><strong>${heading}</strong><span class="export-badge ${missing||failed?"failed":stale?"older":""}">${badge}</span></div>${done?`${facts}${Number.isFinite(result.revision)?`<p class="help">Versão ${esc(result.revision)}${stale?` · projeto agora na versão ${project.revision}`:""}</p>`:""}${name?`<p class="export-filename">${esc(name)}</p>`:""}${action}`:failed?`<p class="help">${esc(job.error||"Tente novamente após conferir os arquivos.")}</p>`:`<progress max="100" value="${progress}" aria-label="Andamento da exportação"></progress><p class="help">${progress}% · você pode fechar esta janela.</p>`}</article>`;
+}
+function prepareExportAgain(quality,projectId){
+  if(project?.id!==projectId||!["preview","balanced","full","high"].includes(quality))return;
+  $("#export-quality").value=quality;updateExportPreview();renderExportReadiness();
+  toast("Confira a versão atual e toque em Gerar vídeo. A exportação antiga não será sobrescrita.");$("#start-export").focus();
 }
 function renderExportJobs(jobs){
-  const root=$("#export-jobs"),expanded=root.querySelector("details")?.open;
+  const root=$("#export-jobs"),expanded=root.querySelector("details")?.open,projectId=project.id;
   root.innerHTML=jobs.length?exportJobCard(jobs[0])+(jobs.length>1?`<details class="export-history" ${expanded?"open":""}><summary>Exportações anteriores (${jobs.length-1})</summary>${jobs.slice(1).map(exportJobCard).join("")}</details>`:""):'<p class="export-empty">Seu vídeo final aparecerá aqui. Escolha a saída e toque em Gerar vídeo.</p>';
+  for(const button of root.querySelectorAll("[data-export-again]"))button.addEventListener("click",()=>prepareExportAgain(button.dataset.exportAgain,projectId));
 }
 async function refreshJobs(){
   if(!project)return;const id=project.id,jobs=await api(`/api/projects/${id}/jobs`);if(project?.id!==id)return;
