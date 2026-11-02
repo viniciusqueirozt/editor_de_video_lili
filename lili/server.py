@@ -15,7 +15,7 @@ from .media import ALLOWED, MediaService
 from .uploads import Uploads
 from .ai import AIEditor
 from .access import Principal, ProjectAccess
-from .httpguard import validate_headers
+from .httpguard import validate_headers, json_object
 from .delivery import content_disposition
 
 WEB = Path(__file__).resolve().parent.parent / "web"
@@ -80,13 +80,17 @@ class Handler(BaseHTTPRequestHandler):
         length = int(self.headers.get("Content-Length", "0"))
         if not 0 < length <= 2 * 1024 * 1024:
             raise EditorError("Tamanho da solicitação inválido.", 413)
+        previous_timeout=self.connection.gettimeout()
+        self.connection.settimeout(min(previous_timeout,10) if previous_timeout is not None else 10)
         try:
-            data = json.loads(self.rfile.read(length))
-        except (ValueError, UnicodeError):
-            raise EditorError("JSON inválido.") from None
-        if not isinstance(data, dict):
-            raise EditorError("Envie um objeto JSON.")
-        return data
+            raw=self.rfile.read(length)
+        except TimeoutError:
+            raise EditorError("O envio JSON foi interrompido. Tente novamente.",408) from None
+        finally:
+            self.connection.settimeout(previous_timeout)
+        if len(raw)!=length:
+            raise EditorError("O envio JSON chegou incompleto. Nenhuma alteração foi aplicada.")
+        return json_object(raw)
 
     def handle_request(self):
         try:

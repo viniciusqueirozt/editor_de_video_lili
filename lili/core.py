@@ -33,7 +33,7 @@ def number(value, minimum=0, maximum=86400):
         raise EditorError("Informe um número válido.")
     try:
         value = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         raise EditorError("Informe um número válido.") from None
     if not math.isfinite(value) or not minimum <= value <= maximum:
         raise EditorError(f"O valor deve estar entre {minimum} e {maximum}.")

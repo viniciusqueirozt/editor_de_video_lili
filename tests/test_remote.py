@@ -56,6 +56,24 @@ class RemoteTests(unittest.TestCase):
         self.assertIn('HttpOnly',headers['Set-Cookie'])
         self.assertIn('SameSite=Strict',headers['Set-Cookie'])
 
+    def test_interrupted_json_forwarding_cannot_apply_a_partial_request(self):
+        import socket
+        from lili.server import Handler
+        finished=threading.Event();original_handler=self.editor.RequestHandlerClass
+        class CheckedHandler(Handler):
+            def handle_request(handler):
+                try:super(CheckedHandler,handler).handle_request()
+                finally:finished.set()
+        self.editor.RequestHandlerClass=CheckedHandler
+        self.addCleanup(setattr,self.editor,'RequestHandlerClass',original_handler)
+        self.setup_login();before=len(self.editor.store.list());body=b'{"name":"Interrupted proxy request"}'
+        conn=http.client.HTTPConnection('127.0.0.1',self.remote.server_port,timeout=5)
+        try:
+            conn.putrequest('POST','/api/projects');conn.putheader('Origin',self.origin);conn.putheader('Cookie',self.cookie);conn.putheader('Content-Type','application/json');conn.putheader('Content-Length',str(len(body)+8));conn.endheaders();conn.send(body);conn.sock.shutdown(socket.SHUT_WR)
+            response=conn.getresponse();response.read();self.assertEqual(response.status,400)
+        finally:conn.close()
+        self.assertTrue(finished.wait(3));self.assertEqual(len(self.editor.store.list()),before)
+
     def test_login_protects_project_api_media_and_survives_proxy(self):
         self.setup_login()
         config=(self.root/'remote/auth.json').read_text()

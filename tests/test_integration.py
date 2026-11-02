@@ -54,6 +54,26 @@ class IntegrationTests(unittest.TestCase):
             time.sleep(.08)
         self.fail("Tempo excedido no processamento")
 
+    def test_truncated_json_body_never_creates_a_project(self):
+        import http.client,socket
+        before=len(self.store.list());body=b'{"name":"Incomplete synthetic request"}'
+        conn=http.client.HTTPConnection('127.0.0.1',self.server.server_port,timeout=5)
+        try:
+            conn.putrequest('POST','/api/projects');conn.putheader('Content-Type','application/json');conn.putheader('Content-Length',str(len(body)+7));conn.endheaders();conn.send(body);conn.sock.shutdown(socket.SHUT_WR)
+            response=conn.getresponse();response.read();self.assertEqual(response.status,400)
+        finally:conn.close()
+        self.assertEqual(len(self.store.list()),before)
+
+    def test_ambiguous_json_fields_and_nonfinite_values_are_rejected_without_mutation(self):
+        import http.client
+        before=len(self.store.list())
+        for body in (b'{"name":"first","name":"second"}',b'{"name":"synthetic","options":{"a":1,"a":2}}',b'{"name":"synthetic","ignored":NaN}',b'{"name":"synthetic","ignored":Infinity}'):
+            conn=http.client.HTTPConnection('127.0.0.1',self.server.server_port,timeout=5)
+            try:
+                conn.request('POST','/api/projects',body=body,headers={'Content-Type':'application/json'});response=conn.getresponse();response.read();self.assertEqual(response.status,400)
+            finally:conn.close()
+        self.assertEqual(len(self.store.list()),before)
+
     def test_export_delivery_names_snapshot_headers_ranges_and_missing_artifacts(self):
         from urllib.parse import unquote
         name='Ensaio Ágata / "Noite"'

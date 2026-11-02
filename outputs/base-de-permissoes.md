@@ -63,3 +63,8 @@ A consulta tem destino HTTPS configurado no servidor, caminho fixo, timeout de t
 Verificação: quatro testes unitários novos e um teste HTTP integrado ao gateway/editor com portal simulado; conjunto focado de 13 testes passou, incluindo o conector existente. Cobertura de duas contas, atribuição correta, falsificação recusada, revogação/expiração, erro de rede/redirecionamento, cookie ambíguo e respostas inválidas. Nenhuma consulta real ao portal, credencial real ou serviço modificado.
 
 Estado: cliente preparado, endpoint pendente, modo individual inativo. Consultar o portal a cada requisição acrescentará latência e carga, inclusive para mídia; isso deverá ser medido antes de ativar, preservando a semântica de revogação. Não foi testado Safari real.
+
+
+## Revisão de 02/11/2026 — integridade da API e estado de ativação
+
+Proteções de identidade/permissões/gateway existentes passaram novamente com dados sintéticos; modo individual real permanece inativo e migração de proprietários não foi aplicada. A rodada de segurança corrigiu aceitação de JSON com corpo menor que Content-Length e passou a recusar campos duplicados, não finitos e Unicode inválido, com tratamento de timeout/overflow. Isso protege o recebimento de comandos e não implementa a sessão individual do portal. Nenhuma credencial/sessão real foi lida ou invalidada. Detalhes, prova e limites em [revisão de segurança](rodada-noturna-2026-11-01-05-seguranca.md).
