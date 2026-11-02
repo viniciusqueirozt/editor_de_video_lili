@@ -614,11 +614,12 @@ async function openSmoothPlayback(draft=null){
     }
     if(ticket!==smoothTicket||!dialog.open)return;
     if(job.status==="error"){smoothJobs.delete(key);throw new Error(job.error||"Não foi possível preparar a prévia.");}
-    video.onloadedmetadata=()=>{if(ticket===smoothTicket){video.currentTime=Math.max(0,Math.min(start,video.duration-.05));video.play().catch(()=>{});}};
+    video.onloadedmetadata=()=>{if(ticket===smoothTicket){video.currentTime=Math.max(0,Math.min(draft?(job.result.preview_seek||0):start,video.duration-.05));video.play().catch(()=>{});}};
+    video.ontimeupdate=()=>{if(draft&&job.result.preview_stop&&video.currentTime>=job.result.preview_stop)video.pause();};
     video.src=job.result.url;video.hidden=false;video.load();status.textContent=draft?"Prévia das duas cenas, sem narração, música ou legendas. Toque em reproduzir se necessário.":`Prévia pronta · versão ${revision}. Toque em reproduzir se necessário.`;
   }catch(error){if(ticket===smoothTicket&&dialog.open)status.textContent=error.message;}
 }
-$("#smooth-preview-dialog").addEventListener("close",()=>{smoothTicket++;const video=$("#smooth-preview-video");video.pause();video.removeAttribute("src");video.load();});
+$("#smooth-preview-dialog").addEventListener("close",()=>{smoothTicket++;const video=$("#smooth-preview-video");video.pause();video.onloadedmetadata=null;video.ontimeupdate=null;video.removeAttribute("src");video.load();});
 
 function updateImportStatus(snapshot){
   const status=$("#upload-progress");

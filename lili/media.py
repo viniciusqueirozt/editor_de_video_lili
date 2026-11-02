@@ -288,10 +288,14 @@ class MediaService:
         if not isinstance(kind,str) or kind not in KINDS | {"none"}:raise EditorError("Transição inválida.")
         value = number(values.get("duration", .5), .1, min(3,clip_duration(left),clip_duration(right)))
         project["timeline"] = [left, right]
-        left["start"] = max(left["start"],left["end"]-max(value,1.5)*left.get("speed",1))
-        right["end"] = min(right["end"],right["start"]+max(value,1.5)*right.get("speed",1))
-        left["fade_in"] = left["audio_fade_in"] = 0
-        right["fade_out"] = right["audio_fade_out"] = 0
+        # Cropping a clip with an existing fade would restart/move that envelope.
+        # Keep that pair intact and seek near the join in the rendered preview.
+        fades = ("fade_in","fade_out","audio_fade_in","audio_fade_out")
+        if not any(c.get(k,0) for c in (left,right) for k in fades):
+            left["start"] = max(left["start"],left["end"]-max(value,1.5)*left.get("speed",1))
+            right["end"] = min(right["end"],right["start"]+max(value,1.5)*right.get("speed",1))
+        project["preview_seek"] = max(0,clip_duration(left)-max(value,1.5))
+        project["preview_stop"] = clip_duration(left)+min(clip_duration(right),max(value,1.5))
         project.update(narration=None,music=None,captions=[],transitions=[] if kind=="none" else [{"left":left["id"],"right":right["id"],"kind":kind,"duration":value}])
         with self.lock:
             if any(j["kind"] in ("export","transition_preview") and j["status"] in ("queued","running") for j in self.jobs.values()):
@@ -424,6 +428,7 @@ class MediaService:
                 base.replace(output)
             details = probe(output)
             return {"revision": project["revision"], "duration": details["duration"], "width": width, "height": height,
+                    "preview_seek":project.get("preview_seek",0), "preview_stop":project.get("preview_stop"),
                     "preview_scope": "transition" if self.job(job_id)["kind"] == "transition_preview" else "montage",
                     "quality": quality, "crf": profile["crf"], "bytes": output.stat().st_size, "container": "mp4", "codec": details["codec"],
                     "url": f"/api/projects/{project_id}/exports/{job_id}/video.mp4", "filename": "video.mp4"}

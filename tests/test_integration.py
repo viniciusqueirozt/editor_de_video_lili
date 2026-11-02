@@ -396,6 +396,12 @@ class IntegrationTests(unittest.TestCase):
         draft=self.client.call("POST",f"/api/projects/{p['id']}/transition-preview",{"expected_revision":p["revision"],"left":p["timeline"][0]["id"],"right":p["timeline"][1]["id"],"kind":"dissolve","duration":.8})
         result=self.wait_job(draft["id"])["result"];self.assertEqual(result["preview_scope"],"transition");self.assertAlmostEqual(result["duration"],3,delta=.1)
         self.assertEqual(self.store.get(p["id"]),baseline)
+        # Existing visual/audio fades keep their original time base in a draft.
+        p=self.store.apply(p["id"],"clip_update",{"clip_id":p["timeline"][0]["id"],"fade_out":1.6,"audio_fade_out":1.6},p["revision"])
+        faded=self.client.call("POST",f"/api/projects/{p['id']}/transition-preview",{"expected_revision":p["revision"],"left":p["timeline"][0]["id"],"right":p["timeline"][1]["id"],"kind":"dissolve","duration":.8})
+        result=self.wait_job(faded["id"])["result"];self.assertAlmostEqual(result["duration"],3.2,delta=.1);self.assertAlmostEqual(result["preview_seek"],.1,delta=.01)
+        self.assertEqual(self.store.get(p["id"]),p)
+        p=self.store.apply(p["id"],"clip_update",{"clip_id":p["timeline"][0]["id"],"fade_out":0,"audio_fade_out":0},p["revision"])
         # A dry junction before a dissolve must also keep a constant frame rate.
         p=self.store.apply(p["id"],"transition_set",{"left":p["timeline"][0]["id"],"right":p["timeline"][1]["id"],"kind":"none"},p["revision"])
         mixed=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"full"})
