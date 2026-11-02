@@ -10,7 +10,7 @@ let cursor = 0, playerLoading = false, playTicket = 0, playbackFrame = 0;
 let previewSeek = null;
 let editorFeatures = {};
 const uploadState = {pending:null, cancel:false, completing:false, available:false};
-let importBatch = null, pendingRemoval = null, aiAvailable = null, aiStarting = false, aiJobsKey = "";
+let importBatch = null, pendingRemoval = null, aiAvailable = null, aiStarting = false, aiJobsKey = "", aiRecentJobs=[];
 const aiNotified = new Set();
 let selectingMedia=false;
 let selectedCaption=null,pendingSRT=null;
@@ -195,6 +195,7 @@ function pause(){
 }
 async function play(){
   if(!currentClip()) return;
+  if(typeof needsSmoothPlayback==="function"&&needsSmoothPlayback()){await openSmoothPlayback();return;}
   if(cursor >= project.duration-.015) seekTo(0);
   const ticket=++playTicket; playing=true;
   $("#play-button").innerHTML=icon("pause");
@@ -542,43 +543,83 @@ async function openAIEditor(){
   }catch(error){$("#ai-readiness").textContent=error.message;}
 }
 function renderAIJobs(jobs){
+  aiRecentJobs=jobs;
+  const quick=aiAvailable?.quick_actions?.some(a=>a.instructions===$("#ai-instructions").value.trim());
   const edits=jobs.filter(j=>j.kind==="ai_edit").reverse(),running=edits.some(j=>["queued","running"].includes(j.status));
-  const videos=project.media.filter(m=>m.kind==="video"&&m.status==="ready");
-  let reason="";
-  if(!project.script.trim())reason="Adicione o roteiro em Arquivos → Roteiro e tente novamente.";
-  else if(uploadRunning||project.media.some(m=>m.status==="processing"))reason="Aguarde o envio e a preparação de todos os arquivos.";
+  const videos=project.media.filter(m=>m.kind==="video"&&m.status==="ready");let reason="";
+  if(!editorFeatures.ai_chat)reason="A conversa será liberada quando o editor atualizado estiver ativo. Recarregue a página após a atualização.";
+  else if(!project.script.trim()&&!project.timeline.length)reason="Salve o roteiro em Arquivos → Roteiro para criar a primeira montagem.";
+  else if(uploadRunning||project.media.some(m=>m.status==="processing"))reason="Aguarde o envio e a preparação dos arquivos.";
   else if(project.media.some(m=>m.status!=="ready"))reason="Há arquivos com falha. Reimporte ou envie esses arquivos à Lixeira.";
   else if(!videos.length)reason="Importe pelo menos um vídeo em Arquivos.";
-  else if(videos.length>40)reason="Esta versão aceita até 40 vídeos por montagem.";
-  else if(aiAvailable&&!aiAvailable.available)reason="O Codex precisa estar instalado e conectado no notebook.";
-  $("#ai-readiness").textContent=reason||`${videos.length} vídeo(s) prontos · roteiro salvo · ${project.timeline.length} cenas na montagem atual`;
-  $("#ai-replace-note").textContent=project.timeline.length?"Ao iniciar, a IA substituirá a montagem atual, preservando cenas protegidas. Você poderá desfazer. Evite editar enquanto a IA trabalha: mudanças no projeto impedem a aplicação do resultado.":"A primeira montagem aparecerá na linha do tempo. Mantenha o notebook ligado durante a análise.";
-  $("#start-ai-edit").disabled=!!reason||running||aiStarting||!aiAvailable?.available;
-  $("#ai-edit-button").classList.toggle("ai-running",running);
-  $("#ai-mobile").classList.toggle("ai-running",running);
-  const jobsKey=JSON.stringify([project.id,edits.slice(0,1)]);
+  else if(videos.length>40)reason="Esta versão analisa até 40 vídeos por projeto.";
+  else if(aiAvailable&&!aiAvailable.available&&!quick)reason="Conecte o Codex no notebook para editar por conversa.";
+  $("#ai-readiness").textContent=reason||`${videos.length} arquivos prontos · ${project.timeline.length} cenas · ${running?"pedido em andamento":"pronta para o próximo ajuste"}`;
+  $("#ai-replace-note").textContent=running?"Pode fechar a conversa. Seu pedido continua no notebook.":"Enviar aplica o ajuste à timeline. Você pode revisar e desfazer.";
+  $("#start-ai-edit").disabled=!!reason||running||aiStarting||(!aiAvailable?.available&&!quick);
+  $("#start-ai-edit").textContent=running?"Editando seu pedido…":aiStarting?"Enviando…":"Enviar e editar";
+  $("#ai-instructions").disabled=aiStarting;
+  $("#ai-edit-button").classList.toggle("ai-running",running);$("#ai-mobile").classList.toggle("ai-running",running);
+  const shown=edits.slice(0,20),jobsKey=JSON.stringify([project.id,shown]);
   if(jobsKey!==aiJobsKey){
-    aiJobsKey=jobsKey;
-    $("#ai-jobs").innerHTML=edits.slice(0,1).map(j=>`<article class="ai-job ${j.status}"><strong>${j.status==="done"?"Montagem aplicada à linha do tempo":j.status==="error"?"A montagem não foi aplicada":esc(j.stage||"Aguardando análise do Codex")}</strong>${j.status==="done"?`<p>${esc(j.result.summary)}</p><small>${j.result.clip_count} cenas · ${precise(j.result.duration)} · versão ${j.result.revision}${j.result.bytes?` · ${(j.result.bytes/1024/1024).toFixed(1)} MB`:""}</small><button class="button secondary full" data-ai-review>Revisar na linha do tempo</button><details><summary>Observações da montagem</summary>${j.result.warnings.map(w=>`<p class="ai-warning">${esc(w)}</p>`).join("")}</details>`:j.status==="error"?`<p>${esc(j.error)}</p>`:'<p>Você pode fechar esta janela e acompanhar pelo botão Editar com IA.</p><progress aria-label="Edição com IA em andamento"></progress>'}</article>`).join("");
-    $("#ai-jobs").querySelectorAll("[data-ai-review]").forEach(b=>b.addEventListener("click",async()=>{try{await queue;project=await api(`/api/projects/${project.id}`);selected=project.timeline[0]?.id||null;cursor=0;render();$("#ai-dialog").close();closeSheet();}catch(error){toast(error.message,true);}}));
+    aiJobsKey=jobsKey;const log=$("#ai-jobs"),bottom=!Number.isFinite(log.scrollHeight)||log.scrollHeight-log.scrollTop-log.clientHeight<80;
+    log.innerHTML=shown.length?[...shown].reverse().map(j=>`<div class="ai-message user"><span>Você</span><p>${esc(j.request||"Montagem solicitada anteriormente")}</p></div><article class="ai-message assistant ${j.status}"><span>Lili · ${j.status==="done"?"aplicado na timeline":j.status==="error"?"não aplicado":"editando"}</span>${j.status==="done"?`<p>${esc(j.result?.summary||"Ajuste concluído.")}</p><small>${j.result?.clip_count||0} cenas · versão ${j.result?.revision||""}${j.result?.transition_count!==undefined?` · ${j.result.transition_count} transições`:""}</small>${j.id===edits[0]?.id?'<button class="button secondary full" data-ai-review>Ver timeline atual</button>':""}${j.result?.warnings?.length?`<details><summary>Pontos para revisar</summary>${j.result.warnings.map(w=>`<p class="ai-warning">${esc(w)}</p>`).join("")}</details>`:""}`:j.status==="error"?`<p>${esc(j.error)}</p><small>A montagem salva foi preservada. Você pode reformular o pedido.</small>`:`<p>${esc(j.stage||"Pedido recebido no notebook")}</p><progress max="100" value="${Math.max(0,Math.min(100,j.progress||0))}" aria-label="Etapa da edição"></progress><small>Você pode continuar escrevendo o próximo pedido; envie quando este terminar.</small>`}</article>`).join(""):'<article class="ai-message assistant"><span>Lili</span><p>Vamos editar juntas? Peça uma primeira montagem ou diga o que mudar no vídeo atual.</p><p class="help">Ex.: “Mantenha as cenas, use transições suaves e tire o som original.”</p></article>';
+    if(bottom)log.scrollTop=log.scrollHeight;
+    log.querySelectorAll("[data-ai-review]").forEach(b=>b.addEventListener("click",async()=>{try{await queue;const id=project.id;const fresh=await api(`/api/projects/${id}`);if(project.id!==id)return;project=fresh;selected=project.timeline[0]?.id||null;cursor=0;render();$("#ai-dialog").close();closeSheet();}catch(error){toast(error.message,true);}}));
   }
-  for(const j of edits){
-    if(["queued","running"].includes(j.status)){aiNotified.add("running-"+j.id);continue;}
-    if(aiNotified.has("running-"+j.id)&&!aiNotified.has(j.id)){
-      aiNotified.add(j.id);toast(j.status==="done"?"A IA concluiu a montagem. Abra Editar com IA para revisar.":"A edição com IA não terminou. Abra Editar com IA para ver o motivo.",j.status==="error");
-    }
-  }
+  for(const j of edits){if(["queued","running"].includes(j.status)){aiNotified.add("running-"+j.id);continue;}if(aiNotified.has("running-"+j.id)&&!aiNotified.has(j.id)){aiNotified.add(j.id);toast(j.status==="done"?"Pedido aplicado. Abra a conversa para revisar.":"O pedido não foi aplicado. Veja o motivo na conversa.",j.status==="error");}}
 }
-$("#ai-edit-button").addEventListener("click",openAIEditor);
-$("#ai-mobile").addEventListener("click",openAIEditor);
+$("#ai-edit-button").addEventListener("click",openAIEditor);$("#ai-mobile").addEventListener("click",openAIEditor);
 $("#start-ai-edit").addEventListener("click",async()=>{
-  if(aiStarting)return;aiStarting=true;$("#start-ai-edit").disabled=true;
-  await queue;const id=project.id;
-  try{
-    await api(`/api/projects/${id}/ai-edit`,{method:"POST",body:JSON.stringify({expected_revision:project.revision,instructions:$("#ai-instructions").value})});
-    toast("A IA começou a analisar o roteiro e os vídeos.");
-  }catch(error){toast(error.message,true);}finally{aiStarting=false;await refreshJobs();}
+  if(aiStarting||$("#start-ai-edit").disabled||!project)return;
+  const id=project.id,instructions=$("#ai-instructions").value.trim();
+  if(!instructions&&project.timeline.length){toast("Escreva o que você quer ajustar.");return;}
+  aiStarting=true;$("#start-ai-edit").disabled=true;$("#ai-send-error").hidden=true;
+  try{await queue;if(project?.id!==id)return;
+    const latest=await api(`/api/projects/${id}`);if(project?.id!==id)return;
+    project=latest;render();
+    await api(`/api/projects/${id}/ai-edit`,{method:"POST",body:JSON.stringify({expected_revision:project.revision,instructions})});
+    if(project?.id===id&&$("#ai-instructions").value.trim()===instructions)$("#ai-instructions").value="";
+    toast("Pedido recebido. Acompanhe pela conversa.");
+  }catch(error){$("#ai-send-error").hidden=false;$("#ai-send-error").textContent=error.message;toast(error.message,true);}finally{aiStarting=false;if(project?.id===id)await refreshJobs();}
 });
+for(const chip of document.querySelectorAll("[data-ai-prompt]"))chip.addEventListener("click",()=>{$("#ai-instructions").value=chip.dataset.aiPrompt;$("#ai-instructions").focus();renderAIJobs(aiRecentJobs);});
+$("#ai-instructions").addEventListener("input",()=>renderAIJobs(aiRecentJobs));
+$("#ai-instructions").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrlKey||e.metaKey)){e.preventDefault();$("#start-ai-edit").click();}});
+
+let smoothTicket=0;
+const smoothJobs=new Map();
+function needsSmoothPlayback(){
+  return editorFeatures.dissolve_transitions&&project?.transitions?.some(t=>t.kind==="dissolve")&&
+    !(typeof audioDraft!=="undefined"&&audioDraft)&&!(typeof captionDraft!=="undefined"&&captionDraft)&&!(typeof effectDraft!=="undefined"&&effectDraft)&&!(typeof transitionDraft!=="undefined"&&transitionDraft);
+}
+async function openSmoothPlayback(draft=null){
+  if(!project||!editorFeatures.dissolve_transitions)return;
+  pause();const ticket=++smoothTicket,id=project.id,revision=project.revision,start=draft?0:cursor;
+  const dialog=$("#smooth-preview-dialog"),video=$("#smooth-preview-video"),status=$("#smooth-preview-status");
+  video.pause();video.hidden=true;if(!dialog.open)dialog.showModal();status.textContent="Preparando a prévia fluida no notebook…";
+  const key=JSON.stringify([id,revision,draft&&[draft.left,draft.right,draft.kind,draft.duration]]);
+  try{
+    await queue;if(project?.id!==id||project.revision!==revision)throw new Error("O projeto mudou. Reabra a prévia.");
+    let job=smoothJobs.get(key);
+    if(!job){
+      if(!draft){const jobs=await api(`/api/projects/${id}/jobs`);job=jobs.findLast(j=>j.kind==="export"&&j.status==="done"&&j.result?.quality==="preview"&&j.result?.revision===revision&&j.result?.preview_scope!=="transition");}
+      if(!job){job=await api(`/api/projects/${id}/${draft?"transition-preview":"exports"}`,{method:"POST",body:JSON.stringify({expected_revision:revision,quality:"preview",...(draft?{left:draft.left,right:draft.right,kind:draft.kind,duration:draft.duration}:{})})});}
+      smoothJobs.set(key,job);
+    }
+    while(ticket===smoothTicket&&dialog.open&&!["done","error"].includes(job.status)){
+      status.textContent=job.stage||`Preparando prévia · ${job.progress||0}%`;
+      await new Promise(resolve=>setTimeout(resolve,800));if(ticket!==smoothTicket||!dialog.open)return;
+      job=await api(`/api/jobs/${job.id}`);smoothJobs.set(key,job);
+    }
+    if(ticket!==smoothTicket||!dialog.open)return;
+    if(job.status==="error"){smoothJobs.delete(key);throw new Error(job.error||"Não foi possível preparar a prévia.");}
+    video.onloadedmetadata=()=>{if(ticket===smoothTicket){video.currentTime=Math.max(0,Math.min(start,video.duration-.05));video.play().catch(()=>{});}};
+    video.src=job.result.url;video.hidden=false;video.load();status.textContent=draft?"Prévia das duas cenas, sem narração, música ou legendas. Toque em reproduzir se necessário.":`Prévia pronta · versão ${revision}. Toque em reproduzir se necessário.`;
+  }catch(error){if(ticket===smoothTicket&&dialog.open)status.textContent=error.message;}
+}
+$("#smooth-preview-dialog").addEventListener("close",()=>{smoothTicket++;const video=$("#smooth-preview-video");video.pause();video.removeAttribute("src");video.load();});
+
 function updateImportStatus(snapshot){
   const status=$("#upload-progress");
   if(!importBatch||snapshot?.id!==importBatch.projectId){status.hidden=true;return;}

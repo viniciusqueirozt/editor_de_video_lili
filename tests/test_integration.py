@@ -1,3 +1,4 @@
+import copy
 import json
 import subprocess
 import sys
@@ -367,6 +368,39 @@ class IntegrationTests(unittest.TestCase):
         with self.assertRaises(HTTPError) as error:
             urlopen(Request(self.base + "/api/projects", data=b"[]", headers={"Content-Type": "application/json"}))
         self.assertEqual(error.exception.code, 400)
+
+    def test_dissolve_mix_pixels_audio_timing_and_draft_preview(self):
+        import array,math
+        p=self.client.call("POST","/api/projects",{"name":"Synthetic dissolve"});ids=[]
+        for name,freq in (("red",440),("blue",880)):
+            path=self.root/(name+"-dissolve.mp4")
+            run(["-f","lavfi","-i",f"color=c={name}:s=160x90:r=30:d=1.6","-f","lavfi","-i",f"sine=frequency={freq}:duration=1.6","-c:v","libx264","-pix_fmt","yuv420p","-c:a","aac","-shortest",path])
+            up=self.client.upload(p["id"],path);self.wait_job(up["job"]["id"]);ids.append(up["media_id"])
+        up=self.client.upload(p["id"],self.source);self.wait_job(up["job"]["id"]);ids.append(up["media_id"])
+        p=self.store.get(p["id"])
+        for media_id in ids:p=self.store.apply(p["id"],"clip_add",{"media_id":media_id,"start":0,"end":1.6},p["revision"])
+        p=self.store.apply(p["id"],"transition_set",{"all":True,"kind":"dissolve","duration":.8},p["revision"])
+        baseline=copy.deepcopy(p)
+        job=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"preview"});self.wait_job(job["id"])
+        output=self.store.folder(p["id"])/"exports"/job["id"]/"video.mp4"
+        raw=subprocess.run([executable(),"-v","error","-i",str(output),"-vf","crop=20:20:(iw-20)/2:(ih-20)/2,scale=1:1,format=rgb24","-f","rawvideo","pipe:1"],capture_output=True,check=True).stdout
+        pixels=[tuple(raw[i:i+3]) for i in range(0,len(raw),3)]
+        for at in (1.5,1.6,1.7):
+            r,g,b=pixels[round(at*30)];self.assertGreater(r,50);self.assertGreater(b,50);self.assertLess(g,20)
+        self.assertGreater(pixels[20][0],230);self.assertGreater(pixels[70][2],230);self.assertGreater(pixels[-6][1],90)
+        self.assertAlmostEqual(probe(output)["duration"],4.8,delta=.1)
+        audio=array.array('f',subprocess.run([executable(),"-v","error","-i",str(output),"-f","f32le","-ac","1","-ar","16000","pipe:1"],capture_output=True,check=True).stdout)
+        def tone(freq,a,b):
+            values=audio[int(a*16000):int(b*16000)];return 2*abs(sum(v*complex(math.cos(2*math.pi*freq*i/16000),math.sin(2*math.pi*freq*i/16000)) for i,v in enumerate(values)))/len(values)
+        self.assertGreater(tone(440,1.2,1.4),.06);self.assertGreater(tone(880,2,2.2),.06);self.assertLess(tone(440,2,2.2),.01)
+        draft=self.client.call("POST",f"/api/projects/{p['id']}/transition-preview",{"expected_revision":p["revision"],"left":p["timeline"][0]["id"],"right":p["timeline"][1]["id"],"kind":"dissolve","duration":.8})
+        result=self.wait_job(draft["id"])["result"];self.assertEqual(result["preview_scope"],"transition");self.assertAlmostEqual(result["duration"],3,delta=.1)
+        self.assertEqual(self.store.get(p["id"]),baseline)
+        # A dry junction before a dissolve must also keep a constant frame rate.
+        p=self.store.apply(p["id"],"transition_set",{"left":p["timeline"][0]["id"],"right":p["timeline"][1]["id"],"kind":"none"},p["revision"])
+        mixed=self.client.call("POST",f"/api/projects/{p['id']}/exports",{"expected_revision":p["revision"],"quality":"full"})
+        result=self.wait_job(mixed["id"])["result"];self.assertAlmostEqual(result["duration"],4.8,delta=.1)
+        self.assertEqual((result["width"],result["height"]),(1080,1920))
 
     def test_pair_color_transitions_render_two_sides_without_changing_audio_or_duration(self):
         p=self.client.call("POST","/api/projects",{"name":"Synthetic pair passages"})

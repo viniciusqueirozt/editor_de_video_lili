@@ -459,6 +459,7 @@ function transitionListForPreview(){
 function transitionBlend(clip,time,items){
   let result={color:"black",opacity:0};if(!clip)return result;
   for(const t of items){
+    if(t.kind==="dissolve")continue;
     const half=t.duration/2;let opacity=0;
     if(t.right===clip.id&&time<half)opacity=1-time/half;
     if(t.left===clip.id&&time>clipDuration(clip)-half)opacity=1-(clipDuration(clip)-time)/half;
@@ -487,13 +488,15 @@ function refreshTransitionDraft(){
   if(!transitionDraft)return;
   const pair=transitionPair(transitionDraft.left,transitionDraft.right);if(!pair)return;
   pause();transitionPreviewEnd=null;
+  $("[data-transition-kind='dissolve']").hidden=!editorFeatures.dissolve_transitions;
+  $("#transition-all-label").hidden=!editorFeatures.dissolve_transitions;
   const maximum=transitionMaximum(pair);transitionDraft.duration=clamp(transitionDraft.duration,.1,maximum);
   const locked=pair.some(c=>c.locked);
   $("#transition-duration").max=maximum;$("#transition-duration").value=transitionDraft.duration;$("#transition-duration").disabled=transitionDraft.kind==="none"||transitionSaving||locked;
   $("#transition-duration-value").textContent=`${transitionDraft.duration.toFixed(2).replace(".",",")} s`;
   $("#transition-limit").textContent=`Até ${maximum.toFixed(2).replace(".",",")} s neste encontro. Metade antes e metade depois do corte.`;
   $("#transition-draft-status").textContent=locked?"Desproteja as duas cenas para alterar esta transição.":transitionSaving?"Salvando…":"Prévia local. Aplicar salva uma alteração; Cancelar descarta.";
-  $("#transition-apply").disabled=locked||transitionSaving;
+  $("#transition-apply").disabled=locked||transitionSaving;$("#transition-all").disabled=locked||transitionSaving;
   $("#transition-pair").disabled=transitionSaving;$("#transition-preview").disabled=transitionSaving;
   document.querySelectorAll("[data-transition-kind]").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.transitionKind===transitionDraft.kind);b.disabled=locked||transitionSaving;});
   updateTransitionPreview();
@@ -506,7 +509,7 @@ async function openTransition(left,right){
   await queue;if(!editorFeatures.pair_transitions||project.timeline.length<2)return;
   pause();closeSheet();
   const pair=transitionPair(left,right)||project.timeline.slice(Math.min(Math.max(0,index()),project.timeline.length-2),Math.min(Math.max(0,index()),project.timeline.length-2)+2);
-  transitionDraft={projectId:project.id,revision:project.revision,originalCursor:cursor};
+  transitionDraft={projectId:project.id,revision:project.revision,originalCursor:cursor};$("#transition-all").checked=false;
   $("#transition-pair").innerHTML=project.timeline.slice(0,-1).map((c,i)=>`<option value="${c.id}">${i+1} → ${i+2} · ${esc(c.label)} / ${esc(project.timeline[i+1].label)}</option>`).join("");
   $("#transition-pair").value=pair[0].id;chooseTransitionPair(pair[0].id,pair[1].id);$("#transition-dialog").showModal();
 }
@@ -516,6 +519,7 @@ for(const button of document.querySelectorAll("[data-transition-kind]"))button.a
 $("#transition-duration").addEventListener("input",e=>{transitionDraft.duration=Number(e.target.value);refreshTransitionDraft();});
 $("#transition-preview").addEventListener("click",()=>{
   if(!transitionDraft||transitionSaving)return;
+  if(transitionDraft.kind==="dissolve"){openSmoothPlayback({...transitionDraft});return;}
   const at=project.timeline.findIndex(c=>c.id===transitionDraft.right),boundary=before(at),half=transitionDraft.kind==="none"?.2:transitionDraft.duration/2;
   seekTo(Math.max(before(at-1),boundary-half-.2));transitionPreviewEnd=Math.min(project.duration,boundary+half+.2);play();
 });
@@ -528,7 +532,7 @@ $("#transition-apply").addEventListener("click",async()=>{
   if(transitionDraft.projectId!==project.id||transitionDraft.revision!==project.revision){toast("O projeto mudou. Reabra a transição para revisar.",true);$("#transition-dialog").close();return;}
   const {left,right,kind,duration}=transitionDraft;
   transitionSaving=true;refreshTransitionDraft();
-  try{const ok=await mutate("transition_set",{left,right,kind,duration},kind==="none"?"Corte seco aplicado.":"Transição salva. Você pode desfazer.");if(ok){transitionDraft=null;$("#transition-dialog").close();}}
+  try{const ok=await mutate("transition_set",{left,right,kind,duration,...($("#transition-all").checked?{all:true}:{})},kind==="none"?"Corte seco aplicado.":"Transição salva. Você pode desfazer.");if(ok){transitionDraft=null;$("#transition-dialog").close();}}
   finally{transitionSaving=false;refreshTransitionDraft();}
 });
 

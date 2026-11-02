@@ -125,7 +125,7 @@ class Handler(BaseHTTPRequestHandler):
         store, media = self.server.store, self.server.media
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
-                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "pair_transitions": True}})
+                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "ai_chat": True, "dissolve_transitions": True, "pair_transitions": True}})
             if path == "/auth/status":
                 return self.json({"authenticated": self.server.identity_resolver is not None})
             if path == "/api/projects":
@@ -274,6 +274,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.json(store.draft(project_id, data.get("expected_revision")))
                 if operation == "ai-edit":
                     return self.json(self.server.ai.start(project_id, data.get("expected_revision"), data.get("instructions", "")), 202)
+                if operation == "transition-preview":
+                    return self.json(media.transition_preview(project_id,data.get("expected_revision"),data),202)
                 if operation == "exports":
                     return self.json(media.export(project_id, data.get("expected_revision"), data.get("quality", "full")), 202)
         raise EditorError("Operação não encontrada.", 404)

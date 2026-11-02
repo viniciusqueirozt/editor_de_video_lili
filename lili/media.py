@@ -268,12 +268,39 @@ class MediaService:
             if not self.source(project_id, asset).is_file() or (asset.get("is_still") and not self.visual_source(project_id, asset).is_file()):
                 raise EditorError("Um arquivo usado na montagem não foi encontrado no armazenamento local. Restaure o arquivo ou ajuste a montagem antes de exportar.", 409)
         with self.lock:
-            if any(j["kind"] == "export" and j["status"] in ("queued", "running") for j in self.jobs.values()):
+            if any(j["kind"] in ("export", "transition_preview") and j["status"] in ("queued", "running") for j in self.jobs.values()):
                 raise EditorError("Já existe uma exportação em andamento.", 409)
             return self.submit(project_id, "export", self._render, project, quality)
 
+    def transition_preview(self, project_id, expected_revision, values):
+        project = self.store.get(project_id)
+        if project["revision"] != expected_revision:
+            raise EditorError("O projeto mudou. Reabra a transição.", 409)
+        # Store.apply on a copy is unnecessary: validate the explicit adjacent pair.
+        from .transitions import KINDS
+        from .core import number
+        left = self.store.find(project["timeline"], values.get("left"))
+        right = self.store.find(project["timeline"], values.get("right"))
+        at = project["timeline"].index(left)
+        if at+1 >= len(project["timeline"]) or project["timeline"][at+1]["id"] != right["id"]:
+            raise EditorError("Escolha duas cenas vizinhas.", 409)
+        kind = values.get("kind")
+        if not isinstance(kind,str) or kind not in KINDS | {"none"}:raise EditorError("Transição inválida.")
+        value = number(values.get("duration", .5), .1, min(3,clip_duration(left),clip_duration(right)))
+        project["timeline"] = [left, right]
+        left["start"] = max(left["start"],left["end"]-max(value,1.5)*left.get("speed",1))
+        right["end"] = min(right["end"],right["start"]+max(value,1.5)*right.get("speed",1))
+        left["fade_in"] = left["audio_fade_in"] = 0
+        right["fade_out"] = right["audio_fade_out"] = 0
+        project.update(narration=None,music=None,captions=[],transitions=[] if kind=="none" else [{"left":left["id"],"right":right["id"],"kind":kind,"duration":value}])
+        with self.lock:
+            if any(j["kind"] in ("export","transition_preview") and j["status"] in ("queued","running") for j in self.jobs.values()):
+                raise EditorError("Aguarde a prévia/exportação em andamento.",409)
+            return self.submit(project_id,"transition_preview",self._render,project,"preview")
+
     def _render(self, job_id, project, quality):
         with self.export_lock:
+            self.job_update(job_id,source_revision=project["revision"],quality=quality)
             project_id = project["id"]
             folder = self.store.folder(project_id) / "exports" / job_id
             folder.mkdir(parents=True, exist_ok=True)
@@ -340,6 +367,17 @@ class MediaService:
             playlist.write_text("\n".join(f"file '{i:04d}.mp4'" for i in range(len(project["timeline"]))), encoding="utf-8")
             base = folder / "base.mp4"
             run(["-f", "concat", "-safe", "1", "-i", playlist, "-c", "copy", "-movflags", "+faststart", base])
+            from .transitions import dissolve_graph
+            graph = dissolve_graph(project)
+            if graph:
+                self.job_update(job_id, stage="Compondo dissoluções suaves", progress=88)
+                blended = folder / "blended.mp4"
+                blend_inputs = ["-i", base]
+                for i in range(len(project["timeline"])):blend_inputs += ["-i", folder / f"{i:04d}.mp4"]
+                run([*blend_inputs,"-filter_complex_threads","1","-filter_complex",graph,
+                     "-map","[blended]","-map","0:a:0","-c:v","libx264","-preset","veryfast","-crf",profile["crf"],
+                     "-c:a","copy","-t",duration(project),"-movflags","+faststart",blended])
+                base = blended
             output = folder / "video.mp4"
             narration = project["narration"]
             music = project.get("music")
@@ -386,5 +424,6 @@ class MediaService:
                 base.replace(output)
             details = probe(output)
             return {"revision": project["revision"], "duration": details["duration"], "width": width, "height": height,
+                    "preview_scope": "transition" if self.job(job_id)["kind"] == "transition_preview" else "montage",
                     "quality": quality, "crf": profile["crf"], "bytes": output.stat().st_size, "container": "mp4", "codec": details["codec"],
                     "url": f"/api/projects/{project_id}/exports/{job_id}/video.mp4", "filename": "video.mp4"}

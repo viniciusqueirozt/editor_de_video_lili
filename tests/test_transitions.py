@@ -24,8 +24,20 @@ class TransitionTests(unittest.TestCase):
         self.command("redo",{});self.assertEqual(len(self.p["transitions"]),1)
         self.transition(kind="none");self.assertEqual(self.p["transitions"],[])
         self.command("undo",{});self.assertEqual(len(self.p["transitions"]),1)
+    def test_dissolve_bulk_preserves_clock_and_protected_pairs(self):
+        self.command("clip_update",{"clip_id":self.a,"locked":True})
+        baseline=self.p["timeline"]
+        self.command("transition_set",{"all":True,"kind":"dissolve","duration":.6})
+        self.assertEqual(self.p["timeline"],baseline);self.assertEqual(self.p["duration"],6)
+        self.assertEqual(self.p["transitions"],[{"left":self.b,"right":self.c,"kind":"dissolve","duration":.6}])
+        self.command("undo",{});self.assertEqual(self.p["transitions"],[])
+        self.command("redo",{});self.assertEqual(len(self.p["transitions"]),1)
+        before=self.store.get(self.p["id"])
+        with self.assertRaises(EditorError):self.command("timeline_replace",{"clips":self.p["timeline"],"transition_style":{"kind":[]}})
+        self.assertEqual(self.store.get(self.p["id"]),before)
+
     def test_invalid_commands_are_atomic(self):
-        for args in ({"left":self.a,"right":self.c},{"kind":[]},{"kind":"dissolve"},{"duration":True},{"duration":float("nan")},{"duration":float("inf")},{"duration":-.1},{"duration":2.1}):
+        for args in ({"left":self.a,"right":self.c},{"kind":[]},{"kind":"unsupported"},{"duration":True},{"duration":float("nan")},{"duration":float("inf")},{"duration":-.1},{"duration":2.1}):
             before=self.store.get(self.p["id"])
             with self.assertRaises(EditorError):self.transition(**args)
             self.assertEqual(self.store.get(self.p["id"]),before)

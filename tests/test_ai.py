@@ -6,7 +6,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from lili.ai import AIEditor
+from lili.ai import AIEditor, QUICK_ACTIONS
 from lili.core import EditorError, Store, uid
 from lili.media import MediaService
 
@@ -51,6 +51,42 @@ class AIEditorTests(unittest.TestCase):
         p = self.store.apply(p["id"], "undo", {}, p["revision"])
         p = self.store.apply(p["id"], "undo", {}, p["revision"])
         self.assertEqual(p["timeline"], [])
+
+    def test_conversation_refines_existing_edits_and_preserves_history(self):
+        for start,end in ((0,2),(2,4)):
+            self.p=self.store.apply(self.p["id"],"clip_add",{"media_id":self.asset["id"],"start":start,"end":end,"brightness":1.2,"speed":1.25},self.p["revision"])
+        original=copy.deepcopy(self.p["timeline"])
+        def runner(project,instructions,images):
+            self.assertEqual(project["conversation"],[])
+            return {"summary":"Dissoluções e áudio original silenciado","warnings":[],"clips":[{**{k:c[k] for k in ("media_id","start","end","label","title","block_id")},"volume":0,"existing_clip_id":c["id"]} for c in project["timeline"]],"transition_style":{"kind":"dissolve","duration":.5}}
+        self.ai.runner=runner;job=self.wait_job(self.ai.start(self.p["id"],self.p["revision"],"Suavize as transições e retire o som original"))
+        self.assertEqual(job["status"],"done",job);self.assertIn("Suavize",job["request"])
+        p=self.store.get(self.p["id"]);self.assertEqual(len(p["transitions"]),1)
+        for clip,old in zip(p["timeline"],original):
+            self.assertEqual(clip["id"],old["id"]);self.assertEqual(clip["brightness"],1.2);self.assertEqual(clip["speed"],1.25);self.assertEqual(clip["volume"],0)
+        def followup(project,instructions,images):
+            self.assertEqual(project["conversation"][-1]["user"],job["request"])
+            self.assertEqual(project["conversation"][-1]["assistant"],job["result"]["summary"])
+            return {"summary":"Mantive a edição","warnings":[],"clips":[{**c,"existing_clip_id":c["id"]} for c in project["timeline"]],"transition_style":{"kind":"keep","duration":.5}}
+        self.ai.runner=followup;second=self.wait_job(self.ai.start(p["id"],p["revision"],"Mantenha essa edição"));self.assertEqual(second["status"],"done",second)
+        current=self.store.get(p["id"]);self.assertEqual(current["transitions"],p["transitions"])
+        current=self.store.apply(p["id"],"undo",{},current["revision"]);current=self.store.apply(p["id"],"undo",{},current["revision"])
+        self.assertEqual(current["timeline"],original);self.assertEqual(current["transitions"],[])
+
+    def test_quick_actions_use_no_codex_and_preserve_protected_audio(self):
+        for start,end in ((0,1),(1,2),(2,3)):
+            self.p=self.store.apply(self.p["id"],"clip_add",{"media_id":self.asset["id"],"start":start,"end":end},self.p["revision"])
+        self.p=self.store.apply(self.p["id"],"clip_update",{"clip_id":self.p["timeline"][0]["id"],"locked":True},self.p["revision"])
+        self.ai.runner=lambda *_:self.fail("Quick edit must not call Codex")
+        for action in QUICK_ACTIONS:
+            job=self.wait_job(self.ai.start(self.p["id"],self.p["revision"],action["instructions"]))
+            self.assertEqual(job["status"],"done",job);self.assertEqual(job["result"]["provider"],"local");self.p=self.store.get(self.p["id"])
+        self.assertEqual(self.p["timeline"][0]["volume"],1);self.assertEqual(self.p["timeline"][1]["volume"],0);self.assertEqual(len(self.p["transitions"]),1)
+        self.assertEqual(self.p["last_change"]["actor"],"Lili · ajuste local")
+        self.p=self.store.apply(self.p["id"],"clip_update",{"clip_id":self.p["timeline"][1]["id"],"locked":True},self.p["revision"])
+        before=copy.deepcopy(self.p)
+        with self.assertRaises(EditorError):self.ai.start(self.p["id"],self.p["revision"],QUICK_ACTIONS[0]["instructions"])
+        self.assertEqual(self.store.get(self.p["id"]),before)
 
     def test_invalid_plan_does_not_change_project(self):
         for mutation in ({"clips": []}, {"warnings": [None]}, {"summary": "x" * 4001}):

@@ -10,4 +10,5 @@ ctx.transitionDraft.kind='none';assert.equal(ctx.transitionListForPreview().leng
 ctx.transitionDraft.revision=3;assert.equal(ctx.transitionListForPreview()[0].kind,'black');
 ctx.transitionDraft=null;assert.equal(ctx.transitionListForPreview()[0].kind,'black');
 assert.equal(ctx.transitionPair('a','b').length,2);assert.equal(ctx.transitionPair('b','a'),null);
+assert.equal(ctx.transitionBlend(a,1.75,[{left:'a',right:'b',kind:'dissolve',duration:1}]).opacity,0,'a dissolve must not turn into an opaque color veil');
 console.log('Pair transitions: half-duration, speed, draft isolation, cancellation and stale revision passed');

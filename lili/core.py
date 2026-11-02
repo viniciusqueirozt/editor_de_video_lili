@@ -401,6 +401,9 @@ class Store:
                 if not asset.get("deleted_at"):
                     raise EditorError("O arquivo não está na Lixeira.", 409)
                 asset.pop("deleted_at")
+            elif operation == "transition_set" and args.get("all") is True:
+                from .transitions import apply_style
+                apply_style(p, args)
             elif operation == "transition_set":
                 from .transitions import KINDS
                 left = self.find(p["timeline"], args.get("left"))
@@ -412,7 +415,7 @@ class Store:
                     raise EditorError("Desproteja as duas cenas antes de alterar a transição.", 409)
                 kind = args.get("kind")
                 if not isinstance(kind, str) or kind not in KINDS | {"none"}:
-                    raise EditorError("Escolha corte seco, passagem por preto ou passagem por branco.")
+                    raise EditorError("Escolha dissolução, corte seco, passagem por preto ou passagem por branco.")
                 value = number(args.get("duration", .5), .1, min(3, clip_duration(left), clip_duration(right))) if kind != "none" else 0
                 p["transitions"] = [t for t in p["transitions"] if (t["left"], t["right"]) != (left["id"], right["id"])]
                 if kind != "none":
@@ -463,6 +466,9 @@ class Store:
                     if old["locked"] and self.validate_clip(p, old) not in proposed:
                         raise EditorError("A nova montagem precisa preservar as cenas protegidas, incluindo seus identificadores.", 409)
                 p["timeline"] = proposed
+                if "transition_style" in args:
+                    from .transitions import apply_style
+                    apply_style(p, args["transition_style"])
             elif operation == "music_set":
                 media_id = args.get("media_id", (p["music"] or {}).get("media_id"))
                 if media_id is None:
