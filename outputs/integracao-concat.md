@@ -43,7 +43,7 @@ As capacidades da coluna Concat foram identificadas em documentação/tipos/cód
 
 ## Como transformar a preparação em integração real
 
-1. Definir a forma de reutilização/licença antes de copiar ou distribuir código do Concat dentro da Lili. A pergunta de preferência foi enviada no chat e permanece pendente, sem assumir resposta.
+1. Definir a forma de reutilização/licença antes de copiar ou distribuir código do Concat dentro da Lili. Em 02/11/2026, o usuário escolheu expressamente **definir a licença antes de copiar código**. Não houve autorização para relicenciar a Lili ou torná-la código aberto. Até essa definição, continuar implementações próprias e análise técnica sem incorporar código do Concat.
 2. Disponibilizar build oficial compatível e registrar versão/checksum; testar descoberta real, dependências e ferramentas disponíveis em projeto sintético. Não baixar todos os modelos por padrão.
 3. Criar adaptador Lili → projeto Concat em pasta de trabalho: IDs, fontes, fontes tipográficas, enquadramento, posições, velocidade, áudio, legendas, fades, junções e locks. Rejeitar mapeamento incompleto em vez de perder efeitos silenciosamente.
 4. Renderizar uma cópia sintética sem alterar a origem, medir duração/som/pixels e comparar com a prévia. Testar falha, cancelamento, reinício e ausência de GPU.
