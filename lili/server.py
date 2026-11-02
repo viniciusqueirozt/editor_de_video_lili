@@ -204,7 +204,7 @@ class Handler(BaseHTTPRequestHandler):
                     if not isinstance(job.get("result"),dict) or job["result"].get("download_available") is False:
                         raise EditorError("Este arquivo de exportação não está mais disponível ou foi alterado. Gere um novo vídeo da versão atual.",410)
                     return self.file(store.folder(project_id) / "exports" / job["id"] / "video.mp4", download=True, download_name=job.get("result",{}).get("download_name"))
-            if path in ("/", "/editor", "/home.js", "/home.css", "/studio.css", "/app.js", "/source-audio.js", "/timeline.js", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
+            if path in ("/", "/editor", "/home.js", "/home.css", "/studio.css", "/app.js", "/source-audio.js", "/timeline.js", "/caption-tools.js", "/caption-tools-ui.js", "/caption-tools.css", "/styles.css", "/timeline.css", "/editor.css", "/favicon.svg", "/manifest.webmanifest", "/sw.js", "/icon-192.png", "/icon-512.png"):
                 return self.file(WEB / ({"/": "home.html", "/editor": "index.html"}.get(path, path[1:])))
             raise EditorError("Página não encontrada.", 404)
         if path == "/api/concat/inspect" and self.command == "POST":

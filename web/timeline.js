@@ -861,6 +861,7 @@ function updateCaptionControls(){
   $("#caption-edit-apply").disabled=captionSaving||!!problem||!captionHasChanges();
   $("#caption-review").disabled=captionSaving||!canPreview;$("#caption-play").disabled=captionSaving||!canPreview||playerLoading;
   $("#caption-play").textContent=playing?"Pausar prévia":"Reproduzir legenda";
+  $("#caption-organize").hidden=captionDraft.isNew;$("#caption-organize").disabled=captionSaving||!validCaptionDraft();
   $("#caption-edit-remove").hidden=captionDraft.isNew;$("#caption-edit-remove").disabled=captionSaving||!validCaptionDraft();
   for(const edge of ["start","end"])$("#caption-"+edge+"-here").disabled=captionSaving||!!captionDraftProblem({...d,[edge]:roundTime(cursor)});
   $("#caption-move-here").disabled=captionSaving||!!captionDraftProblem({...d,start:roundTime(cursor),end:roundTime(cursor+d.end-d.start)});

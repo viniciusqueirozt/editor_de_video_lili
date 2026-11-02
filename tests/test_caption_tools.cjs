@@ -1,0 +1,25 @@
+const assert=require("node:assert/strict"),tools=require("../web/caption-tools.js");
+const a={id:"a".repeat(32),start:.2,end:1.2,text:"Olá Cora",title_font:"serif",title_size:"large",title_position:"top"};
+const b={...a,id:"b".repeat(32),start:1.5,end:2.5,text:"Outro passeio",title_font:"mono"};
+const original=[a,b],before=JSON.stringify(original);
+const parts=tools.split(original,a.id,.7,"Olá","Cora","c".repeat(32),5);
+assert.deepEqual(parts.map(c=>[c.start,c.end,c.text]),[[.2,.7,"Olá"],[.7,1.2,"Cora"],[1.5,2.5,"Outro passeio"]]);
+assert.equal(parts[0].id,a.id);assert.equal(parts[1].title_font,"serif");assert.equal(parts[2].id,b.id);
+const merged=tools.merge(original,a.id,5);
+assert.equal(merged.length,1);assert.deepEqual([merged[0].start,merged[0].end,merged[0].text,merged[0].title_font],[.2,2.5,"Olá Cora Outro passeio","serif"]);
+const shifted=tools.shift(original,.3,5);
+for(let i=0;i<original.length;i++){assert.ok(Math.abs(shifted[i].start-original[i].start-.3)<1e-8);assert.ok(Math.abs((shifted[i].end-shifted[i].start)-(original[i].end-original[i].start))<1e-8);assert.equal(shifted[i].id,original[i].id);}
+assert.equal(JSON.stringify(original),before);
+for(const at of [.2,.25,1.2,NaN,Infinity,null,true])assert.throws(()=>tools.split(original,a.id,at,"A","B","c".repeat(32),5));
+for(const delta of [0,-.3,5,NaN,Infinity,null,true])assert.throws(()=>tools.shift(original,delta,5));
+assert.throws(()=>tools.split(original,a.id,.7,"","B","c".repeat(32),5));
+assert.throws(()=>tools.split(original,a.id,.7,"A","B",a.id,5));
+assert.throws(()=>tools.merge(original,b.id,5));
+assert.throws(()=>tools.merge([a,{...b,text:"x".repeat(160)}],a.id,5));
+assert.throws(()=>tools.split(Array.from({length:500},(_,i)=>({...a,id:i.toString(16).padStart(32,"0"),start:i*2,end:i*2+1})),a.id,.7,"A","B","c".repeat(32)));
+assert.deepEqual(tools.splitText("Vamos passear com Cora"),["Vamos passear","com Cora"]);
+assert.deepEqual(tools.splitText("Olá Cora",3),["Olá","Cora"]);
+assert.deepEqual(tools.splitText("Palavra"),["Palavra",""]);
+assert.equal(tools.validate([{...a,text:"<img src=x onerror=bad()>"}])[0].text,"<img src=x onerror=bad()>");
+assert.throws(()=>tools.validate([{...a,text:"\ud83d"}]));
+console.log("Caption tools: non-destructive split/merge/shift, timings, IDs, styles, invalid boundaries and plain text passed");
