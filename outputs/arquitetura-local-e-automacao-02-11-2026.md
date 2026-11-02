@@ -10,7 +10,7 @@ A aplicação deve manter código fechado. Fronteira entre pastas/processos, mon
 
 | Área | Situação atual verificada no repositório | Evolução proposta |
 | --- | --- | --- |
-| Interface no celular | Web/PWA responsiva em web/, editor manual e inicial | Fluxo principal guiado: importar, escolher ação, prévia, ajustar, exportar; manter PWA inicialmente |
+| Interface no celular | Web/PWA responsiva em web/, editor manual e inicial | Flutter definido para o app móvel; fluxo guiado de importar, prévia, ajustar e exportar; PWA atual durante a transição |
 | Estado e edição | Python em lili/, revisão, comandos e histórico | Continuar fonte única de estado; automações geram operações reversíveis, sem escrever projetos por conta própria |
 | Processamento | FFmpeg, jobs, prévia/exportação, fontes preservadas | Worker opcional por tarefa e benchmark; não reimplementar codecs antes de entregar funções |
 | Upload | Upload em partes, validação, cancelamento e processamento no PC | Reaproveitar recebimento e recuperação; arquivo disponibilizado por ID, sem caminho arbitrário vindo do celular |
@@ -76,9 +76,9 @@ Medir gargalo real antes da migração. Teste sintético compara render atual, e
 
 Só introduzir Rust onde houver benefício medido em desempenho, estabilidade ou distribuição. Preservar fallback CPU/FFmpeg e contrato de jobs. O ganho deve ser verificado com qualidade/pixels, duração, sincronismo, cancelamento, recuperação e memória, não apenas FPS de uma demonstração de terceiros.
 
-### F — Aplicativo móvel nativo, se justificar
+### F — Aplicativo móvel em Flutter — tecnologia definida pelo usuário
 
-Manter o acesso atual pelo Safari/PWA enquanto a experiência de automação é validada. Avaliar Expo/React Native ou Flutter quando houver necessidade comprovada de captura, mídia, notificações ou uploads em segundo plano que o navegador não atenda. Isso não muda automaticamente o motor nem contorna licenças. Preservar login, projetos, conta e revisões; não iniciar duas interfaces com regras divergentes.
+Decisão explícita do usuário em 02/11/2026: desenvolver a versão para celular em **Flutter**. Esta escolha substitui a comparação anterior com Expo/React Native. Registrar a decisão agora; não iniciar migração ou instalação de toolchain apenas por este registro. O acesso web/PWA existente permanece disponível durante a transição futura. O aplicativo Flutter deve reaproveitar as APIs, autenticação, projetos, revisões e jobs do servidor; processamento pesado continua no motor local previsto. Manter regras no servidor para evitar divergência entre interfaces. Flutter não muda automaticamente o motor nem as obrigações de licença.
 
 ## Contratos e segurança a preservar
 

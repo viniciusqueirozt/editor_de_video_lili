@@ -1,5 +1,9 @@
 # Esteira da Lili
 
+## Tecnologia do aplicativo móvel — decisão de 02/11/2026
+
+O usuário escolheu **Flutter para a versão de celular da Lili**. Reaproveitar APIs, autenticação, projetos e jobs do servidor/motor. O pedido desta etapa é somente registrar a escolha: migração, criação do app e instalação do Flutter ainda não iniciadas. O acesso web/PWA existente permanece disponível durante a futura transição. Esta decisão substitui a escolha em aberto entre Flutter e React Native/Expo.
+
 ## Entregue nesta versão
 
 - Identidade visual da inicial nas telas do editor, painéis, linha do tempo e janelas.
