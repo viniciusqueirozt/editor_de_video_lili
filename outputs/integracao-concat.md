@@ -6,6 +6,30 @@ Foi estudada uma cópia de referência do Concat, commit `f0c0169628c61de7311f7f
 
 A Lili continua renderizando com FFmpeg. O Concat é um aplicativo nativo Rust/Slint com bibliotecas próprias; não é um componente JavaScript que possa ser colocado diretamente no navegador. A implementação entregue prepara descoberta pelo protocolo público MCP, sem anunciar efeitos disponíveis antes de executá-los. O motor Concat não está instalado nos caminhos conhecidos do notebook; não foi compilado nem executado nesta entrega. Rust e as bibliotecas de desenvolvimento necessárias também não estão prontos no ambiente consultado.
 
+## Diretriz atual: Lili com código fechado — 02/11/2026
+
+O usuário esclareceu que não deseja disponibilizar o código da Lili como software aberto. Isso substitui a escolha anterior ainda em definição: não copiar, portar, traduzir ou adaptar código AGPL do Concat para a Lili, nem relicenciar o projeto. Gerar uma tradução ou modificação por IA não será tratado como implementação independente por si só.
+
+Caminho de produto: usar comportamentos observáveis como referência e escrever nossas próprias soluções, a partir de especificações funcionais e documentação das ferramentas escolhidas, sem reproduzir código, shaders, presets/arquivos de efeito, arte, marca ou outros materiais protegidos do Concat. A restrição vale também para futuras rodadas automáticas. A cópia local de referência continua ignorada pelo Git e não deve ser incorporada.
+
+Bibliotecas de terceiros devem ser obtidas diretamente dos respectivos projetos e avaliadas na versão escolhida, sem copiar os wrappers do Concat. Candidatos com licença MIT consultada em 02/11/2026:
+
+| Componente independente | Aplicação possível | Condições/limites |
+| --- | --- | --- |
+| whisper.cpp | Transcrição local para legendas | Preservar avisos MIT e conferir separadamente modelos/arquivos distribuídos; integração própria |
+| ONNX Runtime | Executar modelos locais de visão/áudio | Runtime MIT não determina licença de pesos, modelos ou datasets |
+| wgpu | Composição/renderização por GPU no futuro | Camada gráfica própria; conferir versão e dependências transitivas, não reutilizar compositor/shaders AGPL do Concat |
+
+As licenças MIT desses componentes não exigem publicar o código próprio da Lili, mas mantêm exigência de avisos de direitos/licença. Não foram instalados nesta revisão nem declarados compatíveis de ponta a ponta; cada integração exige conferir a árvore real de dependências, os modelos e a distribuição.
+
+FFmpeg já é usado na Lili, mas sua licença depende da configuração do build e dos componentes habilitados (LGPL/GPL). Não foi concluída uma auditoria do executável instalado nem afirmada compatibilidade comercial irrestrita. Essa conferência pertence à preparação da distribuição, sem interromper ou alterar a instalação atual.
+
+O Concat nativo via MCP/processo separado não é uma dispensa automática da AGPL. A avaliação depende da relação real entre os programas e da forma de distribuição/modificação; por isso não será ativado como motor do produto fechado com base apenas em estar separado. O bridge original de descoberta permanece preparado e não incorpora o código do motor. Uma licença alternativa somente seria opção se os titulares competentes efetivamente a concedessem cobrindo o código usado; não há licença comercial alternativa confirmada nem contato com autores autorizado nesta tarefa.
+
+Os vídeos exportados com gravações próprias, em regra, não passam a ter a licença do editor por terem sido processados por ele; materiais incluídos como músicas, modelos de composição e arte conservam seus próprios termos. Isso é diferente de distribuir o software.
+
+Fontes primárias: [licença do workspace Concat](https://github.com/jub0t/Concat/blob/main/src/Cargo.toml), [AGPL do repositório](https://github.com/jub0t/Concat/blob/main/LICENSE), [GNU FAQ: programas separados/combinação](https://www.gnu.org/licenses/gpl-faq.en.html#MereAggregation), [GNU FAQ: saída do programa](https://www.gnu.org/licenses/gpl-faq.en.html#WhatCaseIsOutputGPL), [MIT whisper.cpp](https://github.com/ggml-org/whisper.cpp/blob/master/LICENSE), [MIT ONNX Runtime](https://github.com/microsoft/onnxruntime/blob/main/LICENSE), [MIT wgpu](https://github.com/gfx-rs/wgpu/blob/trunk/LICENSE.MIT), [licenciamento FFmpeg](https://ffmpeg.org/legal.html). Este é um plano técnico de conformidade, sem garantia jurídica sobre uma futura distribuição ainda não definida; validar essa composição antes do lançamento comercial.
+
 ## Implementado e verificável
 
 - lili/concat_bridge.py: identifica instalação conhecida ou caminho absoluto LILI_CONCAT definido pelo responsável no notebook; não pesquisa um executável genérico chamado concat no PATH.
@@ -43,7 +67,7 @@ As capacidades da coluna Concat foram identificadas em documentação/tipos/cód
 
 ## Como transformar a preparação em integração real
 
-1. Definir a forma de reutilização/licença antes de copiar ou distribuir código do Concat dentro da Lili. Em 02/11/2026, o usuário escolheu expressamente **definir a licença antes de copiar código**. Não houve autorização para relicenciar a Lili ou torná-la código aberto. Até essa definição, continuar implementações próprias e análise técnica sem incorporar código do Concat.
+1. Respeitar a decisão atual de manter a Lili com código fechado. Não incorporar código AGPL do Concat sob os termos atuais. Priorizar implementações próprias e componentes independentes com licença compatível; qualquer caminho excepcional de integração depende da revisão concreta de licença/distribuição, sem presumir autorização.
 2. Disponibilizar build oficial compatível e registrar versão/checksum; testar descoberta real, dependências e ferramentas disponíveis em projeto sintético. Não baixar todos os modelos por padrão.
 3. Criar adaptador Lili → projeto Concat em pasta de trabalho: IDs, fontes, fontes tipográficas, enquadramento, posições, velocidade, áudio, legendas, fades, junções e locks. Rejeitar mapeamento incompleto em vez de perder efeitos silenciosamente.
 4. Renderizar uma cópia sintética sem alterar a origem, medir duração/som/pixels e comparar com a prévia. Testar falha, cancelamento, reinício e ausência de GPU.
