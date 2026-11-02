@@ -596,11 +596,11 @@ $("#ai-instructions").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.ctrl
 let smoothTicket=0;
 const smoothJobs=new Map();
 function needsSmoothPlayback(){
-  return ((editorFeatures.dissolve_transitions&&project?.transitions?.some(t=>t.kind==="dissolve"))||(editorFeatures.source_audio_clips&&project?.audio_clips?.length>0))&&
+  return ((project?.transitions?.some(t=>(editorFeatures.dissolve_transitions&&t.kind==="dissolve")||(editorFeatures.spatial_transitions&&["wipe_left","wipe_right","slide_left","slide_right"].includes(t.kind))))||(editorFeatures.source_audio_clips&&project?.audio_clips?.length>0))&&
     !(typeof audioDraft!=="undefined"&&audioDraft)&&!(typeof captionDraft!=="undefined"&&captionDraft)&&!(typeof effectDraft!=="undefined"&&effectDraft)&&!(typeof transitionDraft!=="undefined"&&transitionDraft);
 }
 async function openSmoothPlayback(draft=null){
-  if(!project||!editorFeatures.dissolve_transitions)return;
+  if(!project||!(editorFeatures.dissolve_transitions||editorFeatures.spatial_transitions||editorFeatures.source_audio_clips))return;
   pause();const ticket=++smoothTicket,id=project.id,revision=project.revision,start=draft?0:cursor;
   const dialog=$("#smooth-preview-dialog"),video=$("#smooth-preview-video"),status=$("#smooth-preview-status");
   video.pause();video.hidden=true;if(!dialog.open)dialog.showModal();status.textContent="Preparando a prévia fluida no notebook…";

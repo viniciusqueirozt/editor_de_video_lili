@@ -21,7 +21,7 @@ PLAN_SCHEMA = {"type": "object", "additionalProperties": False, "properties": {
     "summary": {"type": "string"}, "warnings": {"type": "array", "items": {"type": "string"}},
     "original_audio": {"type":"string","enum":["keep","mute"]},
     "transition_style": {"type":"object","additionalProperties":False,"properties":{
-        "kind":{"type":"string","enum":["keep","none","dissolve","black","white"]},
+        "kind":{"type":"string","enum":["keep","none","dissolve","black","white","wipe_left","wipe_right","slide_left","slide_right"]},
         "duration":{"type":"number"}},"required":["kind","duration"]},
     "clips": {"type": "array", "items": {"type": "object", "additionalProperties": False,
         "properties": CLIP_FIELDS, "required": list(CLIP_FIELDS)}},

@@ -12,3 +12,5 @@ ctx.transitionDraft=null;assert.equal(ctx.transitionListForPreview()[0].kind,'bl
 assert.equal(ctx.transitionPair('a','b').length,2);assert.equal(ctx.transitionPair('b','a'),null);
 assert.equal(ctx.transitionBlend(a,1.75,[{left:'a',right:'b',kind:'dissolve',duration:1}]).opacity,0,'a dissolve must not turn into an opaque color veil');
 console.log('Pair transitions: half-duration, speed, draft isolation, cancellation and stale revision passed');
+
+for(const kind of ["wipe_left","wipe_right","slide_left","slide_right"])assert.equal(ctx.transitionBlend(a,1.75,[{left:"a",right:"b",kind,duration:1}]).opacity,0,"spatial transitions must use the compositor, not an opaque veil");

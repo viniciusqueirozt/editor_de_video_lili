@@ -2,7 +2,10 @@
 import math
 from .core import clip_duration
 
-KINDS = {"black", "white", "dissolve"}
+# Public IDs are mapped to documented FFmpeg filter names, never interpolated
+# from a client-supplied expression. This compositor is Lili's own implementation.
+COMPOSITED = {"dissolve":"fade", "wipe_left":"wipeleft", "wipe_right":"wiperight", "slide_left":"slideleft", "slide_right":"slideright"}
+KINDS = {"black", "white"} | set(COMPOSITED)
 
 def clean_transitions(project):
     clips = project["timeline"]
@@ -26,7 +29,7 @@ def clip_transition_filters(project, index):
     clip = project["timeline"][index]
     filters = []
     for transition in clean_transitions(project):
-        if transition["kind"] == "dissolve": continue
+        if transition["kind"] in COMPOSITED: continue
         half = transition["duration"] / 2
         if transition["right"] == clip["id"]:
             filters.append(f"fade=t=in:st=0:d={half}:color={transition['kind']}")
@@ -57,14 +60,14 @@ def apply_style(project, style):
 
 
 def dissolve_graph(project):
-    """Blend endpoint holds across each cut, preserving narration/subtitle clocks.
+    """Composite endpoint holds across cuts, preserving narration/subtitle clocks.
 
     Half of the transition is before the cut and half after it. Padding holds
     only the adjacent endpoint frame, rather than shortening the montage.
     Input 0 supplies the untouched concatenated audio; clips start at input 1.
     """
     clips = project["timeline"]
-    transitions = {(t["left"],t["right"]):t for t in clean_transitions(project) if t["kind"] == "dissolve"}
+    transitions = {(t["left"],t["right"]):t for t in clean_transitions(project) if t["kind"] in COMPOSITED}
     if not transitions:return None
     filters = [f"[{i+1}:v]setpts=PTS-STARTPTS,fps=30,settb=AVTB,format=yuv420p[c{i}]" for i in range(len(clips))]
     previous="c0";at=clip_duration(clips[0])
@@ -74,7 +77,7 @@ def dissolve_graph(project):
             value=item["duration"];half=value/2
             filters += [f"[{previous}]tpad=stop_mode=clone:stop_duration={half},fps=30,settb=AVTB[l{i}]",
                         f"[c{i}]tpad=start_mode=clone:start_duration={half},fps=30,settb=AVTB[r{i}]",
-                        f"[l{i}][r{i}]xfade=transition=fade:duration={value}:offset={at-half},format=yuv420p,fps=30,settb=AVTB[v{i}]"]
+                        f"[l{i}][r{i}]xfade=transition={COMPOSITED[item['kind']]}:duration={value}:offset={at-half},format=yuv420p,fps=30,settb=AVTB[v{i}]"]
         else:filters.append(f"[{previous}][c{i}]concat=n=2:v=1:a=0,fps=30,settb=AVTB[v{i}]")
         previous=f"v{i}";at+=clip_duration(clip)
     filters.append(f"[{previous}]trim=duration={at},setpts=PTS-STARTPTS,fps=30,format=yuv420p[blended]")

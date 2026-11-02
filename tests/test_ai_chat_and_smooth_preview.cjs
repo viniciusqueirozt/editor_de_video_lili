@@ -23,5 +23,8 @@ function reset(){calls.length=0;toasts.length=0;jobs=[];sendGate=null;failSend=f
  reset();ctx.queue=new Promise(r=>release=r);const old=ctx.openSmoothPlayback();ctx.project.revision++;release();await old;assert.equal(calls.filter(c=>c.opt).length,0);assert.match(node('#smooth-preview-status').textContent,/projeto mudou/);
  reset();sendGate=new Promise(r=>release=r);const closed=ctx.openSmoothPlayback();await tick();node('#smooth-preview-dialog').close();release();await closed;assert.equal(node('#smooth-preview-dialog').open,false);
  reset();ctx.currentClip=()=>base.timeline[0];ctx.player={play(){throw Error('Dry playback must not be used for a dissolve');}};vm.runInContext(app.slice(app.indexOf('async function play(){'),app.indexOf('function markSelection(')),ctx);await ctx.play();assert.equal(node('#smooth-preview-dialog').open,true,'main play opens exact rendered composition');
+ for(const kind of ['wipe_left','wipe_right','slide_left','slide_right']){
+  reset();ctx.editorFeatures.spatial_transitions=true;ctx.project.transitions=[{left:'a',right:'b',kind,duration:.6}];assert.equal(ctx.needsSmoothPlayback(),true);await ctx.openSmoothPlayback({left:'a',right:'b',kind,duration:.6});assert.equal(JSON.parse(calls.find(c=>c.opt).opt.body).kind,kind);ctx.audioDraft={};assert.equal(ctx.needsSmoothPlayback(),false);delete ctx.audioDraft;
+ }
  console.log('Project chat and smooth preview: history, escaping, progress, draft retention, one send, project guard, local shortcut availability, exact preview, scoped cache, draft endpoint, closed dialog and actual Play interception passed.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

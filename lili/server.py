@@ -125,7 +125,7 @@ class Handler(BaseHTTPRequestHandler):
         store, media = self.server.store, self.server.media
         if self.command in ("GET", "HEAD"):
             if path == "/api/health":
-                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "ai_chat": True, "source_audio_clips": True, "library_sounds": True, "dissolve_transitions": True, "pair_transitions": True}})
+                return self.json({"ok": True, "version": "0.1.0", "mode": "local", "engine": "ffmpeg", "features": {"upload_cancel": True, "visual_fades": True, "caption_styles": True, "export_profiles": True, "framing_watermark": True, "color_adjustments": True, "clip_speed": True, "subtitles": True, "music_track": True, "still_images": True, "redo": True, "scene_audio_fades": True, "narration_trim": True, "ai_chat": True, "source_audio_clips": True, "library_sounds": True, "dissolve_transitions": True, "spatial_transitions": True, "pair_transitions": True}})
             if path == "/api/concat/status":
                 from .concat_bridge import ConcatBridge
                 return self.json(ConcatBridge().availability())

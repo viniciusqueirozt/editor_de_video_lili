@@ -384,7 +384,7 @@ class MediaService:
             from .transitions import dissolve_graph
             graph = dissolve_graph(project)
             if graph:
-                self.job_update(job_id, stage="Compondo dissoluções suaves", progress=88)
+                self.job_update(job_id, stage="Compondo transições entre cenas", progress=88)
                 blended = folder / "blended.mp4"
                 blend_inputs = ["-i", base]
                 for i in range(len(project["timeline"])):blend_inputs += ["-i", folder / f"{i:04d}.mp4"]

@@ -36,6 +36,22 @@ class TransitionTests(unittest.TestCase):
         with self.assertRaises(EditorError):self.command("timeline_replace",{"clips":self.p["timeline"],"transition_style":{"kind":[]}})
         self.assertEqual(self.store.get(self.p["id"]),before)
 
+    def test_spatial_transitions_use_compositor_and_preserve_atomic_history(self):
+        from lili.transitions import COMPOSITED, dissolve_graph
+        for kind in ("wipe_left","wipe_right","slide_left","slide_right"):
+            before=self.store.get(self.p["id"])
+            self.transition(kind=kind,duration=.8)
+            self.assertEqual(self.p["timeline"],before["timeline"]);self.assertEqual(self.p["duration"],6)
+            self.assertEqual(clip_transition_filters(self.p,0),"")
+            self.assertIn("xfade=transition="+COMPOSITED[kind],dissolve_graph(self.p))
+            self.command("undo",{});self.assertEqual(self.p["transitions"],before["transitions"])
+            self.command("redo",{});self.assertEqual(self.p["transitions"][0]["kind"],kind)
+            self.command("undo",{})
+        with self.assertRaises(EditorError):self.transition(kind="wipe_left:evil")
+        self.command("clip_update",{"clip_id":self.a,"locked":True})
+        self.command("transition_set",{"all":True,"kind":"slide_left","duration":.6})
+        self.assertEqual(len(self.p["transitions"]),1);self.assertEqual(self.p["transitions"][0]["left"],self.b)
+
     def test_invalid_commands_are_atomic(self):
         for args in ({"left":self.a,"right":self.c},{"kind":[]},{"kind":"unsupported"},{"duration":True},{"duration":float("nan")},{"duration":float("inf")},{"duration":-.1},{"duration":2.1}):
             before=self.store.get(self.p["id"])

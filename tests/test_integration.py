@@ -441,6 +441,48 @@ class IntegrationTests(unittest.TestCase):
         samples,length=render();self.assertLess(tone(samples,.8,1),.002);self.assertGreater(tone(samples,1.8,2),.05);self.assertGreater(tone(samples,2.8,3),.05)
         self.assertEqual(source.read_bytes(),original)
 
+    def test_spatial_transitions_move_images_preserve_clock_audio_and_draft(self):
+        import array, math
+        p=self.client.call('POST','/api/projects',{'name':'Spatial transition samples'});ids=[];originals={}
+        self.assertTrue(self.client.call('GET','/api/health')['features']['spatial_transitions'])
+        for name,base,right,freq in (('outgoing','red','yellow',440),('incoming','blue','green',880)):
+            path=self.root/(name+'-spatial.mp4')
+            run(['-f','lavfi','-i',f'color=c={base}:s=160x90:r=30:d=1.6,drawbox=x=80:y=0:w=80:h=90:color={right}:t=fill','-f','lavfi','-i',f'sine=frequency={freq}:duration=1.6','-c:v','libx264','-pix_fmt','yuv420p','-c:a','aac','-shortest',path])
+            originals[path]=path.read_bytes();upload=self.client.upload(p['id'],path);self.wait_job(upload['job']['id']);ids.append(upload['media_id'])
+        p=self.store.get(p['id']);p=self.store.apply(p['id'],'settings_update',{'format':'landscape'},p['revision'])
+        for media_id in ids:p=self.store.apply(p['id'],'clip_add',{'media_id':media_id,'start':0,'end':1.6},p['revision'])
+        colors={'red':lambda r,g,b:r>180 and g<50 and b<50,'yellow':lambda r,g,b:r>180 and g>180 and b<50,'blue':lambda r,g,b:b>180 and r<50 and g<50,'green':lambda r,g,b:g>70 and r<50 and b<50}
+        expected={'wipe_left':('red','green'),'wipe_right':('blue','yellow'),'slide_left':('yellow','blue'),'slide_right':('green','red')}
+        for kind,(left_color,right_color) in expected.items():
+            with self.subTest(kind=kind):
+                p=self.store.apply(p['id'],'transition_set',{'left':p['timeline'][0]['id'],'right':p['timeline'][1]['id'],'kind':kind,'duration':.8},p['revision'])
+                baseline=copy.deepcopy(p)
+                job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+                output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+                raw=subprocess.run([executable(),'-v','error','-i',str(output),'-vf','scale=80:46,format=rgb24','-f','rawvideo','pipe:1'],capture_output=True,check=True).stdout
+                size=80*46*3;frames=[raw[i:i+size] for i in range(0,len(raw),size)]
+                def pixel(t,x):
+                    start=(23*80+x)*3;return tuple(frames[round(t*30)][start:start+3])
+                self.assertTrue(colors[left_color](*pixel(1.6,10)),(kind,'left',pixel(1.6,10)))
+                self.assertTrue(colors[right_color](*pixel(1.6,70)),(kind,'right',pixel(1.6,70)))
+                self.assertTrue(colors['red'](*pixel(.5,10)));self.assertTrue(colors['green'](*pixel(3,70)))
+                self.assertGreater(len(set(frame[23*80*3:24*80*3] for frame in frames[37:59])),10,'must contain continuous spatial motion, not a dry cut')
+                self.assertAlmostEqual(probe(output)['duration'],3.2,delta=.1)
+                samples=array.array('f',subprocess.run([executable(),'-v','error','-i',str(output),'-f','f32le','-ac','1','-ar','16000','pipe:1'],capture_output=True,check=True).stdout)
+                def tone(freq,a,b):
+                    v=samples[int(a*16000):int(b*16000)];return 2*abs(sum(x*complex(math.cos(2*math.pi*freq*i/16000),math.sin(2*math.pi*freq*i/16000)) for i,x in enumerate(v)))/len(v)
+                self.assertGreater(tone(440,1.2,1.4),.06);self.assertGreater(tone(880,1.9,2.1),.06);self.assertLess(tone(440,1.9,2.1),.01)
+                preview=self.client.call('POST',f"/api/projects/{p['id']}/transition-preview",{'expected_revision':p['revision'],'left':p['timeline'][0]['id'],'right':p['timeline'][1]['id'],'kind':kind,'duration':.8})
+                result=self.wait_job(preview['id'])['result'];self.assertEqual(result['preview_scope'],'transition');self.assertAlmostEqual(result['duration'],3,delta=.1)
+                preview_file=self.store.folder(p['id'])/'exports'/preview['id']/'video.mp4'
+                frame=subprocess.run([executable(),'-v','error','-ss','1.5','-i',str(preview_file),'-frames:v','1','-vf','scale=80:46,format=rgb24','-f','rawvideo','pipe:1'],capture_output=True,check=True).stdout
+                for x,color in ((10,left_color),(70,right_color)):
+                    index=(23*80+x)*3;self.assertTrue(colors[color](*frame[index:index+3]),(kind,'draft',x,tuple(frame[index:index+3])))
+                self.assertEqual(self.store.get(p['id']),baseline)
+        full=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'full'});result=self.wait_job(full['id'])['result']
+        self.assertEqual((result['width'],result['height']),(1920,1080));self.assertAlmostEqual(result['duration'],3.2,delta=.1)
+        for path,raw in originals.items():self.assertEqual(path.read_bytes(),raw)
+
     def test_dissolve_mix_pixels_audio_timing_and_draft_preview(self):
         import array,math
         p=self.client.call("POST","/api/projects",{"name":"Synthetic dissolve"});ids=[]

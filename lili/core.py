@@ -421,7 +421,7 @@ class Store:
                     raise EditorError("Desproteja as duas cenas antes de alterar a transição.", 409)
                 kind = args.get("kind")
                 if not isinstance(kind, str) or kind not in KINDS | {"none"}:
-                    raise EditorError("Escolha dissolução, corte seco, passagem por preto ou passagem por branco.")
+                    raise EditorError("Escolha uma transição disponível no catálogo.")
                 value = number(args.get("duration", .5), .1, min(3, clip_duration(left), clip_duration(right))) if kind != "none" else 0
                 p["transitions"] = [t for t in p["transitions"] if (t["left"], t["right"]) != (left["id"], right["id"])]
                 if kind != "none":
