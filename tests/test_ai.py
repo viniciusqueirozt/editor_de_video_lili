@@ -75,6 +75,18 @@ class AIEditorTests(unittest.TestCase):
         current=self.store.get(self.p["id"]);self.assertEqual(current["audio_clips"][0],sounds[0]);self.assertEqual(current["audio_clips"][1]["volume"],0)
         self.assertEqual(current["timeline"],self.p["timeline"])
 
+    def test_mute_original_audio_preserves_imported_effects(self):
+        self.p=self.store.apply(self.p["id"],"clip_add",{"media_id":self.asset["id"],"start":0,"end":4,"separate_audio":True},self.p["revision"])
+        self.p=self.store.apply(self.p["id"],"audio_clip_add",{"media_id":self.asset["id"],"start":0,"end":1,"offset":1,"volume":.5},self.p["revision"])
+        effect=copy.deepcopy(self.p["audio_clips"][1])
+        action=next(a["instructions"] for a in QUICK_ACTIONS if a["kind"]=="mute")
+        self.ai.runner=lambda *_:self.fail("Local command must not call AI")
+        job=self.wait_job(self.ai.start(self.p["id"],self.p["revision"],action));self.assertEqual(job["status"],"done",job)
+        p=self.store.get(self.p["id"]);self.assertEqual(p["audio_clips"][0]["volume"],0);self.assertEqual(p["audio_clips"][1],effect)
+        p=self.store.apply(p["id"],"audio_clip_update",{"audio_id":p["audio_clips"][0]["id"],"locked":True},p["revision"])
+        p=self.store.apply(p["id"],"clip_update",{"clip_id":p["timeline"][0]["id"],"locked":True},p["revision"])
+        with self.assertRaises(EditorError):self.ai.start(p["id"],p["revision"],action)
+
     def test_conversation_refines_existing_edits_and_preserves_history(self):
         for start,end in ((0,2),(2,4)):
             self.p=self.store.apply(self.p["id"],"clip_add",{"media_id":self.asset["id"],"start":start,"end":end,"brightness":1.2,"speed":1.25},self.p["revision"])

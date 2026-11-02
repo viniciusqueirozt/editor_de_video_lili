@@ -90,14 +90,14 @@ class AIEditor:
         if action is None:return None
         if action["kind"] == "dissolve" and not any(not a["locked"] and not b["locked"] for a,b in zip(project["timeline"],project["timeline"][1:])):
             raise EditorError("Adicione duas cenas vizinhas sem proteção para criar uma transição.")
-        if action["kind"] == "mute" and all(c["locked"] for c in project["timeline"]) and not any(not a["locked"] for a in project.get("audio_clips",[])):
+        if action["kind"] == "mute" and all(c["locked"] for c in project["timeline"]) and not any(a.get("source_clip_id") and not a["locked"] for a in project.get("audio_clips",[])):
             raise EditorError("Desproteja uma cena antes de alterar seu áudio original.")
         clips = [{**c,"existing_clip_id":c["id"]} for c in project["timeline"]]
         if action["kind"] == "mute":
             for clip in clips:
                 if not clip["locked"]:clip["volume"]=0
         return {"original_audio":"mute" if action["kind"]=="mute" else "keep","clips":clips,"transition_style":{"kind":"dissolve" if action["kind"]=="dissolve" else "keep","duration":.5},
-                "summary":"Apliquei dissoluções suaves às junções sem proteção." if action["kind"]=="dissolve" else "Silenciei o áudio original das cenas sem proteção. Narração e música foram mantidas.",
+                "summary":"Apliquei dissoluções suaves às junções sem proteção." if action["kind"]=="dissolve" else "Silenciei o áudio original das cenas sem proteção. Narração, música e sons adicionados foram mantidos.",
                 "warnings":["Cenas, junções e áudios protegidos mantiveram seus ajustes anteriores."] if any(c["locked"] for c in clips) or any(a["locked"] for a in project.get("audio_clips",[])) else []}
 
     def _perform(self, job_id, project, instructions):

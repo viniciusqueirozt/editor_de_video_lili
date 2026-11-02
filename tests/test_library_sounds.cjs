@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const script=fs.readFileSync('web/source-audio.js','utf8'),nodes=new Map(),calls=[],opened=[],messages=[],buttons=[{disabled:false},{disabled:false}];let commandGate=null,saveOk=true;
+function node(id){if(!nodes.has(id))nodes.set(id,{addEventListener(){}});return nodes.get(id);}
+const original={id:'p',revision:3,duration:4,timeline:[{id:'image'}],audio_clips:[],narration:{media_id:'voice'},music:{media_id:'music'},media:[{id:'effect',name:'Chime.wav',kind:'audio',status:'ready',duration:7,has_audio:true},{id:'clip',name:'Clip.mp4',kind:'video',status:'ready',duration:2,has_audio:true},{id:'silent',name:'Silent.mp4',kind:'video',status:'ready',duration:2,has_audio:false}]};
+const ctx=vm.createContext({$:node,document:{querySelectorAll(){return buttons;}},editorFeatures:{source_audio_clips:true,library_sounds:true},project:structuredClone(original),cursor:1.5,queue:Promise.resolve(),roundTime:n=>Math.round(n*10000)/10000,toast:(s)=>messages.push(s),async openAudioEdit(kind,id){opened.push([kind,id]);},async mutate(op,args,message,expected){calls.push({op,args,message,expected});if(commandGate)await commandGate;if(!saveOk)return false;ctx.project.audio_clips.push({...args,id:'new-sound'});ctx.project.revision++;return true;}});
+vm.runInContext(script,ctx);const ev=s=>vm.runInContext(s,ctx),copy=x=>JSON.parse(JSON.stringify(x));
+function reset(){ctx.project=structuredClone(original);ctx.cursor=1.5;ctx.queue=Promise.resolve();calls.length=opened.length=messages.length=0;commandGate=null;saveOk=true;ctx.editorFeatures.library_sounds=true;}
+(async()=>{
+ reset();await ctx.addLibrarySound('effect');assert.equal(calls.length,1);assert.equal(calls[0].op,'audio_clip_add');assert.deepEqual(copy(calls[0].args),{media_id:'effect',start:0,end:2.5,offset:1.5,speed:1,volume:1,fade_in:0,fade_out:0,label:'Chime.wav'});assert.deepEqual(copy(calls[0].expected),{projectId:'p',revision:3});assert.deepEqual(opened,[['source','new-sound']]);assert.deepEqual(ctx.project.timeline,original.timeline);assert.deepEqual(ctx.project.narration,original.narration);assert.deepEqual(ctx.project.music,original.music);assert.match(calls[0].message,/limitado/);assert.ok(buttons.every(b=>!b.disabled));
+ reset();await ctx.addLibrarySound('clip');assert.equal(calls[0].args.end,2,'sound from video can be inserted without copying its image');
+ for(const invalid of ['missing','silent']){reset();await ctx.addLibrarySound(invalid);assert.equal(calls.length,0);assert.match(messages[0],/arquivo pronto/);}
+ reset();ctx.project.media[0].status='processing';await ctx.addLibrarySound('effect');assert.equal(calls.length,0);
+ reset();ctx.project.timeline=[];await ctx.addLibrarySound('effect');assert.equal(calls.length,0);assert.match(messages[0],/cena/);
+ reset();ctx.cursor=4;await ctx.addLibrarySound('effect');assert.equal(calls.length,0);assert.match(messages[0],/cursor/);
+ reset();ctx.project.audio_clips=Array.from({length:200},(_,i)=>({id:String(i)}));await ctx.addLibrarySound('effect');assert.equal(calls.length,0);assert.match(messages[0],/200/);
+ reset();ctx.editorFeatures.library_sounds=false;await ctx.addLibrarySound('effect');assert.equal(calls.length,0);
+ reset();let release;commandGate=new Promise(r=>release=r);const a=ctx.addLibrarySound('effect');await new Promise(r=>setImmediate(r));assert.ok(buttons.every(b=>b.disabled));await ctx.addLibrarySound('effect');assert.equal(calls.length,1,'double tap creates only one command');release();await a;
+ reset();let releaseQueue;ctx.queue=new Promise(r=>releaseQueue=r);const changed=ctx.addLibrarySound('effect');ctx.project.revision++;releaseQueue();await changed;assert.equal(calls.length,0);assert.match(messages[0],/projeto mudou/);
+ reset();ctx.queue=new Promise(r=>releaseQueue=r);const switched=ctx.addLibrarySound('effect');ctx.project={...structuredClone(original),id:'another'};releaseQueue();await switched;assert.equal(calls.length,0);
+ reset();saveOk=false;await ctx.addLibrarySound('effect');assert.equal(opened.length,0);assert.equal(ctx.project.audio_clips.length,0);assert.equal(ev('librarySoundAdding'),false);assert.ok(buttons.every(b=>!b.disabled));
+ assert.ok(ctx.audioFadePresetValue(.6,.1333)*2<=.1333,'fractional duration presets never overflow');
+ console.log('Library sounds: cursor placement, source fit, video sound, voice/music preservation, one command, open editor, limits, processing/missing media, feature guard, double tap, stale project/revision and failed save passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

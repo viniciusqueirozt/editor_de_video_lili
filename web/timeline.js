@@ -701,8 +701,9 @@ function updateAudioControls(){
     for(const id of ["#audio-align-cursor","#audio-offset-back","#audio-offset-forward","#audio-trim-start","#audio-trim-end","#audio-reset-range"])$(id).disabled=audioSaving||locked||(id.startsWith("#audio-trim-")&&!audioTrimAtCursor(id.endsWith("start")?"start":"end"));
     for(const action of ["split","duplicate","remove"])$("#source-audio-"+action).disabled=audioSaving||locked||(action!=="remove"&&(changed||!!problem))||(action==="split"&&!inside);
     $("#source-audio-note").textContent=audioDraft.baseline.linked?"Ao aplicar, este som fica separado. Depois, mover ou cortar a imagem não muda este áudio.":"Bloco independente: não altera a imagem. Aplique ajustes antes de dividir ou duplicar.";
-    $("#audio-edit-summary").textContent=problem||`Som original · trecho ${precise(length)} · início ${montageTime(d.offset)}. `+(d.offset+length>project.duration?"O fim do áudio ultrapassa o vídeo.":"Imagem, narração e música permanecem nas suas posições.");
+    $("#audio-edit-summary").textContent=problem||`Som · trecho ${precise(length)} · início ${montageTime(d.offset)}. `+(d.offset+length>project.duration?"O fim do áudio ultrapassa o vídeo.":"Imagem, narração e música permanecem nas suas posições.");
   }
+  if(typeof updateAudioFadePresets==="function")updateAudioFadePresets();
   const start=d.start??0,span=length*(d.speed||1),total=audioDraft.asset.duration;
   const window=$("#audio-edit-window");window.hidden=!!problem;window.style.left=`${start/total*100}%`;window.style.width=`${span/total*100}%`;
   const position=(cursor-d.offset)*(d.speed||1)+start,head=$("#audio-edit-cursor");head.hidden=!!problem||position<start||position>start+span;head.style.left=`${clamp(position/total*100,0,100)}%`;
@@ -724,7 +725,7 @@ async function openAudioEdit(kind,soundId=null){
   audioDraft={projectId:project.id,revision:project.revision,kind,baseline,values:{fade_in:0,fade_out:0,...baseline},asset,originalCursor:audioDraft?.originalCursor??cursor};
   // Old projects may omit fades; avoid reporting a default as an edit.
   audioDraft.baseline={...audioDraft.values};
-  $("#audio-edit-title").textContent=kind==="source"?"Som original independente":kind==="music"?"Música no tempo certo":"Narração no tempo certo";$("#audio-edit-name").textContent=asset.name;
+  $("#audio-edit-title").textContent=kind==="source"?"Som independente":kind==="music"?"Música no tempo certo":"Narração no tempo certo";$("#audio-edit-name").textContent=asset.name;
   $("#audio-music-trim").hidden=kind!=="music"&&kind!=="source"&&!editorFeatures.narration_trim;
   $("#source-audio-options").hidden=kind!=="source";
   if(kind==="source"){$("#source-audio-picker").innerHTML=sourceAudioTracks(project).map(a=>`<option value="${a.id}">${esc(a.label)} · ${montageTime(a.offset)}</option>`).join("");$("#source-audio-picker").value=baseline.id;}$("#audio-trim-note").textContent="Aparar início mantém o restante do áudio sincronizado. Não desloca vídeo, outras faixas ou legendas.";$("#audio-duck-label").hidden=kind!=="music";$("#audio-edit-volume").max=kind==="music"?100:200;

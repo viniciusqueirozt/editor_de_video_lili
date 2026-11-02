@@ -377,6 +377,41 @@ class IntegrationTests(unittest.TestCase):
             urlopen(Request(self.base + "/api/projects", data=b"[]", headers={"Content-Type": "application/json"}))
         self.assertEqual(error.exception.code, 400)
 
+    def test_imported_sound_effect_blocks_mix_without_replacing_voice_or_music(self):
+        import array, math
+        effect=self.root/'synthetic-chime.wav'
+        run(['-f','lavfi','-i','sine=frequency=880:duration=1','-ar','16000',effect])
+        original_bytes=effect.read_bytes()
+        self.assertTrue(self.client.call('GET','/api/health')['features']['library_sounds'])
+        p=self.client.call('POST','/api/projects',{'name':'Imported sound blocks'})
+        uploaded=[]
+        for source in (self.source,self.audio,effect):
+            upload=self.client.upload(p['id'],source);self.wait_job(upload['job']['id']);uploaded.append(upload['media_id'])
+        p=self.client.call('GET','/api/projects/'+p['id'])
+        def command(operation,args):
+            nonlocal p
+            p=self.client.call('POST',f"/api/projects/{p['id']}/commands",{'operation':operation,'args':args,'expected_revision':p['revision']})
+        for _ in range(2):command('clip_add',{'media_id':uploaded[0],'start':0,'end':1.6})
+        command('narration_set',{'media_id':uploaded[1],'volume':.2})
+        command('music_set',{'media_id':uploaded[1],'volume':.2,'duck':False})
+        visual=copy.deepcopy(p['timeline']);voice=copy.deepcopy(p['narration']);music=copy.deepcopy(p['music'])
+        command('audio_clip_add',{'media_id':uploaded[2],'start':.1,'end':.9,'offset':1,'volume':.5,'fade_in':.1,'fade_out':.1})
+        sound=p['audio_clips'][0];self.assertIsNone(sound['source_clip_id'])
+        command('audio_clip_duplicate',{'audio_id':sound['id']})
+        self.assertEqual(p['timeline'],visual);self.assertEqual(p['narration'],voice);self.assertEqual(p['music'],music)
+        command('undo',{});self.assertEqual(len(p['audio_clips']),1)
+        command('redo',{});self.assertEqual(len(p['audio_clips']),2)
+        job=self.client.call('POST',f"/api/projects/{p['id']}/exports",{'expected_revision':p['revision'],'quality':'preview'});self.wait_job(job['id'])
+        output=self.store.folder(p['id'])/'exports'/job['id']/'video.mp4'
+        raw=subprocess.run([executable(),'-v','error','-i',str(output),'-f','f32le','-ac','1','-ar','16000','pipe:1'],capture_output=True,check=True).stdout
+        samples=array.array('f',raw)
+        def rms(a,b):
+            values=samples[int(a*16000):int(b*16000)];return math.sqrt(sum(x*x for x in values)/len(values))
+        baseline=rms(.3,.7)
+        self.assertGreater(rms(1.2,1.5),baseline*1.4);self.assertGreater(rms(2,2.3),baseline*1.4)
+        self.assertLess(rms(2.8,3),.002);self.assertAlmostEqual(probe(output)['duration'],3.2,delta=.12)
+        self.assertEqual(effect.read_bytes(),original_bytes)
+
     def test_source_audio_separation_independent_timing_and_no_double_sound(self):
         import array,math
         source=self.root/'source-with-independent-sound.mp4'

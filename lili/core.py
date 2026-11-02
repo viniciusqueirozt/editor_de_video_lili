@@ -488,7 +488,7 @@ class Store:
                     separate_new(self,p,{c["id"] for c in proposed}-old_ids)
                 if args.get("original_audio") == "mute":
                     for sound in p["audio_clips"]:
-                        if not sound["locked"]:sound["volume"]=0
+                        if sound.get("source_clip_id") and not sound["locked"]:sound["volume"]=0
                 elif args.get("original_audio","keep")!="keep":raise EditorError("Ajuste do som original inválido.")
                 if "transition_style" in args:
                     from .transitions import apply_style
