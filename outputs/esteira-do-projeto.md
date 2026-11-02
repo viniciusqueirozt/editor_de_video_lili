@@ -236,3 +236,8 @@ Movimentação direta de música/narração implementada por alça de toque, com
 ## Correção direta de conexão — 01/11/2026
 
 Portal versão 3 publicado e conector atualizado: presença independente da reconexão, recuperação de estado inativo, limites de espera, consultas serializadas e indicação de última comunicação. Estado saudável e heartbeat recente confirmados no banco real. Editor/gateway preservados, sem ativar backend de edição pendente. Relatório em outputs/correcao-conexao-portal-01-11-2026.md. Testes de servidor/poller e build passaram; Safari real e inicialização automática do conector continuam pendentes. Não conta como rodada noturna de segurança/extra.
+
+
+## Conversa e dissolução — entrega direta de 01/11/2026
+
+Conversa contextual por projeto, histórico, pedidos sucessivos sobre a revisão atual e preservação de ajustes existentes implementados. Atalhos locais de dissolução e silenciar som original não chamam Codex. Dissolução real com duração da timeline preservada, aplicação em lote nas junções desprotegidas, prévia fiel renderizada e manutenção dos tempos dos fades. Código 3119048 publicado e ativo após início seguro apenas do editor; gateway/conector/túnel e sessões preservados. Backend de narração/pré-validação de fontes antes pendente também ativo. Suíte final de 147 testes Python e 21 arquivos JavaScript passou, incluindo exportação 1080 × 1920 e pixels/áudio sintéticos. Relatório: outputs/conversa-e-dissolucoes-01-11-2026.md. Revisão visual/Safari pendente; composição de camadas, wipes/zoom/keyframes, crossfade sonoro, contas integradas e nuvem permanecem pendentes. Esta entrega direta não conclui a rodada noturna de segurança/extra.

@@ -38,4 +38,10 @@ No painel de transição, a prévia do rascunho usa só as duas cenas, sem alter
 
 ## Estado de ativação
 
-Código e testes prontos. Ativação segura e sincronização serão registradas abaixo após conferir ausência de jobs/envios reais. Não foi aplicada nenhuma edição em projeto real para testar. Logo, conta individual, credenciais e nuvem estão fora desta alteração.
+Ativação e publicação concluídas. Código **3119048** sincronizado em main no GitHub autorizado; conversa, dissolução, prévia e atalhos locais estão ativos. Saúde/capacidades e a entrada remota foram verificadas após a ativação final. A revisão final da suíte completa também passou: 147 testes Python e 21 arquivos JavaScript, sem somar repetições.
+
+Antes dos inícios, conferidos zero jobs/envios pendentes e zero mídias em preparação. Somente o editor foi reiniciado; os processos de gateway, conector e túnel foram preservados, mantendo as sessões remotas. O projeto real do usuário não foi usado como teste nem editado automaticamente por esta entrega.
+
+A sincronização incluiu os checkpoints anteriores de código/testes/documentação que estavam locais. Com o novo processo também ficaram ativos os backends preparados de aparo de narração e pré-validação de fontes para exportação. Isso não equivale à rodada noturna de segurança: contas individuais continuam sem integração/isolamento real ativado, e nuvem segue planejada. Logo e credenciais não foram alteradas.
+
+No celular, recarregar a página e abrir Editar com IA. Para experimentar sem consumo do Codex, escolher Transições suaves e Enviar e editar. Os pedidos livres continuam sendo enviados ao Codex. Reproduzir na montagem com dissolução abre a Prévia fluida; a primeira preparação pode demorar conforme o projeto. Safari real e revisão visual ainda precisam da avaliação humana no aparelho.
