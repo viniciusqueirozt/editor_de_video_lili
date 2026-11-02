@@ -41,4 +41,4 @@ Na primeira suíte completa ocorreu PermissionError ao substituir jobs.json no W
 
 ## Ativação
 
-Pendente até a checagem final de jobs/uploads e reinício exclusivo do editor. Gateway, sessões, conector e túnel devem ser preservados. Este parágrafo será atualizado com a verificação real, sem anunciar ativação antecipada.
+Ativada com o código c65709d após conferir zero jobs pendentes, uploads parciais ou mídias em processamento. Reiniciado exclusivamente o editor 8765; gateway 8767, conector e túnel mantidos. Saúde/capacidade source_audio_clips, HTML/script novos e bloqueio de acesso não autenticado a projetos pelo gateway verificados. Página de login no mesmo túnel externo respondeu saudável. Concat segue ausente e editing_ready=false, conforme o estado real. Não foram editados projetos reais para testar.
