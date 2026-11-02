@@ -33,3 +33,8 @@ Checkpoint local revisado; sincronização GitHub e ativação segura do backend
 ## Próximo pacote
 
 Às 00h55, consultar saldo/reset e retomar a edição: revisar escolha e apresentação das junções de transição, especialmente a concentração de botões em timelines móveis com muitas cenas. Limitar a ampliação ao que possa ser testado e concluído; questões de licença/instalação do Concat e contas reais permanecem fora desta rodada de edição. Rodada de segurança/acesso continua reservada às 03h55.
+
+
+## Estado final após publicação
+
+Entrega publicada e código ativo no editor no fechamento de 02/11/2026, acumulado até cef630b. Reinício somente do editor após ausência de jobs/uploads/processamento; gateway, conector, túnel e sessões preservados. Verificadas saúde e capacidades HTTP, bloqueio sem login e endereço remoto saudável. A indicação anterior de ativação pendente é histórica. Revisão visual desktop e Safari real continuam pendentes. Ver [relatório consolidado](relatorio-noite-01-02-11-2026.md) para verificações, limitações e próximo passo.

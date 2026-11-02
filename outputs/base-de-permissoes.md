@@ -68,3 +68,8 @@ Estado: cliente preparado, endpoint pendente, modo individual inativo. Consultar
 ## Revisão de 02/11/2026 — integridade da API e estado de ativação
 
 Proteções de identidade/permissões/gateway existentes passaram novamente com dados sintéticos; modo individual real permanece inativo e migração de proprietários não foi aplicada. A rodada de segurança corrigiu aceitação de JSON com corpo menor que Content-Length e passou a recusar campos duplicados, não finitos e Unicode inválido, com tratamento de timeout/overflow. Isso protege o recebimento de comandos e não implementa a sessão individual do portal. Nenhuma credencial/sessão real foi lida ou invalidada. Detalhes, prova e limites em [revisão de segurança](rodada-noturna-2026-11-01-05-seguranca.md).
+
+
+## Fechamento da segurança de comandos — 02/11/2026
+
+Parser estrito e confirmação do corpo completo ativos no editor no acumulado cef630b. Ativação não exigiu reiniciar gateway nem invalidar sessões; o acesso sem login pelo gateway continuou recebendo 401. A checagem de presença/tamanho de exportações não substitui autorização nem prova integridade criptográfica. Contas individuais reais e isolamento por proprietário continuam não ativados: não houve integração de identidade do portal nem atribuição de legados. Relatório: [fechamento da noite](relatorio-noite-01-02-11-2026.md).

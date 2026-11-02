@@ -30,3 +30,8 @@ Passaram **182 testes Python na suíte completa**, seis novos nesta rodada. Tamb
 Correção preparada para ativar ao reiniciar exclusivamente o editor após conferir trabalhos/envios. Ela não exige reiniciar o gateway nem invalidar sessões reais. Publicação no GitHub e ativação das capacidades das rodadas 1/3/4 continuam no fechamento desta execução, após extra caso haja tempo/saldo. Até essa checagem, não anunciar correção ativa ou ciclo encerrado.
 
 Próximo passo operacional: consultar novamente os limites e o relógio, verificar extra ainda não usada na janela e decidir um pacote de visual/pesquisa que caiba antes das 5h com margem para testes, publicação e ativação. Caso não caiba, publicar após esta rodada; nunca prolongar para manhã/tarde.
+
+
+## Estado final após publicação
+
+Entrega publicada e código ativo no editor no fechamento de 02/11/2026, acumulado até cef630b. Reinício somente do editor após ausência de jobs/uploads/processamento; gateway, conector, túnel e sessões preservados. Verificadas saúde e capacidades HTTP, bloqueio sem login e endereço remoto saudável. A indicação anterior de ativação pendente é histórica. Revisão visual desktop e Safari real continuam pendentes. Ver [relatório consolidado](relatorio-noite-01-02-11-2026.md) para verificações, limitações e próximo passo.

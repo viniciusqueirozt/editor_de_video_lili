@@ -250,3 +250,10 @@ Correção pronta para ativação do editor no fechamento, sem reinício do gate
 ## Noite de 01 para 02/11/2026 — extra de visual e pesquisa
 
 Quatro atalhos na inicial com escolha de projeto, abrindo ferramentas existentes sem aplicar ações automaticamente; layout/foco/tamanho de toque e estados vazios tratados. Pesquisa pública oficial de Clipchamp, CapCut e DaVinci registrada como oferta anunciada, sem prova de receita/demanda ou cobrança nova. Passaram 25 arquivos JavaScript e três testes HTTP existentes; 182 é a contagem da última suíte Python completa, sem somar repetições. Tentativa de revisão desktop falhou na inicialização do runtime; Safari/visual pendentes. Relatório: [extra](rodada-noturna-2026-11-01-extra-atalhos-mercado.md). Segue publicação/ativação segura, encerrando antes das 5h.
+
+
+## Fechamento e ativação — 02/11/2026
+
+As cinco rodadas e a extra desta noite foram publicadas no GitHub. O código funcional acumulado até **cef630b** está ativo: após conferir zero jobs em fila/execução, zero mídias em processamento e zero uploads parciais, reiniciou-se exclusivamente o editor. As capacidades library_sounds, spatial_transitions e export_delivery responderam ativas, e a inicial/scripts foram servidos com HTTP 200. O gateway continuou recusando acesso sem login (401); gateway, conector, túnel e endereço remoto existentes foram preservados, com login remoto saudável. Não houve alteração de projetos/mídias reais ou revogação de sessões.
+
+Verificação final acumulada: **182 testes Python na última suíte completa e 25 arquivos de testes JavaScript aprovados**. Testes focados/repetições não são somados como casos novos. Código posterior à suíte completa alterou somente frontend e documentação, com testes JavaScript e HTTP focados correspondentes. Revisão visual desktop e Safari real continuam pendentes; a ferramenta de controle desktop falhou antes de abrir uma janela. Contas individuais reais, nuvem e novo motor de IA local continuam pendentes. Este fechamento substitui o estado de ativação pendente registrado historicamente acima. Relatório consolidado: [entregas e revisão](relatorio-noite-01-02-11-2026.md).

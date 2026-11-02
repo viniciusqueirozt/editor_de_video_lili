@@ -37,3 +37,8 @@ Validação visual desktop e Safari real continuam pendentes. A disposição geo
 Frontend servido pelo editor atual, compatível com a capacidade pair_transitions já ativa; disponível ao atualizar a página. Editor e login remoto consultados saudáveis. Serviços, sessões e dados reais preservados, sem reinício. Checkpoint local para publicação acumulada após segurança/extra. Backend da rodada 1 continua pendente de ativação coordenada no fechamento.
 
 Próximo pacote às 01h55: após consultar a janela renovada e a esteira, avançar uma lacuna de edição concluível, priorizando ampliação de transições realmente renderizáveis ou recursos de montagem. Não ativar Concat nem copiar código AGPL enquanto a decisão de reutilização permanecer pendente. Segurança/acesso continua às 03h55; finalizar o ciclo antes das 5h.
+
+
+## Estado final após publicação
+
+Entrega publicada e código ativo no editor no fechamento de 02/11/2026, acumulado até cef630b. Reinício somente do editor após ausência de jobs/uploads/processamento; gateway, conector, túnel e sessões preservados. Verificadas saúde e capacidades HTTP, bloqueio sem login e endereço remoto saudável. A indicação anterior de ativação pendente é histórica. Revisão visual desktop e Safari real continuam pendentes. Ver [relatório consolidado](relatorio-noite-01-02-11-2026.md) para verificações, limitações e próximo passo.

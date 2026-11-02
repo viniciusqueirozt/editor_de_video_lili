@@ -41,3 +41,8 @@ Editor 8765 e login remoto consultados saudáveis. A versão em execução ainda
 A ampliação corresponde à proposta F14 de varredura/deslize e aos critérios F11–F13/P07 já registrados no estudo CapCut Mobile. O desenho temporal e a implementação são próprios da Lili. Os nomes de filtros foram conferidos na documentação primária disponível no executável: ffmpeg -h filter=xfade; a página pública de filtros não respondeu à consulta nesta rodada. Não foram copiados algoritmos de terceiros para dentro do projeto.
 
 Às 02h55, avaliar entrega/exportação: nomes úteis para baixar arquivos, identificação da revisão e estados de artefatos disponíveis, sem alterar a montagem. Antes do pacote, reler limites e estado. Segurança/acesso às 03h55, extra condicional e publicação até antes das 5h. Transcrição/recorte locais e worker Rust continuam na proposta arquitetural, não são anunciados como implementados por esta rodada.
+
+
+## Estado final após publicação
+
+Entrega publicada e código ativo no editor no fechamento de 02/11/2026, acumulado até cef630b. Reinício somente do editor após ausência de jobs/uploads/processamento; gateway, conector, túnel e sessões preservados. Verificadas saúde e capacidades HTTP, bloqueio sem login e endereço remoto saudável. A indicação anterior de ativação pendente é histórica. Revisão visual desktop e Safari real continuam pendentes. Ver [relatório consolidado](relatorio-noite-01-02-11-2026.md) para verificações, limitações e próximo passo.
