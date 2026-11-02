@@ -475,58 +475,109 @@ function updateTransitionPreview(){
   const blend=transitionBlend(currentClip(),cursor-before(),transitionListForPreview()),veil=$("#transition-veil");
   veil.hidden=blend.opacity<=0;veil.style.background=blend.color;veil.style.opacity=blend.opacity;
 }
+// Full 44 px targets cannot overlap when a montage is zoomed out. Keep every
+// cut marked, prioritize the selected scene's cut, and reach all cuts in the dialog.
+function transitionJoinLayout(clips,scale,selectedId,canvasWidth){
+  let offset=0;const cuts=[];
+  for(let i=0;i<clips.length-1;i++){
+    offset+=clipDuration(clips[i]);const raw=offset*scale;
+    cuts.push({index:i,time:offset,raw,x:clamp(raw,22,Math.max(22,canvasWidth-22)),visible:false});
+  }
+  const anchor=Math.min(Math.max(0,clips.findIndex(c=>c.id===selectedId)),cuts.length-1),chosen=[];
+  for(const cut of [...cuts].sort((a,b)=>Math.abs(a.index-anchor)-Math.abs(b.index-anchor))){
+    if(chosen.every(other=>Math.abs(other.x-cut.x)>=48)){cut.visible=true;chosen.push(cut);}
+  }
+  return cuts;
+}
 function renderTransitionJoins(){
-  const supported=!!editorFeatures.pair_transitions,button=$("#transitions-open");
-  button.hidden=!supported;button.disabled=project.timeline.length<2;
+  const supported=!!editorFeatures.pair_transitions,button=$("#transitions-open"),hint=$("#transition-joins-hint"),track=$("#video-track");
+  for(const node of track.querySelectorAll(".transition-join,.transition-cut-marker"))node.remove();
+  button.hidden=!supported;button.disabled=project.timeline.length<2;hint.hidden=true;
   if(!supported)return;
-  let offset=0;
-  project.timeline.forEach((clip,i)=>{
-    offset+=clipDuration(clip);if(i===project.timeline.length-1)return;
-    const right=project.timeline[i+1],active=(project.transitions||[]).some(t=>t.left===clip.id&&t.right===right.id);
-    const node=document.createElement("button");node.type="button";node.className="transition-join";node.style.left=`${offset*timelineScale}px`;
-    node.setAttribute("aria-label",`Transição entre cenas ${i+1} e ${i+2}`);node.setAttribute("aria-haspopup","dialog");node.classList.toggle("applied",active);
-    node.textContent=active?"◆":"⋈";node.addEventListener("click",()=>openTransition(clip.id,right.id));$("#video-track").append(node);
-  });
+  const cuts=transitionJoinLayout(project.timeline,timelineScale,selected,parseFloat(trackCanvas.style.width)||200);
+  const hidden=cuts.filter(c=>!c.visible).length;
+  button.setAttribute("aria-label",`Transições: escolher entre ${cuts.length} cortes`);
+  button.title="Escolher corte, duração e estilo da transição";
+  if(hidden){hint.hidden=false;hint.textContent=`${hidden} ${hidden===1?"corte compacto":"cortes compactos"}. Amplie a linha do tempo ou use Transições para escolher qualquer corte.`;}
+  for(const cut of cuts){
+    const clip=project.timeline[cut.index],right=project.timeline[cut.index+1],active=(project.transitions||[]).some(t=>t.left===clip.id&&t.right===right.id);
+    const marker=document.createElement("span");marker.className="transition-cut-marker";marker.style.left=`${cut.raw}px`;marker.classList.toggle("applied",active);marker.setAttribute("aria-hidden","true");track.append(marker);
+    if(!cut.visible)continue;
+    const node=document.createElement("button");node.type="button";node.className="transition-join";node.style.left=`${cut.x}px`;
+    node.setAttribute("aria-label",`Transição entre cenas ${cut.index+1} e ${cut.index+2}`);node.setAttribute("aria-haspopup","dialog");node.classList.toggle("applied",active);
+    node.textContent=active?"◆":"⋈";node.addEventListener("click",()=>openTransition(clip.id,right.id));track.append(node);
+  }
+}
+function validTransitionDraft(){return !!transitionDraft&&transitionDraft.projectId===project?.id&&transitionDraft.revision===project.revision&&!!transitionPair(transitionDraft.left,transitionDraft.right);}
+function updateTransitionContext(pair){
+  const at=project.timeline.findIndex(c=>c.id===pair[0].id);let boundary=0;
+  for(let i=0;i<=at;i++)boundary+=clipDuration(project.timeline[i]);
+  $("#transition-position").textContent=`Corte ${at+1} de ${project.timeline.length-1} · ${montageTime(boundary)}`;
+  $("#transition-previous").disabled=transitionSaving||at===0;$("#transition-next").disabled=transitionSaving||at>=project.timeline.length-2;
+  $("#transition-pair").value=pair[0].id;
+  const shots=$("#transition-shots"),key=`${project.id}/${project.revision}/${pair[0].id}/${pair[1].id}`;
+  if(shots.dataset.contextKey===key)return;
+  shots.dataset.contextKey=key;
+  shots.innerHTML=pair.map((clip,i)=>{
+    const asset=project.media?.find(m=>m.id===clip.media_id);
+    const limit=Math.max(0,(asset?.duration||clip.end)-.04),at=Math.floor(clamp(i===0?clip.end-.04:clip.start,0,limit)*1000)/1000;
+    return `<figure>${asset?`<img alt="" src="${assetUrl(asset,"frame.jpg")}?at=${at}">`:'<span class="transition-no-frame">Sem prévia</span>'}<figcaption>${i===0?"Sai":"Entra"} · ${esc(clip.label||"Cena")}</figcaption></figure>`;
+  }).join("");
 }
 function refreshTransitionDraft(){
   if(!transitionDraft)return;
-  const pair=transitionPair(transitionDraft.left,transitionDraft.right);if(!pair)return;
+  if(!validTransitionDraft()){
+    for(const id of ["#transition-apply","#transition-preview","#transition-duration","#transition-pair","#transition-all","#transition-previous","#transition-next"])$(id).disabled=true;
+    document.querySelectorAll("[data-transition-kind]").forEach(b=>b.disabled=true);
+    $("#transition-draft-status").textContent="O projeto mudou. Cancele e reabra a transição para revisar.";return;
+  }
+  const pair=transitionPair(transitionDraft.left,transitionDraft.right);updateTransitionContext(pair);
   pause();transitionPreviewEnd=null;
   $("[data-transition-kind='dissolve']").hidden=!editorFeatures.dissolve_transitions;
   $("#transition-all-label").hidden=!editorFeatures.dissolve_transitions;
   const maximum=transitionMaximum(pair);transitionDraft.duration=clamp(transitionDraft.duration,.1,maximum);
   const locked=pair.some(c=>c.locked);
+  $("#transition-all-count").textContent=project.timeline.slice(0,-1).filter((c,i)=>!c.locked&&!project.timeline[i+1].locked).length;
+  for(const button of $("#transition-dialog").querySelectorAll(".close-dialog"))button.disabled=transitionSaving;
   $("#transition-duration").max=maximum;$("#transition-duration").value=transitionDraft.duration;$("#transition-duration").disabled=transitionDraft.kind==="none"||transitionSaving||locked;
   $("#transition-duration-value").textContent=`${transitionDraft.duration.toFixed(2).replace(".",",")} s`;
   $("#transition-limit").textContent=`Até ${maximum.toFixed(2).replace(".",",")} s neste encontro. Metade antes e metade depois do corte.`;
-  $("#transition-draft-status").textContent=locked?"Desproteja as duas cenas para alterar esta transição.":transitionSaving?"Salvando…":"Prévia local. Aplicar salva uma alteração; Cancelar descarta.";
+  $("#transition-draft-status").textContent=locked?"Desproteja as duas cenas para alterar esta transição.":transitionSaving?"Salvando…":"Prévia local. Aplicar salva; Cancelar ou trocar de corte descarta os ajustes não aplicados.";
   $("#transition-apply").disabled=locked||transitionSaving;$("#transition-all").disabled=locked||transitionSaving;
   $("#transition-pair").disabled=transitionSaving;$("#transition-preview").disabled=transitionSaving;
   document.querySelectorAll("[data-transition-kind]").forEach(b=>{b.setAttribute("aria-pressed",b.dataset.transitionKind===transitionDraft.kind);b.disabled=locked||transitionSaving;});
   updateTransitionPreview();
 }
 function chooseTransitionPair(left,right){
+  if(!transitionDraft||transitionSaving||transitionDraft.projectId!==project?.id||transitionDraft.revision!==project.revision||!transitionPair(left,right))return;
   const saved=(project.transitions||[]).find(t=>t.left===left&&t.right===right);
   transitionDraft={...transitionDraft,left,right,kind:saved?.kind||"none",duration:saved?.duration||.5};refreshTransitionDraft();
 }
 async function openTransition(left,right){
-  await queue;if(!editorFeatures.pair_transitions||project.timeline.length<2)return;
+  const projectId=project?.id,revision=project?.revision;await queue;
+  if(project?.id!==projectId||project.revision!==revision||!editorFeatures.pair_transitions||project.timeline.length<2||transitionSaving)return;
   pause();closeSheet();
   const pair=transitionPair(left,right)||project.timeline.slice(Math.min(Math.max(0,index()),project.timeline.length-2),Math.min(Math.max(0,index()),project.timeline.length-2)+2);
   transitionDraft={projectId:project.id,revision:project.revision,originalCursor:cursor};$("#transition-all").checked=false;
   $("#transition-pair").innerHTML=project.timeline.slice(0,-1).map((c,i)=>`<option value="${c.id}">${i+1} → ${i+2} · ${esc(c.label)} / ${esc(project.timeline[i+1].label)}</option>`).join("");
-  $("#transition-pair").value=pair[0].id;chooseTransitionPair(pair[0].id,pair[1].id);$("#transition-dialog").showModal();
+  $("#transition-pair").value=pair[0].id;chooseTransitionPair(pair[0].id,pair[1].id);if(!$("#transition-dialog").open)$("#transition-dialog").showModal();
 }
 $("#transitions-open").addEventListener("click",()=>openTransition());
-$("#transition-pair").addEventListener("change",e=>{const at=project.timeline.findIndex(c=>c.id===e.target.value);chooseTransitionPair(project.timeline[at].id,project.timeline[at+1].id);});
-for(const button of document.querySelectorAll("[data-transition-kind]"))button.addEventListener("click",()=>{transitionDraft.kind=button.dataset.transitionKind;refreshTransitionDraft();});
-$("#transition-duration").addEventListener("input",e=>{transitionDraft.duration=Number(e.target.value);refreshTransitionDraft();});
+$("#transition-pair").addEventListener("change",e=>{if(!validTransitionDraft()||transitionSaving)return;const at=project.timeline.findIndex(c=>c.id===e.target.value);if(at>=0&&at<project.timeline.length-1)chooseTransitionPair(project.timeline[at].id,project.timeline[at+1].id);});
+for(const [id,delta]of [["previous",-1],["next",1]])$("#transition-"+id).addEventListener("click",()=>{
+  if(!validTransitionDraft()||transitionSaving)return;
+  const at=project.timeline.findIndex(c=>c.id===transitionDraft.left)+delta;
+  if(at>=0&&at<project.timeline.length-1)chooseTransitionPair(project.timeline[at].id,project.timeline[at+1].id);
+});
+for(const button of document.querySelectorAll("[data-transition-kind]"))button.addEventListener("click",()=>{if(!validTransitionDraft()||transitionSaving)return;transitionDraft.kind=button.dataset.transitionKind;refreshTransitionDraft();});
+$("#transition-duration").addEventListener("input",e=>{if(!validTransitionDraft()||transitionSaving)return;transitionDraft.duration=Number(e.target.value);refreshTransitionDraft();});
 $("#transition-preview").addEventListener("click",()=>{
-  if(!transitionDraft||transitionSaving)return;
+  if(!validTransitionDraft()||transitionSaving)return;
   if(transitionDraft.kind==="dissolve"){openSmoothPlayback({...transitionDraft});return;}
   const at=project.timeline.findIndex(c=>c.id===transitionDraft.right),boundary=before(at),half=transitionDraft.kind==="none"?.2:transitionDraft.duration/2;
   seekTo(Math.max(before(at-1),boundary-half-.2));transitionPreviewEnd=Math.min(project.duration,boundary+half+.2);play();
 });
+$("#transition-dialog").addEventListener("cancel",e=>{if(transitionSaving)e.preventDefault();});
 $("#transition-dialog").addEventListener("close",()=>{
   const original=transitionDraft?.originalCursor;pause();transitionPreviewEnd=null;transitionDraft=null;
   if(original!==undefined)seekTo(original);else updateTransitionPreview();
@@ -536,7 +587,7 @@ $("#transition-apply").addEventListener("click",async()=>{
   if(transitionDraft.projectId!==project.id||transitionDraft.revision!==project.revision){toast("O projeto mudou. Reabra a transição para revisar.",true);$("#transition-dialog").close();return;}
   const {left,right,kind,duration}=transitionDraft;
   transitionSaving=true;refreshTransitionDraft();
-  try{const ok=await mutate("transition_set",{left,right,kind,duration,...($("#transition-all").checked?{all:true}:{})},kind==="none"?"Corte seco aplicado.":"Transição salva. Você pode desfazer.");if(ok){transitionDraft=null;$("#transition-dialog").close();}}
+  try{const ok=await mutate("transition_set",{left,right,kind,duration,...($("#transition-all").checked?{all:true}:{})},kind==="none"?"Corte seco aplicado.":"Transição salva. Você pode desfazer.",{projectId:transitionDraft.projectId,revision:transitionDraft.revision});if(ok){transitionDraft=null;$("#transition-dialog").close();}}
   finally{transitionSaving=false;refreshTransitionDraft();}
 });
 

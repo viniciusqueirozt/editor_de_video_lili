@@ -56,7 +56,7 @@ function mutate(operation, args, message, expected=null) {
   queue = queue.then(async () => {
     if (!project) return;
     if(expected&&(project.id!==expected.projectId||project.revision!==expected.revision)){
-      toast("O projeto mudou. O movimento do áudio foi cancelado; tente novamente.",true);render();return false;
+      toast("O projeto mudou. A alteração foi cancelada; tente novamente.",true);render();return false;
     }
     pause(); $("#save-status").textContent = "Salvando…";
     const id = project.id;

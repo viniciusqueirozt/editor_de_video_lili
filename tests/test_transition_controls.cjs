@@ -1,0 +1,37 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const timeline=fs.readFileSync('web/timeline.js','utf8'),app=fs.readFileSync('web/app.js','utf8'),nodes=new Map(),calls=[],messages=[];let saveGate=null;
+class Node{
+ constructor(id){this.id=id;this.style={};this.dataset={};this.children=[];this.attrs={};this.listeners={};this.disabled=false;this.hidden=false;this.open=false;this.className='';this.htmlWrites=0;this.classList={toggle(){}};}
+ addEventListener(type,fn){this.listeners[type]=fn;}
+ setAttribute(key,value){this.attrs[key]=String(value);}
+ append(child){this.children.push(child);child.parent=this;}
+ remove(){this.parent.children=this.parent.children.filter(c=>c!==this);}
+ querySelectorAll(selector){if(selector==='.close-dialog')return[node('#close')];return this.children.filter(c=>selector.split(',').some(s=>c.className===s.slice(1)));}
+ set innerHTML(value){this.html=value;this.htmlWrites++;}get innerHTML(){return this.html||'';}
+ showModal(){this.open=true;}close(){this.open=false;this.listeners.close?.();}
+ async emit(type,extra={}){const e={target:this,preventDefault(){this.prevented=true;},...extra};await this.listeners[type]?.(e);return e;}
+}
+function node(id){if(!nodes.has(id))nodes.set(id,new Node(id));return nodes.get(id);}
+const kinds=['none','dissolve','black','white'].map(kind=>{const n=node(kind);n.dataset.transitionKind=kind;return n;});
+const clips=Array.from({length:20},(_,i)=>({id:'c'+i,media_id:'m',start:0,end:1,label:i===5?'<unsafe>':'Scene '+i,locked:false}));
+const initial={id:'p',revision:1,duration:20,timeline:clips,transitions:[],media:[{id:'m',duration:1}]};
+const ctx=vm.createContext({project:structuredClone(initial),selected:'c5',cursor:2,editorFeatures:{pair_transitions:true,dissolve_transitions:true},queue:Promise.resolve(),timelineScale:10,trackCanvas:node('canvas'),$:node,document:{createElement:()=>new Node('created'),querySelectorAll:()=>kinds},clamp:(n,a,b)=>Math.max(a,Math.min(b,n)),clipDuration:c=>(c.end-c.start)/(c.speed||1),montageTime:n=>n.toFixed(3),esc:s=>String(s).replaceAll('<','&lt;').replaceAll('>','&gt;'),assetUrl:()=>'/source/frame.jpg',pause(){},closeSheet(){},index(){return ctx.project.timeline.findIndex(c=>c.id===ctx.selected);},before(i=0){return ctx.project.timeline.slice(0,i).reduce((n,c)=>n+c.end-c.start,0);},seekTo(t){ctx.cursor=t;},play(){},openSmoothPlayback(){},render(){},toast:s=>messages.push(s),async api(path,opt){if(!opt)return ctx.project;calls.push(JSON.parse(opt.body));if(saveGate)await saveGate;return{...ctx.project,revision:ctx.project.revision+1};}});
+ctx.trackCanvas.style.width='224px';
+vm.runInContext(timeline.slice(timeline.indexOf('let transitionDraft='),timeline.indexOf('// Local looks')),ctx);
+vm.runInContext(app.slice(app.indexOf('function mutate('),app.indexOf('async function listProjects(')),ctx);ctx.updateTransitionPreview=()=>{};
+const ev=s=>vm.runInContext(s,ctx);
+(async()=>{
+ let cuts=ctx.transitionJoinLayout(clips,10,'c5',224),visible=cuts.filter(c=>c.visible).sort((a,b)=>a.x-b.x);assert.equal(cuts.length,19);assert.ok(cuts[5].visible,'selected scene cut remains reachable');for(let i=1;i<visible.length;i++)assert.ok(visible[i].x-visible[i-1].x>=48);assert.ok(visible.every(c=>c.x>=22&&c.x<=202));assert.ok(visible.length<cuts.length);
+ assert.equal(ctx.transitionJoinLayout(clips,100,'c5',2024).filter(c=>c.visible).length,19,'zoom reveals every target');assert.equal(ctx.transitionJoinLayout([],10,null,200).length,0);
+ ctx.renderTransitionJoins();assert.equal(node('#video-track').children.filter(n=>n.className==='transition-cut-marker').length,19);assert.equal(node('#transition-joins-hint').hidden,false);ctx.renderTransitionJoins();assert.equal(node('#video-track').children.filter(n=>n.className==='transition-cut-marker').length,19,'rerender does not accumulate markers');
+ await ctx.openTransition('c5','c6');assert.match(node('#transition-position').textContent,/Corte 6 de 19/);assert.match(node('#transition-shots').innerHTML,/&lt;unsafe&gt;/);assert.equal(node('#transition-all-count').textContent,19);
+ const frames=node('#transition-shots').htmlWrites;await node('#transition-duration').emit('input',{target:{value:'.7'}});assert.equal(node('#transition-shots').htmlWrites,frames,'dragging duration does not refetch thumbnails');
+ for(let i=0;i<13;i++)await node('#transition-next').emit('click');assert.equal(ev('transitionDraft.left'),'c18');assert.equal(node('#transition-next').disabled,true);assert.equal(node('#transition-previous').disabled,false);await node('#transition-previous').emit('click');assert.equal(ev('transitionDraft.left'),'c17');assert.equal(ctx.project.transitions.length,0,'browsing cuts does not save');
+ await node('#transition-pair').emit('change',{target:{value:'c0'}});assert.equal(node('#transition-previous').disabled,true);assert.equal(ev('transitionDraft.right'),'c1');await node('#transition-pair').emit('change',{target:{value:'missing'}});assert.equal(ev('transitionDraft.left'),'c0');
+ ctx.project.revision++;ctx.refreshTransitionDraft();assert.equal(node('#transition-apply').disabled,true);assert.equal(node('#transition-preview').disabled,true);await node('#transition-next').emit('click');assert.equal(ev('transitionDraft.left'),'c0');node('#transition-dialog').close();
+ ctx.project=structuredClone(initial);let releaseQueue;ctx.queue=new Promise(r=>releaseQueue=r);const opening=ctx.openTransition('c0','c1');ctx.project={...ctx.project,id:'other'};releaseQueue();await opening;assert.equal(node('#transition-dialog').open,false,'queued old click cannot open another project');
+ ctx.project=structuredClone(initial);ctx.queue=Promise.resolve();await ctx.openTransition('c0','c1');ctx.project.timeline[0].locked=true;ctx.refreshTransitionDraft();assert.equal(node('#transition-apply').disabled,true);ctx.project.timeline[0].locked=false;
+ ctx.queue=new Promise(r=>releaseQueue=r);const applying=node('#transition-apply').emit('click');ctx.project.revision++;releaseQueue();await applying;assert.equal(calls.length,0,'actual command queue refuses changed revision');assert.match(messages.at(-1),/projeto mudou/);
+ ctx.project=structuredClone(initial);ctx.queue=Promise.resolve();await ctx.openTransition('c0','c1');let releaseSave;saveGate=new Promise(r=>releaseSave=r);const saving=node('#transition-apply').emit('click');await new Promise(r=>setImmediate(r));assert.equal(node('#close').disabled,true);assert.equal((await node('#transition-dialog').emit('cancel')).prevented,true);await node('#transition-next').emit('click');assert.equal(ev('transitionDraft.left'),'c0');releaseSave();await saving;assert.equal(calls.length,1);assert.equal(calls[0].operation,'transition_set');assert.equal(node('#transition-dialog').open,false);
+ console.log('Transition controls: 44px target spacing, compact markers, selected cut, zoom, all-cut navigation, safe thumbnails/cache, locks, cancel, stale opening and actual revision-guarded save passed.');
+})().catch(e=>{console.error(e);process.exitCode=1;});
